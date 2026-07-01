@@ -110,56 +110,77 @@
     .panel { max-height: 40vh; }
   }
 
-  /* ── Mobile game layout (≤600px) ─────────────────────────────────────────
-     On small screens:
-     • Stats and log are hidden — give all space to the board
-     • Scoreboard sits below the board in a compact horizontal strip
-     • Dice panel stays visible but compact                                */
+  /* ── Mobile game layout (≤600px) ──────────────────────────────────────────
+     Board takes ~70% of screen height. Panel is a fixed compact strip below. */
   @media (max-width: 600px) {
     .game-layout {
       grid-template-columns: 1fr;
       grid-template-rows: 1fr auto;
-      gap: 6px;
+      gap: 4px;
     }
 
-    /* Board gets as much height as possible */
-    .board-wrap { padding: 4px; border-radius: 12px; }
-    .board-message { font-size: 0.76rem; padding: 4px 8px; margin-bottom: 4px; }
+    /* Board: minimal padding, maximum space */
+    .board-wrap { padding: 3px; border-radius: 10px; }
+    .board-message { font-size: 0.7rem; padding: 3px 7px; margin-bottom: 3px; min-height: 0; }
+    .situation-banner { font-size: 0.68rem; padding: 4px 8px; margin-bottom: 3px; }
 
-    /* Side panel: compact strip below the board */
+    /* Panel: fixed compact strip — never grows beyond 28vh */
     .panel {
-      border-radius: 12px;
-      padding: 8px 10px;
-      gap: 6px;
-      max-height: none;
-      overflow: visible;
+      max-height: 28vh;
+      min-height: 0;
+      border-radius: 10px;
+      padding: 5px 8px;
+      gap: 4px;
+      overflow: hidden;
+      flex-direction: column;
     }
 
     /* Hide stats and log entirely */
     .panel-stats-section,
     .panel-log-section { display: none !important; }
 
-    /* Scoreboard compact */
-    .mini-scoreboard { gap: 6px; }
-    .mini-team-name { font-size: 0.72rem; }
-    .mini-score { font-size: 1.3rem; }
-    .mini-meta { margin-top: 4px; padding-top: 4px; font-size: 0.6rem; gap: 4px 8px; }
+    /* Scoreboard + dice side by side to save vertical space */
+    .mini-scoreboard {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
+      flex-wrap: nowrap;
+    }
+    .mini-team {
+      flex: 1;
+      flex-direction: row;
+      align-items: center;
+      gap: 4px;
+      justify-content: center;
+    }
+    .mini-team-name { font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
+    .mini-score { font-size: 1.1rem; font-weight: 900; min-width: 18px; text-align: center; }
+    .kit-dot { width: 9px; height: 9px; flex-shrink: 0; }
+    .mini-meta {
+      margin-top: 2px; padding-top: 2px;
+      font-size: 0.55rem; gap: 3px 6px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .sound-toggle-btn, .fullscreen-btn { font-size: 0.75rem; padding: 0 2px; }
 
-    /* Timer row stays visible */
-    .turn-timer-row { margin-top: 4px; }
+    /* Turn timer ultra compact */
+    .turn-timer-row { margin-top: 3px; gap: 5px; }
+    .turn-timer-bar { height: 4px; }
+    .turn-timer-label { font-size: 0.62rem; min-width: 24px; }
 
-    /* Dice panel compact */
-    .dice-panel { padding: 8px 10px; }
-    .dice-panel h3 { font-size: 0.8rem; }
-    .dice-face { width: 36px; height: 36px; font-size: 0.95rem; }
-    .btn { padding: 8px 14px; font-size: 0.8rem; }
-    .btn-row { margin-top: 4px; }
+    /* Dice panel: minimal height */
+    .dice-panel { padding: 5px 8px; border-radius: 8px; }
+    .dice-panel h3 { font-size: 0.7rem; margin-bottom: 3px; }
+    .dice-row { gap: 5px; }
+    .dice-face { width: 30px; height: 30px; font-size: 0.82rem; border-radius: 7px; }
 
-    /* Situation banners smaller */
-    .situation-banner { font-size: 0.72rem; padding: 6px 10px; }
+    /* Buttons: very compact, horizontal */
+    .btn { padding: 5px 10px; font-size: 0.72rem; border-radius: 999px; }
+    .btn-row { gap: 4px; margin-top: 3px; }
 
-    /* Chat FAB position */
-    .chat-fab { bottom: 12px; right: 12px; width: 44px; height: 44px; font-size: 1.1rem; }
+    /* Chat FAB closer to edge on mobile */
+    .chat-fab { bottom: 8px; right: 8px; width: 38px; height: 38px; font-size: 1rem; }
   }
 
   .board-wrap {
