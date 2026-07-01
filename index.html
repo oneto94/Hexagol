@@ -6,6 +6,7 @@
 <title>Hexagol — Fútbol de Dados</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <style>
   :root {
     --background: hsl(120 27% 91%);
@@ -633,6 +634,81 @@
     background: #f0f4ff; border: 1.5px dashed var(--accent); border-radius: 10px;
     padding: 10px 12px; margin: 6px 0; text-align: center;
   }
+
+  /* ── Landing page ── */
+  .landing-screen {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px 16px; text-align: center; gap: 0;
+  }
+  .landing-logo {
+    font-size: 3.5rem; margin-bottom: 4px; line-height: 1;
+  }
+  .landing-title {
+    font-size: 2.2rem; font-weight: 900; color: #1c2b22; margin: 0 0 6px;
+    letter-spacing: -0.02em;
+  }
+  .landing-subtitle {
+    font-size: 1rem; color: #6b7a64; margin: 0 0 28px; font-weight: 500;
+  }
+  .landing-preview {
+    width: min(340px, 90vw); border-radius: 16px; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.18); margin-bottom: 28px;
+    background: #4a7c59;
+  }
+  .landing-actions { display: flex; flex-direction: column; gap: 10px; width: min(320px, 90vw); }
+  .landing-btn {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 14px 20px; border-radius: 14px; border: none; font-size: 1rem;
+    font-weight: 700; cursor: pointer; font-family: inherit; transition: opacity 0.15s;
+    text-decoration: none;
+  }
+  .landing-btn:hover { opacity: 0.88; }
+  .landing-btn-google { background: #fff; color: #1c2b22; box-shadow: 0 2px 8px rgba(0,0,0,0.14); }
+  .landing-btn-email { background: var(--accent); color: #fff; }
+  .landing-btn-guest { background: transparent; color: #6b7a64; border: 1.5px solid #d8ded2; font-size: 0.88rem; }
+  .landing-divider { display: flex; align-items: center; gap: 10px; color: #b0bba8; font-size: 0.8rem; }
+  .landing-divider::before, .landing-divider::after { content:''; flex:1; height:1px; background:#e1e8db; }
+  .landing-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; width: min(380px, 92vw); }
+  .landing-feature { background: rgba(255,255,255,0.7); border-radius: 12px; padding: 12px 8px; }
+  .landing-feature-icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .landing-feature-label { font-size: 0.72rem; font-weight: 700; color: #384032; line-height: 1.3; }
+
+  /* ── Auth forms ── */
+  .auth-screen { max-width: 360px; margin: 0 auto; padding: 24px 16px; }
+  .auth-form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
+  .auth-input {
+    padding: 11px 14px; border: 1.5px solid #e1e8db; border-radius: 10px;
+    font-size: 0.95rem; font-family: inherit; background: #fff;
+    transition: border-color 0.15s;
+  }
+  .auth-input:focus { outline: none; border-color: var(--accent); }
+  .auth-error { color: #dc2626; font-size: 0.8rem; text-align: center; margin-top: -4px; }
+  .auth-switch { text-align: center; font-size: 0.82rem; color: #6b7a64; margin-top: 8px; }
+  .auth-switch button { background: none; border: none; color: var(--accent); font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit; }
+
+  /* ── User profile chip in main menu ── */
+  .user-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.8); border-radius: 999px;
+    padding: 6px 12px 6px 6px; margin-bottom: 12px;
+    border: 1px solid #e1e8db; font-size: 0.82rem;
+  }
+  .user-chip-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
+    overflow: hidden; flex-shrink: 0;
+  }
+  .user-chip-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .user-chip-name { font-weight: 700; color: #1c2b22; }
+  .user-chip-elo { color: #6b7a64; font-size: 0.75rem; }
+  .user-chip-logout { margin-left: auto; background: none; border: none; color: #b0bba8; cursor: pointer; font-size: 0.8rem; padding: 0 0 0 8px; }
+
+  .rematch-prompt {
+    background: #f0f4ff; border: 1.5px dashed var(--accent); border-radius: 10px;
+    padding: 10px 12px; margin: 6px 0; text-align: center;
+  }
   .rematch-prompt p { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; color: #2a3a6b; }
   .rematch-prompt-actions { display: flex; gap: 6px; }
   .rematch-waiting {
@@ -718,6 +794,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
+const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // Online session state
 let onlineRoomId = null;
@@ -1021,6 +1099,172 @@ function escapeHtml(str) {
 }
 
 // ── Room creation / joining ──────────────────────────────────────────────────
+
+/* =========================================================================
+   AUTH & USER PROFILES
+   =========================================================================
+   Three auth states:
+   - Authenticated (Google or Email): full profile, ELO, saved team
+   - Anonymous: temp UID, no profile saved, can upgrade to real account
+   - Logged out: shouldn't happen after landing — always at least anonymous
+   ========================================================================= */
+
+let currentUser = null;      // Firebase Auth user object
+let userProfile = null;      // Firestore profile { username, elo, wins, losses, draws, customTeam }
+let authReady = false;       // true once onAuthStateChanged fires for the first time
+
+const DEFAULT_ELO = 1200;
+
+// Called once on page load — waits for Firebase Auth to restore the session
+// before showing any UI, so the landing page knows who (if anyone) is logged in.
+auth.onAuthStateChanged(async user => {
+  currentUser = user;
+  if (user && !user.isAnonymous) {
+    await loadOrCreateUserProfile(user);
+  } else {
+    userProfile = null;
+  }
+  authReady = true;
+  // If we're still on the landing screen, re-render it with the new auth state
+  if (currentMenuView === 'landing' || currentMenuView === 'main') {
+    if (user && !user.isAnonymous) {
+      currentMenuView = 'main';
+    } else {
+      currentMenuView = 'landing';
+    }
+    render();
+  }
+});
+
+async function loadOrCreateUserProfile(user) {
+  const ref = db.collection('users').doc(user.uid);
+  const snap = await ref.get();
+  if (snap.exists) {
+    userProfile = snap.data();
+    // Sync display name / photo from Google if changed
+    await ref.update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+  } else {
+    // New user — create profile
+    const username = user.displayName || user.email?.split('@')[0] || 'Jugador';
+    userProfile = {
+      username,
+      email: user.email || null,
+      photoURL: user.photoURL || null,
+      elo: DEFAULT_ELO,
+      wins: 0, losses: 0, draws: 0,
+      gamesPlayed: 0,
+      customTeam: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    await ref.set(userProfile);
+  }
+}
+
+async function saveUserProfile() {
+  if (!currentUser || currentUser.isAnonymous || !userProfile) return;
+  await db.collection('users').doc(currentUser.uid).update(userProfile);
+}
+
+// ── Login actions ────────────────────────────────────────────────────────────
+
+async function loginWithGoogle() {
+  try {
+    const result = await auth.signInWithPopup(googleProvider);
+    // onAuthStateChanged will handle profile load and re-render
+  } catch (err) {
+    if (err.code !== 'auth/popup-closed-by-user') {
+      console.error('Google login error:', err);
+      alert('Error al iniciar sesión con Google: ' + err.message);
+    }
+  }
+}
+
+async function loginWithEmail(email, password) {
+  try {
+    await auth.signInWithEmailAndPassword(email, password);
+  } catch (err) {
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      throw new Error('Email o contraseña incorrectos.');
+    }
+    throw new Error(err.message);
+  }
+}
+
+async function registerWithEmail(email, password, username) {
+  try {
+    const result = await auth.createUserWithEmailAndPassword(email, password);
+    await result.user.updateProfile({ displayName: username });
+    // onAuthStateChanged fires and calls loadOrCreateUserProfile with the new display name
+  } catch (err) {
+    if (err.code === 'auth/email-already-in-use') throw new Error('Ese email ya tiene una cuenta.');
+    if (err.code === 'auth/weak-password') throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    throw new Error(err.message);
+  }
+}
+
+async function loginAsGuest() {
+  try {
+    await auth.signInAnonymously();
+    currentMenuView = 'main';
+    render();
+  } catch (err) {
+    console.error('Anonymous login error:', err);
+  }
+}
+
+async function logout() {
+  leaveOnlineRoom();
+  await auth.signOut();
+  userProfile = null;
+  currentMenuView = 'landing';
+  setState(getInitialState());
+}
+
+// ── ELO calculation ──────────────────────────────────────────────────────────
+// Standard Elo formula: K=32 for new players (<30 games), K=16 for veterans
+
+function calculateEloChange(myElo, opponentElo, result, gamesPlayed) {
+  const K = gamesPlayed < 30 ? 32 : 16;
+  const expected = 1 / (1 + Math.pow(10, (opponentElo - myElo) / 400));
+  const score = result === 'win' ? 1 : result === 'draw' ? 0.5 : 0;
+  return Math.round(K * (score - expected));
+}
+
+async function updateEloAfterMatch(myResult, opponentUid) {
+  if (!currentUser || currentUser.isAnonymous || !userProfile) return;
+  if (!opponentUid) return;
+
+  const opponentSnap = await db.collection('users').doc(opponentUid).get();
+  if (!opponentSnap.exists) return;
+  const opponentProfile = opponentSnap.data();
+
+  const myChange = calculateEloChange(userProfile.elo, opponentProfile.elo, myResult, userProfile.gamesPlayed);
+  const theirResult = myResult === 'win' ? 'loss' : myResult === 'loss' ? 'win' : 'draw';
+  const theirChange = calculateEloChange(opponentProfile.elo, userProfile.elo, theirResult, opponentProfile.gamesPlayed);
+
+  // Update my profile
+  userProfile.elo = Math.max(100, userProfile.elo + myChange);
+  userProfile.gamesPlayed++;
+  if (myResult === 'win') userProfile.wins++;
+  else if (myResult === 'loss') userProfile.losses++;
+  else userProfile.draws++;
+
+  const batch = db.batch();
+  batch.update(db.collection('users').doc(currentUser.uid), {
+    elo: userProfile.elo,
+    gamesPlayed: userProfile.gamesPlayed,
+    wins: userProfile.wins,
+    losses: userProfile.losses,
+    draws: userProfile.draws,
+  });
+  batch.update(db.collection('users').doc(opponentUid), {
+    elo: Math.max(100, opponentProfile.elo + theirChange),
+    gamesPlayed: firebase.firestore.FieldValue.increment(1),
+    [`${theirResult}s`]: firebase.firestore.FieldValue.increment(1),
+  });
+  await batch.commit();
+}
 
 async function onlineCreateRoom(homeTeam, duration) {
   const code = generateRoomCode();
@@ -4849,9 +5093,120 @@ function formatClock(totalSeconds) {
    SCREENS
    ========================================================================= */
 
+function renderLanding() {
+  // Mini board preview SVG — a simplified static view of the board
+  const previewSvg = `<svg viewBox="0 0 190 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
+    <rect width="190" height="250" fill="#4a7c59"/>
+    ${Array.from({length:7}, (_,r) => Array.from({length:5}, (_,c) =>
+      `<rect x="${c*38+1}" y="${r*35+1}" width="36" height="33" fill="rgba(255,255,255,${r===0||r===6?'0.25':'0.07'})" rx="2"/>`
+    ).join('')).join('')}
+    <rect x="57" y="1" width="76" height="33" fill="rgba(34,197,94,0.3)" rx="2" stroke="#22c55e" stroke-width="1"/>
+    <text x="95" y="22" text-anchor="middle" font-size="10" fill="#22c55e" font-weight="700">GOL</text>
+    <circle cx="95" cy="125" r="6" fill="#fffdf5" stroke="#333" stroke-width="1"/>
+    <circle cx="57" cy="90" r="8" fill="#3b82f6" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <text x="57" y="93" text-anchor="middle" font-size="6" fill="#fff" font-weight="bold">7</text>
+    <circle cx="133" cy="90" r="8" fill="#3b82f6" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <text x="133" y="93" text-anchor="middle" font-size="6" fill="#fff" font-weight="bold">9</text>
+    <circle cx="95" cy="160" r="8" fill="#e94b4b" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <text x="95" y="163" text-anchor="middle" font-size="6" fill="#fff" font-weight="bold">5</text>
+    <circle cx="57" cy="195" r="8" fill="#e94b4b" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <text x="57" y="198" text-anchor="middle" font-size="6" fill="#fff" font-weight="bold">8</text>
+    <line x1="57" y1="90" x2="95" y2="125" stroke="#ffd700" stroke-width="1.5" stroke-dasharray="3,2"/>
+  </svg>`;
+
+  return `
+  <div class="landing-screen">
+    <div class="landing-logo">⚽</div>
+    <h1 class="landing-title">Hexagol</h1>
+    <p class="landing-subtitle">Fútbol de dados · Estrategia por turnos</p>
+    <div class="landing-preview">${previewSvg}</div>
+    <div class="landing-actions">
+      <button class="landing-btn landing-btn-google" id="landing-google-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continuar con Google
+      </button>
+      <button class="landing-btn landing-btn-email" id="landing-email-btn">
+        ✉️ Registrarse con email
+      </button>
+      <div class="landing-divider">o</div>
+      <button class="landing-btn landing-btn-guest" id="landing-guest-btn">
+        Jugar como invitado →
+      </button>
+    </div>
+    <div class="landing-features">
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🌐</div>
+        <div class="landing-feature-label">Online multijugador</div>
+      </div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🤖</div>
+        <div class="landing-feature-label">Vs. IA con dificultad</div>
+      </div>
+      <div class="landing-feature">
+        <div class="landing-feature-icon">🏆</div>
+        <div class="landing-feature-label">Liga y torneo</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+let authFormMode = 'login'; // 'login' | 'register'
+let authFormError = '';
+let authFormLoading = false;
+
+function renderAuthScreen() {
+  const isRegister = authFormMode === 'register';
+  return `
+  <div class="menu-screen auth-screen">
+    <h1>${isRegister ? 'Crear cuenta' : 'Iniciar sesión'}</h1>
+    <div class="auth-form">
+      ${isRegister ? `<input type="text" class="auth-input" id="auth-username" placeholder="Nombre de usuario" maxlength="24" autocomplete="username"/>` : ''}
+      <input type="email" class="auth-input" id="auth-email" placeholder="Email" autocomplete="email"/>
+      <input type="password" class="auth-input" id="auth-password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="${isRegister ? 'new-password' : 'current-password'}"/>
+      ${authFormError ? `<div class="auth-error">${authFormError}</div>` : ''}
+      <button class="btn" id="auth-submit-btn" style="width:100%;" ${authFormLoading ? 'disabled' : ''}>
+        ${authFormLoading ? 'Cargando...' : isRegister ? 'Crear cuenta' : 'Iniciar sesión'}
+      </button>
+      <button class="landing-btn landing-btn-google" id="auth-google-btn" style="margin-top:4px;">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        Continuar con Google
+      </button>
+    </div>
+    <div class="auth-switch">
+      ${isRegister ? '¿Ya tenés cuenta?' : '¿No tenés cuenta?'}
+      <button id="auth-switch-btn">${isRegister ? 'Iniciar sesión' : 'Registrarse'}</button>
+    </div>
+    <div class="auth-switch" style="margin-top:4px;">
+      <button id="auth-back-btn" style="color:#b0bba8;">← Volver</button>
+    </div>
+  </div>`;
+}
+
 function renderMainMenu() {
+  const isGuest = currentUser && currentUser.isAnonymous;
+  const isLoggedIn = currentUser && !currentUser.isAnonymous;
+  const avatarContent = userProfile?.photoURL
+    ? `<img src="${userProfile.photoURL}" alt="avatar"/>`
+    : `<span>${(userProfile?.username || 'U')[0].toUpperCase()}</span>`;
+
   return `
   <div class="menu-screen">
+    ${isLoggedIn && userProfile ? `
+    <div class="user-chip">
+      <div class="user-chip-avatar">${avatarContent}</div>
+      <div>
+        <div class="user-chip-name">${userProfile.username}</div>
+        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}V ${userProfile.losses}D</div>
+      </div>
+      <button class="user-chip-logout" id="logout-btn" title="Cerrar sesión">salir</button>
+    </div>` : isGuest ? `
+    <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
+      <div class="user-chip-avatar" style="background:#9aa593;">👤</div>
+      <div>
+        <div class="user-chip-name">Invitado</div>
+        <div class="user-chip-elo">Creá una cuenta para guardar tu progreso</div>
+      </div>
+    </div>` : ''}
     <h1>⚽ Hexagol</h1>
     <div class="subtitle">Fútbol de dados — estrategia por turnos</div>
     <div class="menu-grid">
@@ -4884,9 +5239,9 @@ function renderMainMenu() {
         <div class="d">Mové jugadores y la pelota libremente, sin turnos ni reglas.</div>
       </button>
     </div>
-    <div class="footer-note">Versión jugable construida con el motor de reglas real de tu proyecto.</div>
   </div>`;
 }
+
 
 function renderTeamPickerCard(side) {
   const picker = onlineTeamPicker[side];
@@ -5822,12 +6177,28 @@ function renderDicePanel(s) {
    RENDER ROOT + EVENT WIRING
    ========================================================================= */
 
-let currentMenuView = 'main'; // 'main' | 'rules' | 'setup'
+let currentMenuView = 'landing'; // starts on landing until auth resolves
 
 function render() {
   const app = document.getElementById('app');
 
   if (state.gamePhase === 'main-menu') {
+    if (currentMenuView === 'landing') {
+      app.innerHTML = renderLanding();
+      // Wire landing buttons directly here, not via wireEvents
+      const googleBtn = document.getElementById('landing-google-btn');
+      if (googleBtn) googleBtn.onclick = () => loginWithGoogle();
+      const emailBtn = document.getElementById('landing-email-btn');
+      if (emailBtn) emailBtn.onclick = () => { authFormMode = 'register'; authFormError = ''; currentMenuView = 'auth'; render(); };
+      const guestBtn = document.getElementById('landing-guest-btn');
+      if (guestBtn) guestBtn.onclick = () => loginAsGuest();
+      return;
+    }
+    if (currentMenuView === 'auth') {
+      app.innerHTML = renderAuthScreen();
+      wireAuthEvents();
+      return;
+    }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
     else if (currentMenuView === 'ai-setup') app.innerHTML = renderAiSetup();
@@ -5919,7 +6290,7 @@ function wireEvents() {
         setState(startSandbox());
         return;
       }
-      if (target === 'back') currentMenuView = 'main';
+      if (target === 'back') currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
       else currentMenuView = target;
       render();
     };
@@ -6264,6 +6635,17 @@ function wireEvents() {
       };
       return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
     });
+  };
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) logoutBtn.onclick = (e) => { e.stopPropagation(); logout(); };
+
+  const guestUpgradeBtn = document.getElementById('guest-upgrade-btn');
+  if (guestUpgradeBtn) guestUpgradeBtn.onclick = () => {
+    authFormMode = 'register';
+    authFormError = '';
+    currentMenuView = 'auth';
+    render();
   };
 
   const backToMenu = document.getElementById('back-to-menu-btn');
@@ -6629,6 +7011,51 @@ function startTurnTimer() {
     // local timer reaches zero first drives the synced state change.
     setState(s => advanceTurnByTimeout(s));
   }, 1000);
+}
+
+function wireAuthEvents() {
+  const googleBtn = document.getElementById('auth-google-btn');
+  if (googleBtn) googleBtn.onclick = () => loginWithGoogle();
+
+  const switchBtn = document.getElementById('auth-switch-btn');
+  if (switchBtn) switchBtn.onclick = () => {
+    authFormMode = authFormMode === 'login' ? 'register' : 'login';
+    authFormError = '';
+    render();
+  };
+
+  const backBtn = document.getElementById('auth-back-btn');
+  if (backBtn) backBtn.onclick = () => { currentMenuView = 'landing'; render(); };
+
+  const submitBtn = document.getElementById('auth-submit-btn');
+  if (submitBtn) submitBtn.onclick = async () => {
+    const email = document.getElementById('auth-email')?.value?.trim();
+    const password = document.getElementById('auth-password')?.value;
+    const username = document.getElementById('auth-username')?.value?.trim();
+    if (!email || !password) { authFormError = 'Completá todos los campos.'; render(); return; }
+    if (authFormMode === 'register' && !username) { authFormError = 'Elegí un nombre de usuario.'; render(); return; }
+    authFormLoading = true;
+    authFormError = '';
+    render();
+    try {
+      if (authFormMode === 'register') {
+        await registerWithEmail(email, password, username);
+      } else {
+        await loginWithEmail(email, password);
+      }
+      currentMenuView = 'main';
+    } catch (err) {
+      authFormError = err.message;
+    }
+    authFormLoading = false;
+    render();
+  };
+
+  // Allow Enter to submit
+  ['auth-email', 'auth-password', 'auth-username'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.onkeydown = (e) => { if (e.key === 'Enter') submitBtn?.click(); };
+  });
 }
 
 render();
