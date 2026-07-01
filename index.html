@@ -885,13 +885,14 @@ function applyRemoteState(remote) {
     state[myRollField] !== undefined
   ) ? { [myRollField]: state[myRollField] } : {};
 
+  const remoteIsKickoff = !isFirstState && remote.isKickoffTurn && !state.isKickoffTurn;
+  const remoteScoreChanged = !isFirstState && (remote.score.home !== state.score.home || remote.score.away !== state.score.away);
+
   state = {
     ...remote,
     ...preservedRoll,
-    // Use remote clock on first state (authoritative duration from host) OR
-    // when a new half starts (our local clock is at 0, remote has fresh duration).
     gameClock: (isFirstState || remoteIsNewHalf) ? remote.gameClock : state.gameClock,
-    timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf
+    timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf || remoteIsKickoff || remoteScoreChanged
       ? (remote.turnDuration || state.turnDuration)
       : state.timer,
   };
