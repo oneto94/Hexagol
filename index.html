@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hexagol — Fútbol de Dados</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <style>
   :root {
     --background: hsl(120 27% 91%);
@@ -662,25 +662,45 @@
 const firebaseConfig = {
   apiKey: "AIzaSyCZaDQX2Y6z9ANgeC2qk3yx-6-yvFniMTo",
   authDomain: "hexagol-claude.firebaseapp.com",
-  databaseURL: "https://hexagol-claude-default-rtdb.firebaseio.com",
   projectId: "hexagol-claude",
   storageBucket: "hexagol-claude.firebasestorage.app",
   messagingSenderId: "277203302405",
   appId: "1:277203302405:web:910fbf4088d8b4c84c046c"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const db = firebase.firestore();
 
 // Online session state
 let onlineRoomId = null;
 let onlineMyTeam = null;
-let onlineRoomRef = null;
-let onlineStateListener = null;
-let onlineStatusListener = null;
+let onlineRoomRef = null;   // Firestore DocumentReference: db.collection('rooms').doc(code)
+let onlineStateUnsub = null;
+let onlineStatusUnsub = null;
 let onlineIsHost = false;
 let onlineStatus = 'idle';
 let onlineApplyingRemote = false;
-let onlineLastSeenVersion = -1; // highest server timestamp we've applied (local or remote)
+let onlineReceivedFirstState = false; // true after the first remote snapshot is applied
+
+// ── Firestore helpers ────────────────────────────────────────────────────────
+// Firestore preserves arrays, nulls, and empty objects exactly as written —
+// no sanitization layer needed (that was a Realtime Database quirk).
+
+function roomRef(code) {
+  return db.collection('rooms').doc(code);
+}
+
+function sanitizeForFirestore(obj) {
+  // Firestore rejects undefined values — replace with null. Everything else
+  // (empty arrays, empty objects, explicit nulls) is stored faithfully.
+  if (obj === undefined) return null;
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(sanitizeForFirestore);
+  const out = {};
+  for (const k of Object.keys(obj)) {
+    out[k] = sanitizeForFirestore(obj[k]);
+  }
+  return out;
+}
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -702,96 +722,68 @@ function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration) {
   };
 }
 
-const ONLINE_ARRAY_FIELDS = [
-  'validMoves', 'validKickTargets', 'invalidOffsideKickTargets',
-  'validDragTargets', 'invalidOffsideDragTargets', 'validLoftedPassTargets',
-  'validLoftedDragTargets', 'invalidOffsideLoftedDragTargets', 'validChainPassTargets',
-  'invalidOffsideChainPassTargets', 'chainPassReceivers',
-  'offsidePlayerIds', 'validOffsideMoves', 'swapCandidates', 'gameLog',
-];
-
-// Fields that are legitimately `null` in local state. Firebase Realtime Database
-// strips any key whose value is null/undefined when writing, so these come back
-// as missing (undefined) instead of null after a round trip. Restore them to null
-// explicitly so strict `=== null` / `!== null` checks in the UI behave correctly.
-const ONLINE_NULLABLE_FIELDS = [
-  'kickoffTeam', 'diceValue', 'selectedPlayerId', 'homeRoll', 'awayRoll',
-  'chainPassInitiatorId', 'actionChoice', 'lastPlayerToTouchBallId',
-  'offsideContext', 'toastToShow', 'turnStartState', 'lastAction',
-  'assistProviderId', 'aiTeam', 'highlightedElementId', 'leagueState',
-];
-
-function sanitizeRemoteState(remote) {
-  const fixed = { ...remote };
-  ONLINE_ARRAY_FIELDS.forEach(field => {
-    const val = fixed[field];
-    if (Array.isArray(val)) return; // already a proper array, nothing to do
-    if (val && typeof val === 'object') {
-      // Firebase Realtime Database can serialize an array as an index-keyed
-      // object on round trip (e.g. validKickTargets becoming {0: {...}, 1: {...}}
-      // instead of [{...}, {...}]). Recovering via Object.values preserves the
-      // real targets; without this, every valid move/kick/drag target silently
-      // got wiped to [] the moment the array round-tripped through Firebase —
-      // which is exactly what made "click the goal-kick bubble" do nothing.
-      fixed[field] = Object.values(val);
-    } else {
-      fixed[field] = [];
-    }
-  });
-  ONLINE_NULLABLE_FIELDS.forEach(field => {
-    if (fixed[field] === undefined) fixed[field] = null;
-  });
-  // matchStats starts as { goals: {}, assists: {} } — an object whose only
-  // contents are themselves empty objects. Firebase strips keys it considers
-  // "empty" on write (same behavior as empty arrays/null), so the whole
-  // matchStats key can vanish entirely, leaving handleGoal crashing on
-  // `s.matchStats.goals` of undefined the moment a goal is scored online.
-  if (!fixed.matchStats || typeof fixed.matchStats !== 'object') {
-    fixed.matchStats = { goals: {}, assists: {} };
-  } else {
-    fixed.matchStats = {
-      goals: fixed.matchStats.goals && typeof fixed.matchStats.goals === 'object' ? fixed.matchStats.goals : {},
-      assists: fixed.matchStats.assists && typeof fixed.matchStats.assists === 'object' ? fixed.matchStats.assists : {},
-    };
-  }
-  // players must never be empty — if Firebase mangled it into an object, recover values
-  if (!Array.isArray(fixed.players)) {
-    fixed.players = fixed.players && typeof fixed.players === 'object'
-      ? Object.values(fixed.players)
-      : getInitialPlayers();
-  }
-  return fixed;
-}
+// ── State sync ───────────────────────────────────────────────────────────────
 
 function applyRemoteState(remote) {
   if (!remote || !remote.gamePhase || remote.gamePhase === 'main-menu') return;
-  const safeRemote = sanitizeRemoteState(remote);
-  const remoteVersion = typeof remote._v === 'number' ? remote._v : null;
-  const lagMs = remoteVersion ? (Date.now() - remoteVersion) : null;
-  console.log('[Hexagol Sync] Applying remote state. turnCount:', remote.turnCount, 'gamePhase:', remote.gamePhase, 'currentPlayer:', remote.currentPlayer, 'lag from write to apply (ms):', lagMs);
-  onlineApplyingRemote = true;
+  // Firestore delivers the full document — no sanitization needed (unlike RTDB).
+  //
+  // timer and gameClock run independently on each client and must NOT be
+  // overwritten mid-match by the opponent's snapshot: their clock was ticking
+  // from a different starting point. BUT on the very first snapshot (the
+  // initial state the host writes when the guest joins), we DO want the
+  // server's gameClock — it carries the authoritative halfDurationMinutes
+  // chosen by the host, which the guest hasn't seen yet.
+  const isFirstState = !onlineReceivedFirstState;
+  const prevTurnCount = state.turnCount;
+  const remoteIsNewTurn = !isFirstState && remote.turnCount !== prevTurnCount;
   const prev = state;
-  state = safeRemote;
+  state = {
+    ...remote,
+    gameClock: isFirstState ? remote.gameClock : state.gameClock,
+    timer: isFirstState || remoteIsNewTurn
+      ? (remote.turnDuration || state.turnDuration)
+      : state.timer,
+  };
+  onlineReceivedFirstState = true;
   window.state = state;
   playSoundsForTransition(prev, state);
   currentMenuView = 'main';
   render();
-  onlineApplyingRemote = false;
 }
 
-/* ---------------- Reconnection ---------------- */
-// If the tab/browser closes by accident (crash, accidental close, phone lock),
-// the player loses no real progress as long as the room is still alive and the
-// opponent hasn't already been told they disconnected — Firebase still has the
-// latest synced gameState waiting. We persist just enough in localStorage to
-// offer rejoining: the room code and which side we were playing.
+function pushOnlineState(s) {
+  if (!onlineRoomRef || onlineStatus !== 'connected') return;
+  const payload = sanitizeForFirestore(s);
+  const pushedAt = Date.now();
+  onlineRoomRef.update({ gameState: payload })
+    .then(() => console.log('[Hexagol Sync] Push ok. RTT:', Date.now() - pushedAt, 'ms | turn:', s.turnCount, 'phase:', s.gamePhase))
+    .catch(err => console.error('[Hexagol Sync] Push failed:', err));
+}
+
+function attachOnlineStateListener() {
+  if (onlineStateUnsub) { onlineStateUnsub(); onlineStateUnsub = null; }
+  onlineStateUnsub = onlineRoomRef.onSnapshot({ includeMetadataChanges: true }, snap => {
+    if (!snap.exists) return;
+    // hasPendingWrites is true when this snapshot was triggered by our OWN
+    // local write before the server has confirmed it. In that case we already
+    // have the correct state locally (we set it before calling pushOnlineState),
+    // so we can safely skip it. We only want to apply snapshots from the SERVER
+    // (i.e. from the other player's writes), which have hasPendingWrites: false.
+    if (snap.metadata.hasPendingWrites) return;
+    const data = snap.data();
+    if (!data || !data.gameState || !data.gameState.gamePhase) return;
+    applyRemoteState(data.gameState);
+  }, err => console.error('[Hexagol Online] Snapshot error:', err));
+}
+
+// ── Reconnection ─────────────────────────────────────────────────────────────
 const ONLINE_SESSION_KEY = 'hexagol_online_session';
 
 function saveOnlineSession() {
   if (!onlineRoomId || !onlineMyTeam) return;
-  try {
-    localStorage.setItem(ONLINE_SESSION_KEY, JSON.stringify({ roomId: onlineRoomId, myTeam: onlineMyTeam, savedAt: Date.now() }));
-  } catch (e) { /* localStorage unavailable (private browsing, etc.) — reconnection just won't be offered */ }
+  try { localStorage.setItem(ONLINE_SESSION_KEY, JSON.stringify({ roomId: onlineRoomId, myTeam: onlineMyTeam, savedAt: Date.now() })); }
+  catch (e) {}
 }
 
 function clearOnlineSession() {
@@ -803,33 +795,25 @@ function readOnlineSession() {
     const raw = localStorage.getItem(ONLINE_SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    // Sessions older than 15 minutes are stale enough that the room very likely
-    // expired or the match concluded one way or another — don't offer those.
     if (!parsed.roomId || !parsed.myTeam || Date.now() - parsed.savedAt > 15 * 60 * 1000) return null;
     return parsed;
   } catch (e) { return null; }
 }
 
-// Checked once on page load, before showing the main menu. If a recoverable
-// session exists and the room is still mid-match on the server, offer to
-// rejoin instead of silently dropping the player back to the menu.
 async function checkForReconnectableSession() {
   const session = readOnlineSession();
   if (!session) return;
   try {
-    const snap = await db.ref('rooms/' + session.roomId).once('value');
-    if (!snap.exists()) { clearOnlineSession(); return; }
-    const room = snap.val();
+    const snap = await db.collection('rooms').doc(session.roomId).get();
+    if (!snap.exists) { clearOnlineSession(); return; }
+    const room = snap.data();
     if (room.status !== 'playing' || !room.gameState || ['game-over', 'main-menu'].includes(room.gameState.gamePhase)) {
-      clearOnlineSession();
-      return;
+      clearOnlineSession(); return;
     }
     pendingReconnectSession = session;
     currentMenuView = 'online-reconnect';
     render();
-  } catch (e) {
-    clearOnlineSession();
-  }
+  } catch (e) { clearOnlineSession(); }
 }
 
 let pendingReconnectSession = null;
@@ -841,17 +825,16 @@ async function reconnectToOnlineRoom() {
   onlineRoomId = session.roomId;
   onlineMyTeam = session.myTeam;
   onlineIsHost = session.myTeam === 'home';
-  onlineRoomRef = db.ref('rooms/' + session.roomId);
+  onlineRoomRef = db.collection('rooms').doc(session.roomId);
   onlineStatus = 'connected';
-  onlineLastSeenVersion = -1;
 
-  const snap = await onlineRoomRef.child('gameState').once('value');
-  if (snap.exists()) {
-    const remote = snap.val();
-    const safeRemote = sanitizeRemoteState(remote);
-    state = safeRemote;
-    window.state = state;
-    onlineLastSeenVersion = typeof remote._v === 'number' ? remote._v : -1;
+  const snap = await onlineRoomRef.get();
+  if (snap.exists) {
+    const data = snap.data();
+    if (data && data.gameState) {
+      state = data.gameState;
+      window.state = state;
+    }
   }
 
   attachOnlineStateListener();
@@ -873,13 +856,10 @@ function declineReconnect() {
   render();
 }
 
-/* ---------------- Chat ---------------- */
-// Messages live in their own Firebase node (rooms/{code}/messages), pushed with
-// Firebase's auto-generated chronological keys — same idea as the original's
-// separate Firestore "messages" subcollection. Keeping this fully separate from
-// gameState means chat traffic never competes with or gets overwritten by move
-// syncing, and vice versa.
-let onlineChatListener = null;
+// ── Chat ─────────────────────────────────────────────────────────────────────
+// Messages live in a subcollection (rooms/{code}/messages) — exactly like the
+// original's Firestore chat-service.ts — so chat traffic never touches gameState.
+let onlineChatUnsub = null;
 let onlineChatMessages = [];
 let onlineChatOpen = false;
 let onlineChatUnread = 0;
@@ -888,12 +868,12 @@ const CHAT_QUICK_PHRASES = ['¡Buena jugada!', 'Mala suerte 😅', 'Vamos!', 'ja
 
 function attachOnlineChat() {
   if (!onlineRoomRef) return;
-  if (onlineChatListener) onlineRoomRef.child('messages').off('value', onlineChatListener);
+  if (onlineChatUnsub) { onlineChatUnsub(); onlineChatUnsub = null; }
   onlineChatMessages = [];
   onlineChatEverLoaded = false;
-  onlineChatListener = onlineRoomRef.child('messages').limitToLast(100).on('value', snap => {
-    const val = snap.val();
-    const list = val ? Object.keys(val).map(key => ({ id: key, ...val[key] })).sort((a, b) => (a.at || 0) - (b.at || 0)) : [];
+  const messagesCol = onlineRoomRef.collection('messages');
+  onlineChatUnsub = messagesCol.orderBy('at', 'asc').limitToLast(100).onSnapshot(snap => {
+    const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     const prevCount = onlineChatMessages.length;
     const isFirstLoad = !onlineChatEverLoaded;
     onlineChatEverLoaded = true;
@@ -907,10 +887,7 @@ function attachOnlineChat() {
 }
 
 function detachOnlineChat() {
-  if (onlineRoomRef && onlineChatListener) {
-    onlineRoomRef.child('messages').off('value', onlineChatListener);
-    onlineChatListener = null;
-  }
+  if (onlineChatUnsub) { onlineChatUnsub(); onlineChatUnsub = null; }
   onlineChatMessages = [];
   onlineChatOpen = false;
   onlineChatUnread = 0;
@@ -920,39 +897,28 @@ function detachOnlineChat() {
 function sendOnlineChatMessage(text) {
   const trimmed = (text || '').trim().slice(0, 200);
   if (!trimmed || !onlineRoomRef || !onlineMyTeam) return;
-  onlineRoomRef.child('messages').push({
+  onlineRoomRef.collection('messages').add({
     from: onlineMyTeam,
     text: trimmed,
-    at: firebase.database.ServerValue.TIMESTAMP,
+    at: firebase.firestore.FieldValue.serverTimestamp(),
   });
 }
 
 function toggleOnlineChat() {
   onlineChatOpen = !onlineChatOpen;
   if (onlineChatOpen) onlineChatUnread = 0;
-  render(); // toggles the panel's open/closed class — structural, needs a full render
+  render();
 }
+
 function renderChatPanel() {
   const messagesEl = document.getElementById('chat-messages');
   const chatFab = document.getElementById('chat-fab-btn');
-
-  // If the chat panel isn't in the DOM at all (different screen, first paint,
-  // panel just opened for the first time), there's nothing to surgically
-  // update — fall back to a normal full render.
-  if (!messagesEl) {
-    render();
-    return;
-  }
-
-  // Surgical update: only replace the messages list and the unread badge.
-  // The <input> is never touched, so whatever the user is mid-typing survives
-  // untouched — no need to save/restore a "draft" value at all.
+  if (!messagesEl) { render(); return; }
   const wasScrolledToBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 20;
   messagesEl.innerHTML = onlineChatMessages.length === 0
     ? `<div class="chat-empty">Todavía no hay mensajes. ¡Decí algo!</div>`
     : onlineChatMessages.map(m => `<div class="chat-msg ${m.from === onlineMyTeam ? 'mine' : 'theirs'}">${escapeHtml(m.text)}</div>`).join('');
   if (wasScrolledToBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
-
   if (chatFab) {
     chatFab.innerHTML = `💬${onlineChatUnread > 0 ? `<span class="chat-fab-badge">${onlineChatUnread > 9 ? '9+' : onlineChatUnread}</span>` : ''}`;
   }
@@ -964,78 +930,68 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+// ── Room creation / joining ──────────────────────────────────────────────────
+
 async function onlineCreateRoom(homeTeam, duration) {
   const code = generateRoomCode();
   onlineRoomId = code;
   onlineMyTeam = 'home';
   onlineIsHost = true;
-  onlineRoomRef = db.ref('rooms/' + code);
-
+  onlineRoomRef = db.collection('rooms').doc(code);
   const turnDur = duration <= 5 ? (duration <= 2 ? 10 : 20) : TURN_DURATION;
 
   await onlineRoomRef.set({
     status: 'waiting',
-    homeTeam: serializeState(homeTeam),
+    homeTeam: sanitizeForFirestore(homeTeam),
     duration,
     gameState: null,
-    createdAt: Date.now(),
-  }).then(() => console.log('[Hexagol Online] Sala creada:', code))
-    .catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  }).catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
 
-  // Auto-delete room after 10 minutes
-  setTimeout(() => { if (onlineRoomRef) onlineRoomRef.remove().catch(() => {}); }, 600000);
+  console.log('[Hexagol Online] Sala creada:', code);
+
+  // Auto-delete after 30 minutes (generous for a long match)
+  setTimeout(() => { if (onlineRoomRef) onlineRoomRef.delete().catch(() => {}); }, 1800000);
 
   onlineStatus = 'waiting';
   currentMenuView = 'online-waiting';
   render();
 
-  // Watch for guest joining — fires once when status changes to 'playing'.
-  // By then the guest has also written their own chosen team to the room
-  // (see onlineJoinRoom), so we read it from there instead of guessing it.
-  onlineStatusListener = onlineRoomRef.child('status').on('value', async snap => {
-    console.log('[Hexagol Online] Status listener fired:', snap.val());
-    if (snap.val() !== 'playing') return;
-    // Stop listening to status
-    onlineRoomRef.child('status').off('value', onlineStatusListener);
-    onlineStatusListener = null;
+  // Watch for guest joining
+  onlineStatusUnsub = onlineRoomRef.onSnapshot(async snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    if (data.status !== 'playing') return;
+    if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; }
 
     onlineStatus = 'connected';
 
-    const roomSnap = await onlineRoomRef.once('value');
-    const roomData = roomSnap.val() || {};
-    const guestTeam = roomData.awayTeam || TEAMS[1];
+    const guestTeam = data.awayTeam || TEAMS[1];
     const conflict = customKitsClash(
       { primaryColor: homeTeam.primaryColor, secondaryColor: homeTeam.secondaryColor },
       { primaryColor: guestTeam.primaryColor, secondaryColor: guestTeam.secondaryColor }
     );
-    let finalAwayTeam = guestTeam;
-    if (conflict) {
-      // Same conflict-resolution spirit as the original: nudge the away kit
-      // to white/dark so the two teams stay visually distinguishable.
-      finalAwayTeam = { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' };
-    }
+    const finalAwayTeam = conflict
+      ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
+      : guestTeam;
 
     const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration);
-
-    // Host writes the initial game state, stamped with a server timestamp
     state = initialState;
     window.state = state;
-    onlineLastSeenVersion = -1;
-    const initialPayload = serializeState(initialState);
-    initialPayload._v = firebase.database.ServerValue.TIMESTAMP;
-    onlineRoomRef.child('gameState').set(initialPayload).then(() => {
-      onlineRoomRef.child('gameState/_v').once('value', vsnap => {
-        const v = vsnap.val();
-        if (typeof v === 'number' && v > onlineLastSeenVersion) onlineLastSeenVersion = v;
-      });
-    }).catch(err => console.error('[Hexagol Online] Host: error escribiendo gameState:', err));
 
-    // Then start listening for state changes from guest
+    // Attach the listener BEFORE writing to Firestore. This ensures the
+    // listener is active when our write comes back: while the write is in flight,
+    // hasPendingWrites=true so we skip it (it's our own echo). Once confirmed,
+    // hasPendingWrites=false — but since the state came from us, it matches what
+    // we already have locally and applyRemoteState is a no-op in practice.
     attachOnlineStateListener();
     attachOnlineRematchListener(startOnlineRematch);
     attachOnlinePresence();
     attachOnlineChat();
     saveOnlineSession();
+
+    await onlineRoomRef.update({ gameState: sanitizeForFirestore(initialState) })
+      .catch(err => console.error('[Hexagol Online] Host: error escribiendo gameState:', err));
 
     currentMenuView = 'main';
     render();
@@ -1045,17 +1001,11 @@ async function onlineCreateRoom(homeTeam, duration) {
 }
 
 async function onlineJoinRoom(code, awayTeam) {
-  const ref = db.ref('rooms/' + code.toUpperCase());
-  const snap = await ref.once('value');
-  if (!snap.exists()) {
-    alert('Sala no encontrada. Revisá el código e intentá de nuevo.');
-    return;
-  }
-  const data = snap.val();
-  if (data.status !== 'waiting') {
-    alert('Esa sala ya está en juego o no existe.');
-    return;
-  }
+  const ref = db.collection('rooms').doc(code.toUpperCase());
+  const snap = await ref.get();
+  if (!snap.exists) { alert('Sala no encontrada. Revisá el código e intentá de nuevo.'); return; }
+  const data = snap.data();
+  if (data.status !== 'waiting') { alert('Esa sala ya está en juego o no existe.'); return; }
 
   onlineRoomId = code.toUpperCase();
   onlineMyTeam = 'away';
@@ -1063,14 +1013,9 @@ async function onlineJoinRoom(code, awayTeam) {
   onlineRoomRef = ref;
   onlineStatus = 'connected';
 
-  // Write our chosen team first, then signal 'playing' — the host's status
-  // listener reads awayTeam from the room once it sees that flag flip, so
-  // this write must land before that update goes out.
-  await ref.update({ awayTeam: serializeState(awayTeam), status: 'playing' })
-    .then(() => console.log('[Hexagol Online] Guest: status actualizado a playing'))
+  await ref.update({ awayTeam: sanitizeForFirestore(awayTeam), status: 'playing' })
     .catch(err => { console.error('[Hexagol Online] Guest: error actualizando status:', err); alert('Error al unirse: ' + err.message); });
 
-  // Guest listens for state — host will write initial state shortly
   attachOnlineStateListener();
   attachOnlineRematchListener(startOnlineRematch);
   attachOnlinePresence();
@@ -1078,7 +1023,7 @@ async function onlineJoinRoom(code, awayTeam) {
   saveOnlineSession();
 
   currentMenuView = 'online-waiting';
-  render(); // Show "esperando..." while host writes the state
+  render();
   startClock();
   startTurnTimer();
 }
@@ -1088,10 +1033,20 @@ async function onlineQuickMatch(homeTeam, duration) {
   currentMenuView = 'online-searching';
   render();
 
-  const openRooms = await db.ref('rooms').orderByChild('status').equalTo('waiting').limitToFirst(5).once('value');
+  const snap = await db.collection('rooms')
+    .where('status', '==', 'waiting')
+    .orderBy('createdAt', 'asc')
+    .limit(5)
+    .get();
+
   let found = null;
-  openRooms.forEach(child => {
-    if (!found && child.val().createdAt > Date.now() - 300000) found = child.key;
+  const cutoff = Date.now() - 300000;
+  snap.forEach(doc => {
+    if (!found) {
+      const d = doc.data();
+      const createdAt = d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : 0;
+      if (createdAt > cutoff) found = doc.id;
+    }
   });
 
   if (found) {
@@ -1101,87 +1056,65 @@ async function onlineQuickMatch(homeTeam, duration) {
   }
 }
 
-function attachOnlineStateListener() {
-  if (onlineStateListener) {
-    onlineRoomRef.child('gameState').off('value', onlineStateListener);
-  }
-  onlineStateListener = onlineRoomRef.child('gameState').on('value', snap => {
-    if (!snap.exists()) return;
-    const remote = snap.val();
-    if (!remote || !remote.gamePhase) return;
-    // Ignore our own echo: Firebase always re-fires the listener with the data
-    // we just wrote ourselves. _v is a server-assigned timestamp (consistent
-    // across both clients, unlike a local counter), so a value we've already
-    // applied is either that echo or a stale out-of-order packet.
-    const remoteVersion = typeof remote._v === 'number' ? remote._v : -1;
-    if (remoteVersion <= onlineLastSeenVersion) return;
-    onlineLastSeenVersion = remoteVersion;
-    applyRemoteState(remote);
-  }, err => console.error('[Hexagol Online] Error en listener de gameState:', err));
-}
-
-function pushOnlineState(s) {
-  if (onlineRoomRef && onlineStatus === 'connected' && !onlineApplyingRemote) {
-    const payload = serializeState(s);
-    // Use a server-assigned timestamp as the version stamp. A local counter would
-    // start independently at 0 on each client (host and guest), so their version
-    // numbers collide instead of strictly increasing — causing every other turn's
-    // update to be wrongly discarded as "already seen".
-    payload._v = firebase.database.ServerValue.TIMESTAMP;
-    const pushedAt = Date.now();
-    onlineRoomRef.child('gameState').set(payload).then(() => {
-      console.log('[Hexagol Sync] Push confirmed by server. round-trip (ms):', Date.now() - pushedAt, 'turnCount:', s.turnCount, 'gamePhase:', s.gamePhase);
-    }).catch(err => console.error('[Hexagol Sync] Push failed:', err));
-    // Note: we don't need a separate read-back of the resolved timestamp here —
-    // the main gameState listener in attachOnlineStateListener() receives this
-    // exact write as its own echo and updates onlineLastSeenVersion from it
-    // already. Adding a second round-trip here only added latency to every move
-    // without buying anything.
-  }
-}
-
-function isMyOnlineTurn(s) {
-  if (s.gameMode !== 'online') return true;
-  return s.currentPlayer === onlineMyTeam;
-}
-
-/* ---------------- Presence / disconnect detection ---------------- */
-// Each player writes their own presence node and registers an onDisconnect()
-// handler with the server: if their connection drops for any reason (closed
-// tab, lost network, crashed browser) the server itself flips their node to
-// disconnected — this fires reliably even if the client never gets a chance
-// to run any of its own cleanup code, which a purely client-side "goodbye"
-// message could never guarantee.
-let onlinePresenceListener = null;
+// ── Presence / disconnect ────────────────────────────────────────────────────
+// Firestore doesn't have onDisconnect() natively. We emulate presence using
+// a separate field in the room document that gets written on connect and on
+// window beforeunload/visibilitychange. Not as bulletproof as RTDB onDisconnect,
+// but reliable enough for a game session. For production, Cloud Functions with
+// RTDB presence triggers would be the proper solution.
+let onlinePresenceUnsub = null;
 let onlineOpponentDisconnected = false;
+let onlinePresenceHeartbeatHandle = null;
 
 function attachOnlinePresence() {
   if (!onlineRoomRef || !onlineMyTeam) return;
-  const myPresenceRef = onlineRoomRef.child('presence/' + onlineMyTeam);
   const opponentTeam = onlineMyTeam === 'home' ? 'away' : 'home';
-  const opponentPresenceRef = onlineRoomRef.child('presence/' + opponentTeam);
 
-  // Mark ourselves online, and tell the server what to write if we vanish.
-  myPresenceRef.onDisconnect().set({ online: false, leftAt: firebase.database.ServerValue.TIMESTAMP });
-  myPresenceRef.set({ online: true, leftAt: null });
+  // Mark ourselves online
+  onlineRoomRef.update({ [`presence.${onlineMyTeam}`]: { online: true, at: firebase.firestore.FieldValue.serverTimestamp() } });
 
-  // Watch the opponent's presence node.
-  if (onlinePresenceListener) opponentPresenceRef.off('value', onlinePresenceListener);
-  onlinePresenceListener = opponentPresenceRef.on('value', snap => {
-    const presence = snap.val();
+  // Heartbeat every 8 seconds so the opponent can detect a stale presence
+  if (onlinePresenceHeartbeatHandle) clearInterval(onlinePresenceHeartbeatHandle);
+  onlinePresenceHeartbeatHandle = setInterval(() => {
+    if (onlineRoomRef && onlineStatus === 'connected') {
+      onlineRoomRef.update({ [`presence.${onlineMyTeam}`]: { online: true, at: firebase.firestore.FieldValue.serverTimestamp() } })
+        .catch(() => {});
+    }
+  }, 8000);
+
+  // Mark offline when leaving
+  window.addEventListener('beforeunload', onlinePresenceBeforeUnload);
+
+  // Watch opponent presence field
+  if (onlinePresenceUnsub) { onlinePresenceUnsub(); onlinePresenceUnsub = null; }
+  onlinePresenceUnsub = onlineRoomRef.onSnapshot(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    if (!data || !data.presence) return;
+    const oppPresence = data.presence[opponentTeam];
+    if (!oppPresence) return;
     const wasDisconnected = onlineOpponentDisconnected;
-    onlineOpponentDisconnected = !!presence && presence.online === false;
+    // Consider disconnected if online is false OR if last heartbeat was >20 seconds ago
+    const lastAt = oppPresence.at && oppPresence.at.toMillis ? oppPresence.at.toMillis() : Date.now();
+    const isStale = Date.now() - lastAt > 20000;
+    onlineOpponentDisconnected = oppPresence.online === false || isStale;
     if (onlineOpponentDisconnected && !wasDisconnected) {
       handleOpponentDisconnected();
     } else if (!onlineOpponentDisconnected && wasDisconnected) {
-      render(); // opponent reconnected — clear the banner
+      render();
     }
   });
 }
 
+function onlinePresenceBeforeUnload() {
+  if (onlineRoomRef && onlineMyTeam) {
+    navigator.sendBeacon && navigator.sendBeacon('', ''); // no-op, just ensures sync
+    onlineRoomRef.update({ [`presence.${onlineMyTeam}`]: { online: false, at: firebase.firestore.FieldValue.serverTimestamp() } })
+      .catch(() => {});
+  }
+}
+
 function handleOpponentDisconnected() {
-  // Only meaningful mid-match — if the game already ended or we're back at the
-  // menu, there's nothing to award or announce.
   if (state.gameMode !== 'online') { render(); return; }
   if (['main-menu', 'game-over'].includes(state.gamePhase)) { render(); return; }
   const opponentTeam = onlineMyTeam === 'home' ? 'away' : 'home';
@@ -1197,125 +1130,107 @@ function handleOpponentDisconnected() {
 }
 
 function detachOnlinePresence() {
+  if (onlinePresenceUnsub) { onlinePresenceUnsub(); onlinePresenceUnsub = null; }
+  if (onlinePresenceHeartbeatHandle) { clearInterval(onlinePresenceHeartbeatHandle); onlinePresenceHeartbeatHandle = null; }
+  window.removeEventListener('beforeunload', onlinePresenceBeforeUnload);
   if (onlineRoomRef && onlineMyTeam) {
-    const opponentTeam = onlineMyTeam === 'home' ? 'away' : 'home';
-    if (onlinePresenceListener) {
-      onlineRoomRef.child('presence/' + opponentTeam).off('value', onlinePresenceListener);
-      onlinePresenceListener = null;
-    }
-    // Cancel our own onDisconnect hook and mark ourselves cleanly offline —
-    // this is a normal "I left on purpose" exit, not a presumed disconnect.
-    const myPresenceRef = onlineRoomRef.child('presence/' + onlineMyTeam);
-    myPresenceRef.onDisconnect().cancel();
-    myPresenceRef.set({ online: false, leftAt: firebase.database.ServerValue.TIMESTAMP });
+    onlineRoomRef.update({ [`presence.${onlineMyTeam}`]: { online: false, at: firebase.firestore.FieldValue.serverTimestamp() } })
+      .catch(() => {});
   }
   onlineOpponentDisconnected = false;
 }
 
-/* ---------------- Rematch ---------------- */
-// Lives in its own Firebase node (rooms/{code}/rematch), separate from gameState,
-// since gameState gets fully overwritten on every single move — a rematch
-// request needs to persist independently of whatever move is currently syncing.
-let onlineRematchListener = null;
+// ── Rematch ──────────────────────────────────────────────────────────────────
+let onlineRematchUnsub = null;
 let onlineRematchRequestedByMe = false;
+let onlineIncomingRematchFrom = null;
 
 function attachOnlineRematchListener(onRematchReady) {
   if (!onlineRoomRef) return;
-  if (onlineRematchListener) onlineRoomRef.child('rematch').off('value', onlineRematchListener);
-  onlineRematchListener = onlineRoomRef.child('rematch').on('value', snap => {
-    const rematch = snap.val();
+  if (onlineRematchUnsub) { onlineRematchUnsub(); onlineRematchUnsub = null; }
+  onlineRematchUnsub = onlineRoomRef.onSnapshot(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    const rematch = data && data.rematch;
     if (!rematch) return;
     if (rematch.requestedBy && rematch.requestedBy !== onlineMyTeam) {
-      // Opponent asked for a rematch — show them a prompt to accept.
       state = { ...state, toastToShow: null };
       render();
       showRematchPrompt(rematch.requestedBy);
     }
-    if (rematch.accepted) {
-      onRematchReady();
-    }
+    if (rematch.accepted) onRematchReady();
   });
 }
 
 function requestOnlineRematch() {
   if (!onlineRoomRef) return;
   onlineRematchRequestedByMe = true;
-  onlineRoomRef.child('rematch').set({ requestedBy: onlineMyTeam, accepted: false, at: Date.now() });
+  onlineRoomRef.update({ rematch: { requestedBy: onlineMyTeam, accepted: false, at: firebase.firestore.FieldValue.serverTimestamp() } });
 }
 
 function acceptOnlineRematch() {
   if (!onlineRoomRef) return;
   onlineIncomingRematchFrom = null;
-  onlineRoomRef.child('rematch').update({ accepted: true });
+  onlineRoomRef.update({ 'rematch.accepted': true });
 }
 
 function declineOnlineRematch() {
   if (!onlineRoomRef) return;
   onlineIncomingRematchFrom = null;
-  onlineRoomRef.child('rematch').set(null);
+  onlineRoomRef.update({ rematch: null });
   onlineRematchRequestedByMe = false;
 }
 
 function clearOnlineRematchNode() {
-  if (onlineRoomRef) onlineRoomRef.child('rematch').set(null).catch(() => {});
+  if (onlineRoomRef) onlineRoomRef.update({ rematch: null }).catch(() => {});
   onlineRematchRequestedByMe = false;
   onlineIncomingRematchFrom = null;
 }
-
-let onlineIncomingRematchFrom = null; // 'home' | 'away' | null — set when the opponent requests a rematch
 
 function showRematchPrompt(requestingTeam) {
   onlineIncomingRematchFrom = requestingTeam;
   render();
 }
 
-// Resets the board/score/clock for a fresh match but keeps the same room, teams,
-// and connection — so neither player needs a new code or to rejoin.
 function startOnlineRematch() {
   const fresh = getInitialState();
-  const turnDur = state.turnDuration;
-  const duration = state.halfDurationMinutes;
   const rematchState = {
     ...fresh,
     homeTeam: state.homeTeam, awayTeam: state.awayTeam,
     gameMode: 'online', gamePhase: 'pre-game-roll',
-    halfDurationMinutes: duration, gameClock: duration * 60,
-    turnDuration: turnDur, timer: turnDur,
+    halfDurationMinutes: state.halfDurationMinutes,
+    gameClock: state.halfDurationMinutes * 60,
+    turnDuration: state.turnDuration, timer: state.turnDuration,
     message: 'Revancha. Tiren los dados para decidir quién empieza.',
   };
   clearOnlineRematchNode();
-  if (onlineIsHost) {
-    setState(() => rematchState);
-  }
-  // Non-host clients just wait for the host's pushed state to arrive via the
-  // normal gameState listener — only one side should author the fresh state
-  // to avoid both clients racing to reset the match at once.
+  onlineReceivedFirstState = false; // treat the host's first write as authoritative again
+  if (onlineIsHost) setState(() => rematchState);
 }
 
-function serializeState(s) {
-  return JSON.parse(JSON.stringify(s));
-}
-function deserializeState(raw) {
-  try { return raw; } catch(e) { return null; }
+function serializeState(s) { return JSON.parse(JSON.stringify(s)); }
+function deserializeState(raw) { try { return raw; } catch(e) { return null; } }
+
+function isMyOnlineTurn(s) {
+  if (s.gameMode !== 'online') return true;
+  return s.currentPlayer === onlineMyTeam;
 }
 
 function leaveOnlineRoom() {
   detachOnlinePresence();
   detachOnlineChat();
   clearOnlineSession();
-  if (onlineRoomRef) {
-    if (onlineStateListener) { onlineRoomRef.child('gameState').off('value', onlineStateListener); onlineStateListener = null; }
-    if (onlineStatusListener) { onlineRoomRef.child('status').off('value', onlineStatusListener); onlineStatusListener = null; }
-    if (onlineRematchListener) { onlineRoomRef.child('rematch').off('value', onlineRematchListener); onlineRematchListener = null; }
-    if (onlineIsHost) onlineRoomRef.remove().catch(() => {});
-    onlineRoomRef = null;
-  }
+  if (onlineStateUnsub) { onlineStateUnsub(); onlineStateUnsub = null; }
+  if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; }
+  if (onlineRematchUnsub) { onlineRematchUnsub(); onlineRematchUnsub = null; }
+  if (onlineRoomRef && onlineIsHost) onlineRoomRef.delete().catch(() => {});
+  onlineRoomRef = null;
   onlineRoomId = null;
   onlineMyTeam = null;
   onlineIsHost = false;
   onlineStatus = 'idle';
   onlineApplyingRemote = false;
-  onlineLastSeenVersion = -1;
+  onlineReceivedFirstState = false;
   onlineRematchRequestedByMe = false;
   onlineIncomingRematchFrom = null;
 }
@@ -6629,16 +6544,14 @@ checkForReconnectableSession();
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState !== 'visible') return;
   if (state.gameMode !== 'online' || !onlineRoomRef || onlineStatus !== 'connected') return;
-  onlineRoomRef.child('gameState').once('value', snap => {
-    if (!snap.exists()) return;
-    const remote = snap.val();
-    if (!remote || !remote.gamePhase) return;
-    const remoteVersion = typeof remote._v === 'number' ? remote._v : -1;
-    // Always resync on refocus even if the version looks "already seen" — the
-    // background tab's own state may be stale relative to what it last pushed.
-    onlineLastSeenVersion = Math.max(onlineLastSeenVersion, remoteVersion);
-    applyRemoteState(remote);
-  });
+  // Force a fresh read when the tab regains focus — Firestore's onSnapshot
+  // listener may have been suspended by the browser while the tab was hidden.
+  onlineRoomRef.get().then(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    if (!data || !data.gameState || !data.gameState.gamePhase) return;
+    applyRemoteState(data.gameState);
+  }).catch(() => {});
 });
 </script>
 </body>
