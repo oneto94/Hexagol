@@ -110,6 +110,58 @@
     .panel { max-height: 40vh; }
   }
 
+  /* ── Mobile game layout (≤600px) ─────────────────────────────────────────
+     On small screens:
+     • Stats and log are hidden — give all space to the board
+     • Scoreboard sits below the board in a compact horizontal strip
+     • Dice panel stays visible but compact                                */
+  @media (max-width: 600px) {
+    .game-layout {
+      grid-template-columns: 1fr;
+      grid-template-rows: 1fr auto;
+      gap: 6px;
+    }
+
+    /* Board gets as much height as possible */
+    .board-wrap { padding: 4px; border-radius: 12px; }
+    .board-message { font-size: 0.76rem; padding: 4px 8px; margin-bottom: 4px; }
+
+    /* Side panel: compact strip below the board */
+    .panel {
+      border-radius: 12px;
+      padding: 8px 10px;
+      gap: 6px;
+      max-height: none;
+      overflow: visible;
+    }
+
+    /* Hide stats and log entirely */
+    .panel-stats-section,
+    .panel-log-section { display: none !important; }
+
+    /* Scoreboard compact */
+    .mini-scoreboard { gap: 6px; }
+    .mini-team-name { font-size: 0.72rem; }
+    .mini-score { font-size: 1.3rem; }
+    .mini-meta { margin-top: 4px; padding-top: 4px; font-size: 0.6rem; gap: 4px 8px; }
+
+    /* Timer row stays visible */
+    .turn-timer-row { margin-top: 4px; }
+
+    /* Dice panel compact */
+    .dice-panel { padding: 8px 10px; }
+    .dice-panel h3 { font-size: 0.8rem; }
+    .dice-face { width: 36px; height: 36px; font-size: 0.95rem; }
+    .btn { padding: 8px 14px; font-size: 0.8rem; }
+    .btn-row { margin-top: 4px; }
+
+    /* Situation banners smaller */
+    .situation-banner { font-size: 0.72rem; padding: 6px 10px; }
+
+    /* Chat FAB position */
+    .chat-fab { bottom: 12px; right: 12px; width: 44px; height: 44px; font-size: 1.1rem; }
+  }
+
   .board-wrap {
     background: #eef3ea;
     border-radius: 18px;
@@ -738,8 +790,18 @@ function applyRemoteState(remote) {
   const prevTurnCount = state.turnCount;
   const remoteIsNewTurn = !isFirstState && remote.turnCount !== prevTurnCount;
   const prev = state;
+
+  // Preserve rolls we already made locally during pre-game: if we (home or away)
+  // already rolled, don't let a snapshot from the opponent (who may not have
+  // received our roll yet) overwrite our side's result with null.
+  const myRollField = onlineMyTeam === 'home' ? 'homeRoll' : 'awayRoll';
+  const preservedRoll = (!isFirstState && state[myRollField] !== null && state[myRollField] !== undefined)
+    ? { [myRollField]: state[myRollField] }
+    : {};
+
   state = {
     ...remote,
+    ...preservedRoll,
     gameClock: isFirstState ? remote.gameClock : state.gameClock,
     timer: isFirstState || remoteIsNewTurn
       ? (remote.turnDuration || state.turnDuration)
@@ -5557,7 +5619,7 @@ function renderGameScreen(s) {
         <div class="mini-meta"><span class="clock" id="match-clock">⏱ ${formatClock(s.gameClock)}</span><span>${s.half}er T.</span><span>Turno ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? 'Silenciar sonido' : 'Activar sonido'}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa'}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
       </div>
       ${s.gameMode === 'tutorial' ? renderTutorialPanel(s) : s.gameMode === 'training' ? renderSandboxPanel(s) : renderDicePanel(s)}
-      <div>
+      <div class="panel-stats-section">
         <h3>Estadísticas</h3>
         <div class="stats-grid" style="margin-top:6px;">
           <div class="val home">${possHomePct}%</div><div class="label">Posesión</div><div class="val away">${100-possHomePct}%</div>
@@ -5565,7 +5627,7 @@ function renderGameScreen(s) {
           <div class="val home">${s.stats.offsides.home}</div><div class="label">Offsides</div><div class="val away">${s.stats.offsides.away}</div>
         </div>
       </div>
-      <div style="display:flex; flex-direction:column; flex:1; min-height:0;">
+      <div class="panel-log-section" style="display:flex; flex-direction:column; flex:1; min-height:0;">
         <h3>Jugadas</h3>
         <ul class="log-list">
           ${s.gameLog.slice().reverse().map(e => `<li class="${e.team || ''} ${e.actionType === 'goal' ? 'goal' : ''}"><span class="turn-tag">T${e.turn}</span>${e.message}</li>`).join('')}
