@@ -749,7 +749,20 @@ function applyRemoteState(remote) {
   window.state = state;
   playSoundsForTransition(prev, state);
   currentMenuView = 'main';
+  // Preserve whatever the user is mid-typing in the chat input — render()
+  // replaces the whole DOM so the <input> gets destroyed and recreated,
+  // wiping any draft. Save and restore it around the render call.
+  const chatInput = document.getElementById('chat-input');
+  const chatDraft = chatInput ? chatInput.value : '';
+  const chatHadFocus = chatInput === document.activeElement;
   render();
+  if (chatDraft) {
+    const newChatInput = document.getElementById('chat-input');
+    if (newChatInput) {
+      newChatInput.value = chatDraft;
+      if (chatHadFocus) newChatInput.focus();
+    }
+  }
 }
 
 function pushOnlineState(s) {
@@ -763,17 +776,22 @@ function pushOnlineState(s) {
 
 function attachOnlineStateListener() {
   if (onlineStateUnsub) { onlineStateUnsub(); onlineStateUnsub = null; }
+  let lastSeenStateKey = '';
   onlineStateUnsub = onlineRoomRef.onSnapshot({ includeMetadataChanges: true }, snap => {
     if (!snap.exists) return;
-    // hasPendingWrites is true when this snapshot was triggered by our OWN
-    // local write before the server has confirmed it. In that case we already
-    // have the correct state locally (we set it before calling pushOnlineState),
-    // so we can safely skip it. We only want to apply snapshots from the SERVER
-    // (i.e. from the other player's writes), which have hasPendingWrites: false.
     if (snap.metadata.hasPendingWrites) return;
     const data = snap.data();
     if (!data || !data.gameState || !data.gameState.gamePhase) return;
-    applyRemoteState(data.gameState);
+    const gs = data.gameState;
+    // Build a key from fields that change with every real game event.
+    // Presence heartbeats update the room doc every 8s but never touch
+    // gameState, so Firestore won't fire the snapshot for them at all —
+    // the check here is a second line of defense for edge cases where
+    // the same gameState arrives twice (e.g. reconnection resync).
+    const key = `${gs.turnCount}|${gs.gamePhase}|${gs.homeRoll}|${gs.awayRoll}|${JSON.stringify(gs.score)}|${gs.lastPlayerToTouchBallId}`;
+    if (key === lastSeenStateKey) return;
+    lastSeenStateKey = key;
+    applyRemoteState(gs);
   }, err => console.error('[Hexagol Online] Snapshot error:', err));
 }
 
