@@ -153,6 +153,10 @@
 
     /* Chat FAB: smaller, closer to corner */
     .chat-fab { bottom: 6px; right: 6px; width: 34px; height: 34px; font-size: 0.9rem; }
+
+    /* Pre-game roll: horizontal, both buttons side by side */
+    .pregame-roll-row { flex-direction: row !important; gap: 4px; }
+    .pregame-roll-btn { flex: 1; font-size: 0.62rem !important; padding: 4px 4px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   }
 
   .board-wrap {
@@ -5742,12 +5746,12 @@ function renderDicePanel(s) {
     return `
     <div class="dice-panel">
       <h3>Sorteo inicial</h3>
-      <div style="font-size:0.78rem; color:#6b7a64; margin:2px 0 8px;">Quien saque más alto empieza con el balón.</div>
-      <div class="btn-row" style="flex-direction:column;">
-        <button class="btn team-btn" id="roll-pre-home" style="width:100%; ${teamButtonStyle(s.homeTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='home') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 Tirar por ${homeName}${s.homeRoll !== null ? ` — salió ${s.homeRoll}` : ''}</button>
-        <button class="btn team-btn" id="roll-pre-away" style="width:100%; ${teamButtonStyle(s.awayTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='away') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 Tirar por ${awayName}${s.awayRoll !== null ? ` — salió ${s.awayRoll}` : ''}</button>
+      <div style="font-size:0.78rem; color:#6b7a64; margin:2px 0 6px;">Quien saque más alto empieza con el balón.</div>
+      <div class="btn-row pregame-roll-row">
+        <button class="btn team-btn pregame-roll-btn" id="roll-pre-home" style="${teamButtonStyle(s.homeTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='home') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${homeName}${s.homeRoll !== null ? ` — ${s.homeRoll}` : ''}</button>
+        <button class="btn team-btn pregame-roll-btn" id="roll-pre-away" style="${teamButtonStyle(s.awayTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='away') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${awayName}${s.awayRoll !== null ? ` — ${s.awayRoll}` : ''}</button>
       </div>
-      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:8px;">⏳ Empezando partido...</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:6px;">🤖 La computadora tira automáticamente.</div>` : '')}
+      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ Empezando partido...</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:4px;">🤖 La computadora tira automáticamente.</div>` : '')}
     </div>`;
   }
 
