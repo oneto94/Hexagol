@@ -111,76 +111,48 @@
   }
 
   /* ── Mobile game layout (≤600px) ──────────────────────────────────────────
-     Board takes ~70% of screen height. Panel is a fixed compact strip below. */
+     Board takes ~80% of screen height. Panel is a minimal strip below.      */
   @media (max-width: 600px) {
-    .game-layout {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr auto;
-      gap: 4px;
-    }
+    .game-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; gap: 3px; }
 
-    /* Board: minimal padding, maximum space */
-    .board-wrap { padding: 3px; border-radius: 10px; }
-    .board-message { font-size: 0.7rem; padding: 3px 7px; margin-bottom: 3px; min-height: 0; }
-    .situation-banner { font-size: 0.68rem; padding: 4px 8px; margin-bottom: 3px; }
+    /* Board: zero padding, maximum space */
+    .board-wrap { padding: 2px; border-radius: 8px; gap: 2px; }
+    .board-message { font-size: 0.65rem; padding: 2px 6px; margin-bottom: 2px; min-height: 0; border-radius: 6px; }
+    .situation-banner { font-size: 0.62rem; padding: 3px 6px; margin-bottom: 2px; }
 
-    /* Panel: fixed compact strip — never grows beyond 28vh */
-    .panel {
-      max-height: 28vh;
-      min-height: 0;
-      border-radius: 10px;
-      padding: 5px 8px;
-      gap: 4px;
-      overflow: hidden;
-      flex-direction: column;
-    }
+    /* Panel: hard cap at 20vh */
+    .panel { max-height: 20vh; min-height: 0; border-radius: 8px; padding: 3px 6px; gap: 2px; overflow: hidden; }
 
-    /* Hide stats and log entirely */
-    .panel-stats-section,
-    .panel-log-section { display: none !important; }
+    /* Hide stats, log, and dice panel title */
+    .panel-stats-section, .panel-log-section { display: none !important; }
+    .dice-panel h3 { display: none !important; }
 
-    /* Scoreboard + dice side by side to save vertical space */
-    .mini-scoreboard {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 0;
-      flex-wrap: nowrap;
-    }
-    .mini-team {
-      flex: 1;
-      flex-direction: row;
-      align-items: center;
-      gap: 4px;
-      justify-content: center;
-    }
-    .mini-team-name { font-size: 0.65rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px; }
-    .mini-score { font-size: 1.1rem; font-weight: 900; min-width: 18px; text-align: center; }
-    .kit-dot { width: 9px; height: 9px; flex-shrink: 0; }
-    .mini-meta {
-      margin-top: 2px; padding-top: 2px;
-      font-size: 0.55rem; gap: 3px 6px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    .sound-toggle-btn, .fullscreen-btn { font-size: 0.75rem; padding: 0 2px; }
+    /* Scoreboard: single tight horizontal line */
+    .mini-scoreboard { display: flex; flex-direction: row; align-items: center; gap: 4px; }
+    .mini-team { flex: 1; flex-direction: row; align-items: center; gap: 3px; justify-content: center; }
+    .mini-team-name { font-size: 0.58rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 52px; }
+    .mini-score { font-size: 0.95rem; font-weight: 900; min-width: 14px; text-align: center; }
+    .kit-dot { width: 7px; height: 7px; flex-shrink: 0; }
+    .mini-meta { margin-top: 1px; padding-top: 1px; font-size: 0.5rem; gap: 2px 5px; border-top: none; }
+    .sound-toggle-btn { display: none; }
+    .fullscreen-btn { font-size: 0.65rem; padding: 0 1px; }
 
-    /* Turn timer ultra compact */
-    .turn-timer-row { margin-top: 3px; gap: 5px; }
-    .turn-timer-bar { height: 4px; }
-    .turn-timer-label { font-size: 0.62rem; min-width: 24px; }
+    /* Timer: hide the bar, keep only the number */
+    .turn-timer-row { margin-top: 1px; gap: 4px; }
+    .turn-timer-bar { display: none; }
+    .turn-timer-label { font-size: 0.58rem; min-width: 0; }
 
-    /* Dice panel: minimal height */
-    .dice-panel { padding: 5px 8px; border-radius: 8px; }
-    .dice-panel h3 { font-size: 0.7rem; margin-bottom: 3px; }
-    .dice-row { gap: 5px; }
-    .dice-face { width: 30px; height: 30px; font-size: 0.82rem; border-radius: 7px; }
+    /* Dice panel: absolute minimum */
+    .dice-panel { padding: 3px 6px; border-radius: 6px; }
+    .dice-row { gap: 4px; }
+    .dice-face { width: 26px; height: 26px; font-size: 0.76rem; border-radius: 6px; }
 
-    /* Buttons: very compact, horizontal */
-    .btn { padding: 5px 10px; font-size: 0.72rem; border-radius: 999px; }
-    .btn-row { gap: 4px; margin-top: 3px; }
+    /* Buttons: icon-size, minimal padding */
+    .btn { padding: 4px 8px; font-size: 0.66rem; border-radius: 999px; }
+    .btn-row { gap: 3px; margin-top: 2px; }
 
-    /* Chat FAB closer to edge on mobile */
-    .chat-fab { bottom: 8px; right: 8px; width: 38px; height: 38px; font-size: 1rem; }
+    /* Chat FAB: smaller, closer to corner */
+    .chat-fab { bottom: 6px; right: 6px; width: 34px; height: 34px; font-size: 0.9rem; }
   }
 
   .board-wrap {
@@ -809,22 +781,35 @@ function applyRemoteState(remote) {
   // chosen by the host, which the guest hasn't seen yet.
   const isFirstState = !onlineReceivedFirstState;
   const prevTurnCount = state.turnCount;
+  const prevHalf = state.half;
   const remoteIsNewTurn = !isFirstState && remote.turnCount !== prevTurnCount;
+  const remoteIsNewHalf = !isFirstState && remote.half !== prevHalf;
   const prev = state;
 
-  // Preserve rolls we already made locally during pre-game: if we (home or away)
-  // already rolled, don't let a snapshot from the opponent (who may not have
-  // received our roll yet) overwrite our side's result with null.
+  // Preserve rolls we already made locally during pre-game: if we already
+  // rolled our side, don't let a snapshot from the opponent (who hasn't
+  // received our roll yet) overwrite our result with null.
+  // BUT: if the remote state shows null for our side AND for the opponent
+  // (tie reset — both got nulled), don't preserve the old roll — both
+  // players need to re-roll from scratch.
   const myRollField = onlineMyTeam === 'home' ? 'homeRoll' : 'awayRoll';
-  const preservedRoll = (!isFirstState && state[myRollField] !== null && state[myRollField] !== undefined)
-    ? { [myRollField]: state[myRollField] }
-    : {};
+  const theirRollField = onlineMyTeam === 'home' ? 'awayRoll' : 'homeRoll';
+  const remoteResetBothRolls = remote[myRollField] === null && remote[theirRollField] === null;
+  const preservedRoll = (
+    !isFirstState &&
+    remote.gamePhase === 'pre-game-roll' &&
+    !remoteResetBothRolls &&
+    state[myRollField] !== null &&
+    state[myRollField] !== undefined
+  ) ? { [myRollField]: state[myRollField] } : {};
 
   state = {
     ...remote,
     ...preservedRoll,
-    gameClock: isFirstState ? remote.gameClock : state.gameClock,
-    timer: isFirstState || remoteIsNewTurn
+    // Use remote clock on first state (authoritative duration from host) OR
+    // when a new half starts (our local clock is at 0, remote has fresh duration).
+    gameClock: (isFirstState || remoteIsNewHalf) ? remote.gameClock : state.gameClock,
+    timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf
       ? (remote.turnDuration || state.turnDuration)
       : state.timer,
   };
@@ -5767,7 +5752,11 @@ function renderDicePanel(s) {
   }
 
   if (s.gamePhase === 'half-time') {
-    return `<div class="dice-panel"><h3>Medio tiempo</h3><button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">Comenzar 2do tiempo →</button></div>`;
+    return `<div class="dice-panel"><h3>Medio tiempo</h3>${
+      state.gameMode === 'online' && !onlineIsHost
+        ? `<div class="rematch-waiting">⏳ Esperando que el rival inicie el 2do tiempo...</div>`
+        : `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">Comenzar 2do tiempo →</button>`
+    }</div>`;
   }
   if (s.gamePhase === 'game-over') {
     if (s.gameMode === 'online') {
@@ -6255,18 +6244,23 @@ function wireEvents() {
   });
 
   const start2nd = document.getElementById('start-2nd-half-btn');
-  if (start2nd) start2nd.onclick = () => setState(s => {
-    const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(), secondHalfKickoff);
-    const kickoffTeamName = getTeamName(s, secondHalfKickoff);
-    const news = {
-      ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
-      currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
-      lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-      isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
-    };
-    return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
-  });
+  if (start2nd) start2nd.onclick = () => {
+    // In online mode only the host drives the second half start — same pattern
+    // as all other automatic game events (clock ending, kickoff winner, etc.)
+    if (state.gameMode === 'online' && !onlineIsHost) return;
+    setState(s => {
+      const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
+      const newPlayers = movePlayersForKickoff(getInitialPlayers(), secondHalfKickoff);
+      const kickoffTeamName = getTeamName(s, secondHalfKickoff);
+      const news = {
+        ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
+        currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
+        lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
+        isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
+      };
+      return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
+    });
+  };
 
   const backToMenu = document.getElementById('back-to-menu-btn');
   if (backToMenu) backToMenu.onclick = () => {
