@@ -3860,6 +3860,32 @@ function isDirectGoalTarget(pos, team) {
   return goal.some(g => g.x === pos.x && g.y === pos.y);
 }
 
+// Returns true if the bot has a clear unobstructed line from ballPos to any
+// opponent goal square, AND at least one bot player is adjacent to ballPos.
+// This is the "guaranteed goal next turn if rival rolls 0" check.
+function botHasDirectShotFromPos(ballPos, botTeam, allPlayers) {
+  if (!ballPos) return false;
+  const oppGoal = botTeam === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+  const botAdjacentToBall = allPlayers.some(p =>
+    p.team === botTeam && isAdjacent(p.position, ballPos));
+  if (!botAdjacentToBall) return false;
+
+  return oppGoal.some(g => {
+    const dx = Math.sign(g.x - ballPos.x);
+    const dy = Math.sign(g.y - ballPos.y);
+    if (dx === 0 && dy === 0) return false;
+    // Must be a straight line
+    if (g.x !== ballPos.x && g.y !== ballPos.y &&
+        Math.abs(g.x - ballPos.x) !== Math.abs(g.y - ballPos.y)) return false;
+    let cx = ballPos.x + dx, cy = ballPos.y + dy;
+    while (cx !== g.x || cy !== g.y) {
+      if (allPlayers.some(p => p.position.x === cx && p.position.y === cy)) return false;
+      cx += dx; cy += dy;
+    }
+    return true;
+  });
+}
+
 // Returns squares that the OPPONENT could reach to drag the ball from,
 // given any possible dice value (1-6). Used to detect drag threats so the
 // bot doesn't naively leave its ball exposed to a rival in the same line.
@@ -3955,16 +3981,24 @@ function humanHasDirectShotThreat(s) {
 function collectBallActionsForPlayer(s, player) {
   const actions = [];
   if (!s.diceValue || !s.ballPosition) return actions;
+
+  // Gap crítico 2: arquero dentro de su área usa dado×2 (igual que las reglas del juego)
+  const effectiveDice = (player.isGoalkeeper &&
+    isWithinGoalkeeperArea(player.position, player.team) &&
+    isWithinGoalkeeperArea(s.ballPosition, player.team))
+    ? s.diceValue * 2
+    : s.diceValue;
+
   if (isAdjacent(player.position, s.ballPosition)) {
-    const kickRes = getValidKickTargets(player, s.ballPosition, s.diceValue, s.players);
+    const kickRes = getValidKickTargets(player, s.ballPosition, effectiveDice, s.players);
     kickRes.validTargets.forEach(p => actions.push({ kind: 'kick', target: p }));
-    const lofted = getValidLoftedPassTargets(player, s.ballPosition, s.diceValue, s.players);
+    const lofted = getValidLoftedPassTargets(player, s.ballPosition, effectiveDice, s.players);
     const kickSet = new Set(kickRes.validTargets.map(p => `${p.x},${p.y}`));
     lofted.filter(p => !kickSet.has(`${p.x},${p.y}`)).forEach(p => actions.push({ kind: 'lofted-pass', target: p }));
   } else {
-    const dragRes = getValidDragTargets(player, s.diceValue, s.players, s.ballPosition);
+    const dragRes = getValidDragTargets(player, effectiveDice, s.players, s.ballPosition);
     dragRes.validTargets.forEach(p => actions.push({ kind: 'drag', target: p }));
-    const loftedDragRes = getValidLoftedDragTargets(player, s.diceValue, s.players, s.ballPosition);
+    const loftedDragRes = getValidLoftedDragTargets(player, effectiveDice, s.players, s.ballPosition);
     loftedDragRes.validTargets.forEach(p => actions.push({ kind: 'lofted-drag', target: p }));
   }
   return actions;
@@ -3986,9 +4020,23 @@ function scoreBallAction(s, player, action) {
   const ownGoalPositions = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
   if (ownGoalPositions.some(g => g.x === action.target.x && g.y === action.target.y)) return -9999;
 
-  // ── 2. Advancing toward opponent goal (recalibrated: higher weight) ──────
+  // ── 2. Advancing toward opponent goal ──────────────────────────────────
   const distGainToOppGoal = goalDistanceScore(s.ballPosition, team) - goalDistanceScore(action.target, team);
-  score += distGainToOppGoal * 20; // was 12 — now strong enough to compete with safety plays
+  score += distGainToOppGoal * 20;
+
+  // ── 2b. Direct shot setup — "guaranteed goal next turn" ──────────────────
+  // Only apply when NOT in defensive urgency (ball far from own goal).
+  // If ball is near our goal, clearance always takes priority.
+  const ballFarFromOwnGoal = !ownGoal.some(g =>
+    Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y) <= 6);
+  if (ballFarFromOwnGoal) {
+    const simulatedPlayers = action.kind === 'drag' || action.kind === 'lofted-drag'
+      ? s.players.map(p => p.id === player.id ? { ...p, position: action.target } : p)
+      : s.players;
+    if (botHasDirectShotFromPos(action.target, team, simulatedPlayers)) {
+      score += 350;
+    }
+  }
 
   // ── 3. Passing to a more advanced teammate (chain pass) ──────────────────
   const chainReceiver = s.players.find(p =>
@@ -4172,6 +4220,20 @@ function scoreMoveAction(s, player, target) {
   if (wouldBeAdjacent && !currentlyAdjacent) score += 20;
   if (wouldBeAdjacent) score += 8;
 
+  // ── Direct shot setup via positioning ───────────────────────────────────
+  // Only when ball is not near own goal — don't override defensive duties.
+  if (wouldBeAdjacent && ball) {
+    const ballFarFromOwnGoal = !ownGoal.some(g =>
+      Math.abs(g.x - ball.x) + Math.abs(g.y - ball.y) <= 6);
+    if (ballFarFromOwnGoal) {
+      const simulatedPlayers = s.players.map(p =>
+        p.id === player.id ? { ...p, position: target } : p);
+      if (botHasDirectShotFromPos(ball, team, simulatedPlayers)) {
+        score += 280;
+      }
+    }
+  }
+
   // ── Bug 5 fix: pre-position for next turn ────────────────────────────────
   // If teammate has the ball, move to a square adjacent to where they might
   // kick next (toward the opponent goal) to set up a chain pass.
@@ -4201,27 +4263,52 @@ function scoreMoveAction(s, player, target) {
   // ── Attacking movement ───────────────────────────────────────────────────
   if (weHavePossession) {
     const advance = (goalDistanceScore(player.position, team) - goalDistanceScore(target, team));
-    // Attackers push up more aggressively, defenders less
     score += advance * (isAttacking ? 7 : isDefensive ? 2 : 4);
   }
 
   // ── Defensive movement ───────────────────────────────────────────────────
   if (oppHasPossession && ball) {
+    // How far is the ball from our own goal?
+    const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+    const ballDistToOwnGoal = Math.abs(ball.y - ownGoalY);
+    const ballInOurHalf = team === 'home' ? ball.y > BOARD_HEIGHT * 0.5 : ball.y < BOARD_HEIGHT * 0.5;
+    const ballInOppHalf = !ballInOurHalf;
+
     const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
     const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
-    // Defenders chase harder, attackers stay ready for counter
-    score += (distBefore - distAfter) * (isDefensive ? 6 : isAttacking ? 2 : 4);
 
-    // Defensive players: stay between ball and own goal
-    if (isDefensive) {
-      const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
-      const betweenBallAndGoal = team === 'home'
-        ? target.y > ball.y && target.y < ownGoalY
-        : target.y < ball.y && target.y > ownGoalY;
-      if (betweenBallAndGoal) score += 10;
+    if (ballInOppHalf) {
+      // Ball is in opponent's half — only attackers should chase it.
+      // Defenders hold position; moving randomly is penalized.
+      if (isAttacking) {
+        score += (distBefore - distAfter) * 5;
+      } else if (isDefensive) {
+        // Defenders: hold a compact defensive shape, don't chase ball upfield
+        const targetDistToOwnGoal = Math.abs(target.y - ownGoalY);
+        const playerDistToOwnGoal = Math.abs(player.position.y - ownGoalY);
+        // Penalize moving further from own goal when ball is in opp half
+        if (targetDistToOwnGoal > playerDistToOwnGoal + 2) score -= 30;
+        // Reward staying compact (within 6 rows of own goal)
+        if (targetDistToOwnGoal <= 6) score += 8;
+      } else {
+        // Midfielders: moderate chase
+        score += (distBefore - distAfter) * 2;
+      }
+    } else {
+      // Ball is in our half — everyone defends, urgency increases with proximity to goal
+      const urgency = Math.max(1, Math.round(8 - ballDistToOwnGoal / 2));
+      score += (distBefore - distAfter) * (isDefensive ? urgency : isAttacking ? urgency * 0.4 : urgency * 0.7);
+
+      // Defensive players: stay between ball and own goal
+      if (isDefensive) {
+        const betweenBallAndGoal = team === 'home'
+          ? target.y > ball.y && target.y < ownGoalY
+          : target.y < ball.y && target.y > ownGoalY;
+        if (betweenBallAndGoal) score += 12;
+      }
     }
 
-    // Mark chain receivers
+    // Mark chain receivers regardless of ball position
     const oppsAdj = s.players.filter(p => p.team === oppTeam && isAdjacent(p.position, ball));
     if (oppsAdj.length > 0) {
       const chainReceivers = s.players.filter(p =>
@@ -4235,7 +4322,8 @@ function scoreMoveAction(s, player, target) {
   if (!weHavePossession && !oppHasPossession && ball) {
     const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
     const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
-    score += (distBefore - distAfter) * 3;
+    // Attackers chase harder in neutral; defenders more conservative
+    score += (distBefore - distAfter) * (isAttacking ? 5 : isDefensive ? 1 : 3);
   }
 
   // Avoid clustering
@@ -4318,31 +4406,52 @@ function evaluateChainSequence(s, ballPos, chainTeam, depth, maxDepth) {
 // Picks the bot's full move for the current turn: { playerId, kind: 'move'|'kick'|..., target }
 function pickBotMove(s) {
   const team = s.currentPlayer;
+  const oppTeam = team === 'home' ? 'away' : 'home';
   const difficulty = s.aiDifficulty || 'normal';
   const myPlayers = s.players.filter(p => p.team === team);
   const candidates = [];
-  const dangerSquares = difficulty === 'easy' ? [] : findShotThreatSquares(s);
+  const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const ball = s.ballPosition;
+
+  // Only compute danger squares when there's a real threat —
+  // if the ball is in the human's half, shot threats near our goal are irrelevant
+  const ballNearOwnGoal = ball && ownGoal.some(g =>
+    Math.abs(g.x - ball.x) + Math.abs(g.y - ball.y) <= 8);
+  const dangerSquares = (difficulty !== 'easy' && ballNearOwnGoal)
+    ? findShotThreatSquares(s) : [];
   const dangerKey = new Set(dangerSquares.map(p => `${p.x},${p.y}`));
 
-  // Detect drag threats: human players in line with the ball who could drag it
   const dragThreatPlayers = difficulty === 'easy' ? [] : findDragThreatPlayers(s);
   const dragThreatKeys = new Set(dragThreatPlayers.map(p => `${p.position.x},${p.position.y}`));
 
-  // Detect if human has a direct shot at our goal RIGHT NOW
+  // Detect direct shot threat
   const humanHasShot = difficulty !== 'easy' && humanHasDirectShotThreat(s);
+
+  // Problem 2: detect human chain pass threat
+  // Human has a chain threat if they have a player adjacent to the ball AND another
+  // player adjacent to THAT player who could continue toward our goal
+  const humanHasChainThreat = !humanHasShot && difficulty !== 'easy' && (() => {
+    if (!ball) return false;
+    const humanAdjacentToBall = s.players.filter(p =>
+      p.team === oppTeam && isAdjacent(p.position, ball));
+    if (humanAdjacentToBall.length === 0) return false;
+    return humanAdjacentToBall.some(p1 =>
+      s.players.some(p2 =>
+        p2.team === oppTeam && p2.id !== p1.id &&
+        isAdjacent(p2.position, p1.position) &&
+        goalDistanceScore(p2.position, oppTeam) < goalDistanceScore(p1.position, oppTeam)
+      )
+    );
+  })();
 
   myPlayers.forEach(player => {
     const ballActions = collectBallActionsForPlayer(s, player);
     ballActions.forEach(a => {
       if (isActionOffside(player, a.target, s.players, s.ballPosition)) return;
       let score = scoreBallAction(s, player, a);
-
-      // Bug fix 2: when human has direct shot, moving the ball is ALWAYS better
-      // than any move candidate — add a flat urgency bonus to all ball actions
       if (humanHasShot) score += 400;
+      if (humanHasChainThreat) score += 200; // moving ball breaks chain threat too
 
-      // Bug fix 1: penalize moving ball to a target where a drag-threat player
-      // is still in line — we'd just hand them the drag on the new position too
       if (s.ballPosition) {
         const directions = [
           { dx: 0, dy: -1 }, { dx: 1, dy: -1 }, { dx: 1, dy: 0 }, { dx: 1, dy: 1 },
@@ -4360,19 +4469,51 @@ function pickBotMove(s) {
           }
           return false;
         });
-        if (newDragThreats) score -= 40; // still a drag threat after the move
-        else if (dragThreatPlayers.length > 0) score += 30; // we escaped their drag range
+        if (newDragThreats) score -= 40;
+        else if (dragThreatPlayers.length > 0) score += 30;
       }
 
       candidates.push({ playerId: player.id, kind: a.kind, target: a.target, score });
     });
+
     if (s.diceValue) {
       const moves = getValidMoves(player, s.diceValue, s.players, s.ballPosition);
       moves.forEach(target => {
         let score = scoreMoveAction(s, player, target);
-        if (dangerKey.has(`${target.x},${target.y}`)) score += 200;
-        // If human has direct shot, don't just block — moving the ball is better
-        // (ball actions already get +400, so move candidates need no extra here)
+
+        const isOnDangerSquare = dangerKey.has(`${target.x},${target.y}`);
+        if (isOnDangerSquare) {
+          // Problem 3: prefer danger squares that ALSO bring player closer to ball
+          // A move that blocks AND approaches ball is worth much more than just blocking
+          let blockBonus = 200;
+          if (ball) {
+            const distToBallBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
+            const distToBallAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
+            const ballApproach = distToBallBefore - distToBallAfter;
+            blockBonus += ballApproach * 15; // approaching ball while blocking = dual purpose
+          }
+          // Problem 1: goalkeeper should not leave area just to block a danger square
+          // unless the ball is very close (already filtered by ballNearOwnGoal but add extra check)
+          if (player.isGoalkeeper) {
+            const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+            const targetInOwnArea = Math.abs(target.y - ownGoalY) <= 3;
+            if (!targetInOwnArea) blockBonus = Math.min(blockBonus, 50); // keeper stays back
+          }
+          score += blockBonus;
+        }
+
+        // Problem 2: bonus for moves that disrupt human chain pass setup
+        if (humanHasChainThreat && ball) {
+          const humanAdjacentToBall = s.players.filter(p =>
+            p.team === oppTeam && isAdjacent(p.position, ball));
+          const chainReceivers = s.players.filter(p =>
+            p.team === oppTeam &&
+            !humanAdjacentToBall.some(h => h.id === p.id) &&
+            humanAdjacentToBall.some(h => isAdjacent(h.position, p.position)));
+          if (chainReceivers.some(r => isAdjacent(target, r.position))) score += 80;
+          if (isAdjacent(target, ball)) score += 40; // contesting the ball breaks chain
+        }
+
         candidates.push({ playerId: player.id, kind: 'move', target, score });
       });
     }
@@ -4387,7 +4528,6 @@ function pickBotMove(s) {
   }
   if (difficulty === 'hard') return candidates[0];
 
-  // normal: best option most of the time, occasional second-best for variety
   if (candidates.length > 1 && Math.random() < 0.15) return candidates[1];
   return candidates[0];
 }
@@ -4396,31 +4536,117 @@ function pickBotChainContinuation(s) {
   const targets = s.validChainPassTargets || [];
   if (targets.length === 0) return null;
   const team = s.currentPlayer;
+  const oppTeam = team === 'home' ? 'away' : 'home';
+
+  // Key insight: if we stop the chain, the game REVERTS to turnStartState positions.
+  // So we should only continue if the best chain target is BETTER than reverting.
+  // The baseline is turnStartState.ballPosition (where we'd end up if we stop now).
+  const startBallPos = s.turnStartState?.ballPosition || s.ballPosition;
+  const startDistToGoal = goalDistanceScore(startBallPos, team);
 
   const scored = targets.map(t => {
-    // Never chain into own goal
     const ownGoalPos = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
     if (ownGoalPos.some(g => g.x === t.x && g.y === t.y)) return { target: t, score: -9999 };
+
+    // Direct goal — always worth it
+    if (isDirectGoalTarget(t, team)) return { target: t, score: 1000 };
+
     let score = 0;
-    // Direct goal — absolute priority
-    if (isDirectGoalTarget(t, team)) score += 1000;
-    // Closing distance to goal
-    score += (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(t, team)) * 12;
-    // Landing on another teammate enables further chain
-    const receiver = s.players.find(p => p.position.x === t.x && p.position.y === t.y && p.team === team);
-    if (receiver) score += 25;
-    // Avoid danger zone
-    const oppNear = s.players.some(p => p.team !== team && isAdjacent(p.position, t));
-    if (oppNear) score -= 15;
+
+    // How much do we advance vs the START of the turn (not current ball pos)?
+    // This is the real gain because stopping reverts to startBallPos.
+    const distToGoalAtTarget = goalDistanceScore(t, team);
+    const netAdvance = startDistToGoal - distToGoalAtTarget;
+    score += netAdvance * 20;
+
+    // Chain continues to another receiver
+    const nextReceiver = s.players.find(p =>
+      p.team === team && p.position.x === t.x && p.position.y === t.y);
+    if (nextReceiver) {
+      score += 30;
+      const futureChain = evaluateChainSequence(s, t, team, 0, 2);
+      score += futureChain * 0.5;
+    } else {
+      const nearTeam = s.players.filter(p =>
+        p.team === team && isAdjacent(p.position, t));
+      score += nearTeam.length * 8;
+    }
+
+    // Penalize landing near rivals
+    const rivalsNear = s.players.filter(p =>
+      p.team === oppTeam && isAdjacent(p.position, t));
+    score -= rivalsNear.length * 25;
+
+    // Drag threats at target
+    const directions8 = [
+      {dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},
+      {dx:0,dy:1},{dx:-1,dy:1},{dx:-1,dy:0},{dx:-1,dy:-1}
+    ];
+    directions8.forEach(dir => {
+      for (let i = 1; i <= 4; i++) {
+        const px = t.x + dir.dx * i, py = t.y + dir.dy * i;
+        if (px < 0 || px >= BOARD_WIDTH || py < 0 || py >= BOARD_HEIGHT) break;
+        const pl = s.players.find(p => p.position.x === px && p.position.y === py);
+        if (pl) {
+          if (pl.team === oppTeam) score -= Math.round(20 * (1 - (i-1)/4));
+          break;
+        }
+      }
+    });
+
     return { target: t, score };
   });
 
   scored.sort((a, b) => b.score - a.score);
-  return scored[0].target;
+  const best = scored[0];
+
+  // Only continue chain if best option has positive net value
+  // (i.e., better than reverting to start position)
+  // A score <= 0 means we're not improving on turnStartState — stop the chain.
+  if (best.score <= 0) return null;
+
+  return best.target;
 }
 
 function pickBotOffsideMove(s) {
-  return (s.validOffsideMoves && s.validOffsideMoves[0]) || null;
+  const moves = s.validOffsideMoves || [];
+  if (moves.length === 0) return null;
+  if (moves.length === 1) return moves[0];
+
+  const team = s.currentPlayer;
+  const oppTeam = team === 'home' ? 'away' : 'home';
+  const ball = s.ballPosition;
+
+  const scored = moves.map(pos => {
+    let score = 0;
+
+    // Prefer positions closer to ball (stay in the game)
+    if (ball) {
+      const dist = Math.abs(pos.x - ball.x) + Math.abs(pos.y - ball.y);
+      score -= dist * 3;
+
+      // Bonus for being adjacent to ball (can act next turn)
+      if (isAdjacent(pos, ball)) score += 25;
+    }
+
+    // Prefer positions near teammates (support network)
+    const nearTeam = s.players.filter(p =>
+      p.team === team && isAdjacent(p.position, pos)).length;
+    score += nearTeam * 10;
+
+    // Avoid positions near rivals
+    const nearOpp = s.players.filter(p =>
+      p.team === oppTeam && isAdjacent(p.position, pos)).length;
+    score -= nearOpp * 15;
+
+    // Prefer positions that advance toward opponent goal (stay useful offensively)
+    score += goalDistanceScore(pos, team) * -2; // lower distance = higher score
+
+    return { pos, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].pos;
 }
 
 // Decides if swapping the keeper back in is worth it: only if the keeper is meaningfully
@@ -4476,14 +4702,23 @@ function runBotTurn() {
       return;
     }
     if (cur.gamePhase === 'chain-pass') {
-      const target = pickBotChainContinuation(cur);
+      // Safety counter to prevent infinite chain loops
+      if (!step.chainDepth) step.chainDepth = 0;
+      step.chainDepth++;
+
+      const target = step.chainDepth <= 4 ? pickBotChainContinuation(cur) : null;
+
       setTimeout(() => {
-        if (target) setState(s2 => handleSquareSelection(s2, target));
-        else setState(s2 => {
-          const logState = logAction(s2, 'El equipo rival termina la jugada.', 'game-event');
-          const reverted = { ...logState, players: s2.turnStartState.players, ballPosition: s2.turnStartState.ballPosition, lastPlayerToTouchBallId: s2.turnStartState.lastPlayerToTouchBallId };
-          return advanceToNextTurn(reverted);
-        });
+        if (target) {
+          setState(s2 => handleSquareSelection(s2, target));
+        } else {
+          step.chainDepth = 0;
+          setState(s2 => {
+            const logState = logAction(s2, 'El equipo rival termina la jugada.', 'game-event');
+            const reverted = { ...logState, players: s2.turnStartState.players, ballPosition: s2.turnStartState.ballPosition, lastPlayerToTouchBallId: s2.turnStartState.lastPlayerToTouchBallId };
+            return advanceToNextTurn(reverted);
+          });
+        }
         setTimeout(step, 500);
       }, 500);
       return;
@@ -4492,18 +4727,61 @@ function runBotTurn() {
       const move = pickBotMove(cur);
       if (!move) { setState(s2 => advanceToNextTurn(s2, { skipSwapCheck: true })); setTimeout(step, 300); return; }
       setTimeout(() => {
-        // Select the player
+        // Select the player — this updates validKickTargets/validDragTargets/validMoves in state
         setState(s2 => handlePlayerSelection(s2, move.playerId));
         setTimeout(() => {
-          // Execute the move
+          // Verify the target is actually valid in the post-selection state.
+          // For the goalkeeper (effectiveDice×2), the game engine computes the real
+          // valid targets after selection — the bot's pre-computed target may differ.
+          // If the target isn't valid, fall back to the best valid target of the same kind.
           setState(s2 => {
-            const afterMove = handleSquareSelection(s2, move.target);
-            // If an actionChoice appeared (ambiguous tile: move vs kick/drag),
-            // resolve it immediately in the same setState call to avoid timing issues
+            let finalTarget = move.target;
+            let finalKind = move.kind;
+
+            // Check if target is in the valid set for the chosen kind
+            const validForKind = {
+              'kick': s2.validKickTargets || [],
+              'lofted-pass': s2.validLoftedPassTargets || [],
+              'drag': s2.validDragTargets || [],
+              'lofted-drag': s2.validLoftedDragTargets || [],
+              'move': s2.validMoves || [],
+            }[move.kind] || [];
+
+            const targetIsValid = validForKind.some(t => t.x === move.target.x && t.y === move.target.y);
+
+            if (!targetIsValid) {
+              // Target not valid — pick the best available target of the same kind,
+              // or fall back to any available ball action
+              const allBallTargets = [
+                ...(s2.validKickTargets || []).map(t => ({ t, kind: 'kick' })),
+                ...(s2.validDragTargets || []).map(t => ({ t, kind: 'drag' })),
+                ...(s2.validLoftedPassTargets || []).map(t => ({ t, kind: 'lofted-pass' })),
+                ...(s2.validLoftedDragTargets || []).map(t => ({ t, kind: 'lofted-drag' })),
+              ];
+              const allMoveTargets = (s2.validMoves || []).map(t => ({ t, kind: 'move' }));
+              const allTargets = [...allBallTargets, ...allMoveTargets];
+
+              if (allTargets.length === 0) {
+                // Nothing valid — skip turn
+                return advanceToNextTurn(s2, { skipSwapCheck: true });
+              }
+
+              // Score and pick best available
+              const scored = allTargets.map(({ t, kind }) => {
+                const score = kind === 'move'
+                  ? scoreMoveAction(s2, s2.players.find(p => p.id === s2.selectedPlayerId) || s2.players[0], t)
+                  : goalDistanceScore(t, team) * -1 + (isDirectGoalTarget(t, team) ? 1000 : 0);
+                return { t, kind, score };
+              });
+              scored.sort((a, b) => b.score - a.score);
+              finalTarget = scored[0].t;
+              finalKind = scored[0].kind;
+            }
+
+            const afterMove = handleSquareSelection(s2, finalTarget);
             if (afterMove.actionChoice) {
-              const wanted = move.kind;
               const available = afterMove.actionChoice.actions;
-              const act = available.includes(wanted) ? wanted : available[0];
+              const act = available.includes(finalKind) ? finalKind : available[0];
               return handleActionExecution({ ...afterMove, actionChoice: null }, act, afterMove.actionChoice.position);
             }
             return afterMove;
