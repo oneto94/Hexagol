@@ -461,6 +461,26 @@
   }
   .menu-screen.league-screen { text-align: left; }
   .rules-screen { position: relative; }
+  /* ── Leaderboard ── */
+  .lb-table { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; max-height: 55vh; overflow-y: auto; }
+  .lb-row {
+    display: grid; grid-template-columns: 36px 1fr auto auto;
+    align-items: center; gap: 8px;
+    padding: 8px 12px; border-radius: 10px;
+    background: rgba(255,255,255,0.7); border: 1px solid #e8ede4;
+    font-size: 0.82rem;
+  }
+  .lb-row.lb-me { background: #f0f4ff; border-color: var(--accent); font-weight: 700; }
+  .lb-rank { font-size: 1rem; text-align: center; }
+  .lb-name { font-weight: 600; color: #1c2b22; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-elo { font-weight: 800; color: #1d6b2b; white-space: nowrap; }
+  .lb-record { color: #6b7a64; font-size: 0.74rem; white-space: nowrap; }
+  .lb-my-position {
+    margin-top: 10px; padding: 8px 12px; border-radius: 10px;
+    background: #f0f4ff; border: 1px solid var(--accent);
+    font-size: 0.82rem; text-align: center; color: #384032;
+  }
+
   .rules-body {
     font-size: 0.86rem; line-height: 1.55; color: #384032;
     max-height: 58vh; overflow-y: auto; padding-right: 6px;
@@ -6000,6 +6020,10 @@ function renderMainMenu() {
         <div class="t">Cómo se juega</div>
         <div class="d">Reglas rápidas antes de empezar tu primer partido.</div>
       </button>
+      <button class="menu-btn" data-menu="leaderboard">
+        <div class="t">🏅 Tabla de líderes</div>
+        <div class="d">Los mejores jugadores por ELO a nivel global.</div>
+      </button>
       <button class="menu-btn" data-menu="sandbox">
         <div class="t">🧪 Entrenamiento libre</div>
         <div class="d">Mové jugadores y la pelota libremente, sin turnos ni reglas.</div>
@@ -6378,6 +6402,83 @@ function diagramGoal() {
     miniPlayer(3,3,'#3b82f6','11')+
     miniBall(3,2),
     'El gol se marca haciendo llegar la pelota a las 5 casillas centrales de la línea de fondo rival');
+}
+
+let leaderboardData = null;
+let leaderboardLoading = false;
+let leaderboardError = null;
+
+async function loadLeaderboard() {
+  leaderboardLoading = true;
+  leaderboardError = null;
+  leaderboardData = null;
+  render();
+  try {
+    const snap = await db.collection('users')
+      .where('gamesPlayed', '>=', 1)
+      .orderBy('gamesPlayed', 'asc')
+      .orderBy('elo', 'desc')
+      .limit(50)
+      .get();
+    leaderboardData = snap.docs.map(doc => ({ uid: doc.id, ...doc.data() }))
+      .sort((a, b) => b.elo - a.elo);
+  } catch (err) {
+    // Fallback: simple elo orderBy without composite index
+    try {
+      const snap2 = await db.collection('users')
+        .orderBy('elo', 'desc')
+        .limit(50)
+        .get();
+      leaderboardData = snap2.docs
+        .map(doc => ({ uid: doc.id, ...doc.data() }))
+        .filter(u => (u.gamesPlayed || 0) >= 1);
+    } catch (err2) {
+      leaderboardError = 'No se pudo cargar la tabla. Intentá de nuevo.';
+    }
+  }
+  leaderboardLoading = false;
+  render();
+}
+
+function renderLeaderboard() {
+  const myUid = currentUser?.uid;
+  const rows = leaderboardLoading
+    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">Cargando...</div>`
+    : leaderboardError
+    ? `<div style="text-align:center; padding:24px; color:#dc2626;">${leaderboardError}</div>`
+    : !leaderboardData || leaderboardData.length === 0
+    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">Todavía no hay jugadores con partidas. ¡Sé el primero!</div>`
+    : leaderboardData.map((u, i) => {
+        const isMe = u.uid === myUid;
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+        const winRate = u.gamesPlayed > 0
+          ? Math.round((u.wins / u.gamesPlayed) * 100) : 0;
+        return `<div class="lb-row ${isMe ? 'lb-me' : ''}">
+          <span class="lb-rank">${medal}</span>
+          <span class="lb-name">${escapeHtml(u.username || 'Jugador')}</span>
+          <span class="lb-elo">⚡ ${u.elo || 1200}</span>
+          <span class="lb-record">${u.wins || 0}V ${u.losses || 0}D · ${winRate}%</span>
+        </div>`;
+      }).join('');
+
+  // Find current user's position if not in top 50
+  let myPosition = '';
+  if (myUid && leaderboardData && !leaderboardData.some(u => u.uid === myUid) && userProfile) {
+    myPosition = `<div class="lb-my-position">
+      Tu posición: fuera del top 50 · ⚡ ${userProfile.elo} ELO
+    </div>`;
+  }
+
+  return `
+  <div class="menu-screen" style="max-width:600px;">
+    <h1>🏅 Tabla de líderes</h1>
+    <div class="subtitle">Top jugadores por ELO global</div>
+    <div class="lb-table">${rows}</div>
+    ${myPosition}
+    <div class="menu-grid" style="margin-top:14px;">
+      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
+    </div>
+  </div>`;
 }
 
 function renderRules() {
@@ -6984,6 +7085,7 @@ function render() {
       return;
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
+    else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
     else if (currentMenuView === 'ai-setup') app.innerHTML = renderAiSetup();
     else if (currentMenuView === 'league-entry') app.innerHTML = renderLeagueSetup();
@@ -7072,6 +7174,11 @@ function wireEvents() {
         currentMenuView = 'main';
         sandboxDragTarget = null;
         setState(startSandbox());
+        return;
+      }
+      if (target === 'leaderboard') {
+        currentMenuView = 'leaderboard';
+        loadLeaderboard();
         return;
       }
       if (target === 'back') currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
