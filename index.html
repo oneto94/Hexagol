@@ -3970,65 +3970,133 @@ function scoreBallAction(s, player, action) {
   const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
   let score = 0;
 
-  // Direct goal — highest priority
-  if (isDirectGoalTarget(action.target, team)) score += 1000;
+  // ── 1. Direct goal — absolute priority ───────────────────────────────────
+  if (isDirectGoalTarget(action.target, team)) return 1000;
 
-  // Closing distance to opponent goal
+  // ── 2. Closing distance to opponent goal ──────────────────────────────────
   score += (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(action.target, team)) * 12;
 
-  // ── Defensive clearance priority ─────────────────────────────────────────
-  // If the ball is near our own goal, reward kicking it FAR away (despeje).
-  // This must outweigh blocking: clearing > obstructing.
-  const ballNearOwnGoal = ownGoal.some(g => Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y) <= 4);
+  // ── 3. Possession quality after the action ────────────────────────────────
+  // The most important evaluation: does our team CONTROL the ball after this move?
+  // Control = at least one of our players is adjacent to the target position.
+  const ownPlayersAdjacentToTarget = s.players.filter(p =>
+    p.team === team && (
+      // the moving player itself lands adjacent (drag case)
+      isAdjacent(action.target, action.target) ||
+      // OR another teammate is already adjacent to target
+      (p.id !== player.id && isAdjacent(p.position, action.target))
+    )
+  );
+
+  // Check if moving player itself ends up adjacent to target
+  // For kicks: player stays where they are, ball goes to target
+  // For drags: player moves toward ball, so they end up adjacent to the new ball position
+  const playerEndsAdjacentToTarget = action.kind === 'drag' || action.kind === 'lofted-drag'
+    ? true  // by definition, dragging player moves toward ball so they stay adjacent
+    : isAdjacent(player.position, action.target); // kick: player stays, check if still adjacent
+
+  const teammateAdjacentToTarget = s.players.some(p =>
+    p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
+
+  const weMaintainControl = playerEndsAdjacentToTarget || teammateAdjacentToTarget;
+
+  // Strong bonus for keeping the ball under our control after the action
+  if (weMaintainControl) score += 40;
+
+  // ── 4. Chain pass setup value ─────────────────────────────────────────────
+  // If the ball lands on a teammate, we get a chain pass — enormous value
+  const chainReceiver = s.players.find(p =>
+    p.id !== player.id && p.team === team &&
+    p.position.x === action.target.x && p.position.y === action.target.y);
+  if (chainReceiver) score += 50; // chain pass available
+
+  // If ball lands near (1 step) a teammate, they can chain next
+  const nearbyTeammateForChain = s.players.filter(p =>
+    p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
+  score += nearbyTeammateForChain.length * 15;
+
+  // ── 5. Defensive clearance ────────────────────────────────────────────────
+  const ballNearOwnGoal = ownGoal.some(g =>
+    Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y) <= 4);
   if (ballNearOwnGoal) {
-    const distBefore = Math.min(...ownGoal.map(g => Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y)));
-    const distAfter = Math.min(...ownGoal.map(g => Math.abs(g.x - action.target.x) + Math.abs(g.y - action.target.y)));
-    score += (distAfter - distBefore) * 30; // strong clearance bonus — outweighs blocking
+    const distBefore = Math.min(...ownGoal.map(g =>
+      Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y)));
+    const distAfter = Math.min(...ownGoal.map(g =>
+      Math.abs(g.x - action.target.x) + Math.abs(g.y - action.target.y)));
+    score += (distAfter - distBefore) * 25;
   }
 
-  // Landing on a teammate starts a chain — very valuable
-  const receiver = s.players.find(p => p.position.x === action.target.x && p.position.y === action.target.y && p.team === team);
-  if (receiver) score += 30;
+  // ── 6. Contest situation: rival also adjacent to ball ─────────────────────
+  const rivalsAdjacentToBall = s.players.filter(p =>
+    p.team === oppTeam && isAdjacent(p.position, s.ballPosition));
+  if (rivalsAdjacentToBall.length > 0) {
+    const rivalsStillAdjacentAfter = s.players.filter(p =>
+      p.team === oppTeam && isAdjacent(p.position, action.target)).length;
 
-  // Landing near a teammate enables future chain
-  const nearTeammate = s.players.some(p => p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
-  if (nearTeammate) score += 12;
+    // Best outcome: we keep control AND rival loses adjacency
+    if (weMaintainControl && rivalsStillAdjacentAfter === 0) score += 70;
+    // We lose the ball AND rival gets it — worst outcome
+    else if (!weMaintainControl && rivalsStillAdjacentAfter > 0) score -= 40;
+    // We lose adjacency but rival doesn't get it either — acceptable
+    else if (!weMaintainControl && rivalsStillAdjacentAfter === 0) score += 20;
+    // We keep it but rival also keeps adjacency — contested, not ideal
+    else if (weMaintainControl && rivalsStillAdjacentAfter > 0) score += 10;
+  }
+
+  // ── 7. Detect ALL human threat types from the target position ────────────
+  // Geometric detection — no game engine calls to avoid invalid parameter bugs.
+  const rivalsAdjacentToTarget = s.players.filter(p =>
+    p.team === oppTeam && isAdjacent(p.position, action.target));
+  const ownGoalPositions = ownGoal;
+
+  if (rivalsAdjacentToTarget.length > 0) {
+    score -= 25;
+    // Check if any adjacent rival has a straight line to our goal from target
+    rivalsAdjacentToTarget.forEach(opp => {
+      ownGoalPositions.forEach(g => {
+        const dx = Math.sign(g.x - action.target.x);
+        const dy = Math.sign(g.y - action.target.y);
+        if (dx === 0 && dy === 0) return;
+        if (g.x !== action.target.x && g.y !== action.target.y &&
+            Math.abs(g.x - action.target.x) !== Math.abs(g.y - action.target.y)) return;
+        // Check clear line
+        let cx = action.target.x + dx, cy = action.target.y + dy;
+        let clear = true;
+        while ((cx !== g.x || cy !== g.y) && clear) {
+          if (s.players.some(p => p.position.x === cx && p.position.y === cy)) clear = false;
+          cx += dx; cy += dy;
+        }
+        if (clear) score -= 120; // direct shot threat at our goal
+      });
+      // Chain threat: rival adjacent to target also has teammates adjacent to them
+      const chainable = s.players.some(p2 =>
+        p2.team === oppTeam && p2.id !== opp.id && isAdjacent(p2.position, action.target));
+      if (chainable) score -= 30;
+    });
+  }
+
+  // Drag threat: rival in straight line from target (can drag ball to them)
+  const directions8 = [
+    {dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},
+    {dx:0,dy:1},{dx:-1,dy:1},{dx:-1,dy:0},{dx:-1,dy:-1}
+  ];
+  directions8.forEach(dir => {
+    for (let i = 1; i <= 6; i++) {
+      const px = action.target.x + dir.dx * i;
+      const py = action.target.y + dir.dy * i;
+      if (px < 0 || px >= BOARD_WIDTH || py < 0 || py >= BOARD_HEIGHT) break;
+      const pl = s.players.find(p => p.position.x === px && p.position.y === py);
+      if (pl) {
+        if (pl.team === oppTeam) score -= 35; // drag threat
+        break; // blocked
+      }
+    }
+  });
 
   // Avoid landing ball near own goal
-  const nearOwnGoal = ownGoal.some(g => Math.abs(g.x - action.target.x) <= 2 && Math.abs(g.y - action.target.y) <= 2);
+  const nearOwnGoal = ownGoal.some(g =>
+    Math.abs(g.x - action.target.x) <= 2 && Math.abs(g.y - action.target.y) <= 2);
   if (nearOwnGoal) score -= 60;
-
-  // ── Contest / clear when rival is also on the ball ───────────────────────
-  // This is the key tactical situation: both teams have players adjacent to
-  // the ball. The AI should prioritize moving it OUT of the rival's reach —
-  // either passing to safety or kicking it far enough that the human player
-  // can no longer reach it next turn.
-  const rivalAlsoAdjacentToBall = s.players.some(p =>
-    p.team === oppTeam && isAdjacent(p.position, s.ballPosition));
-  if (rivalAlsoAdjacentToBall) {
-    // Count how many human players can reach the target position
-    const rivalsCanReachTarget = s.players.filter(p =>
-      p.team === oppTeam && isAdjacent(p.position, action.target)).length;
-    const rivalsCantReachTarget = s.players.filter(p =>
-      p.team === oppTeam && isAdjacent(p.position, s.ballPosition) &&
-      !isAdjacent(p.position, action.target)).length;
-
-    // Strong bonus for moving ball OUT of all adjacent rivals' reach
-    if (rivalsCanReachTarget === 0) score += 60;
-    // Bonus proportional to how many rivals we lose from the contest
-    score += rivalsCantReachTarget * 25;
-    // Extra penalty if we leave it reachable by the same rival who had it
-    if (rivalsCanReachTarget > 0) score -= 30;
-  }
-
-  // ── Disrupt opponent chain pass setups ────────────────────────────────────
-  // Reward landing where no opponent is adjacent (they lose chain pass option)
-  const opponentsAdjacentToTarget = s.players.filter(p => p.team === oppTeam && isAdjacent(p.position, action.target));
-  if (opponentsAdjacentToTarget.length === 0) score += 10;
-  if (opponentsAdjacentToTarget.length > 0) {
-    score -= 20;
-    if (isDirectGoalTarget(action.target, oppTeam)) score -= 80;
-  }
 
   if (action.kind === 'kick') score += 5;
   return score;
