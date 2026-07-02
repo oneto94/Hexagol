@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hexagol — Fútbol de Dados</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#1c2b22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hexagol">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -7435,6 +7441,15 @@ function wireAuthEvents() {
 render();
 document.addEventListener('fullscreenchange', () => { render(); });
 checkForReconnectableSession();
+
+// Register PWA service worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('[Hexagol PWA] Service worker registrado:', reg.scope))
+      .catch(err => console.warn('[Hexagol PWA] Service worker error:', err));
+  });
+}
 
 // Background tabs get their setInterval throttled hard by the browser (sometimes
 // paused entirely) to save battery/CPU. In online mode this means the inactive
