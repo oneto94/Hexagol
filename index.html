@@ -3974,54 +3974,70 @@ function scoreBallAction(s, player, action) {
   const team = player.team;
   const oppTeam = team === 'home' ? 'away' : 'home';
   const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const oppGoal = team === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
   let score = 0;
 
-  // ── 1. Direct goal — absolute priority ───────────────────────────────────
+  // ── 1. Direct goal — absolute priority ──────────────────────────────────
   if (isDirectGoalTarget(action.target, team)) return 1000;
 
-  // ── 2. Closing distance to opponent goal ──────────────────────────────────
-  score += (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(action.target, team)) * 12;
+  // ── NEVER score an own goal ──────────────────────────────────────────────
+  // If the target is any of our OWN goal positions, return immediately with
+  // a catastrophic penalty. This overrides every other consideration.
+  const ownGoalPositions = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  if (ownGoalPositions.some(g => g.x === action.target.x && g.y === action.target.y)) return -9999;
 
-  // ── 3. Possession quality after the action ────────────────────────────────
-  // The most important evaluation: does our team CONTROL the ball after this move?
-  // Control = at least one of our players is adjacent to the target position.
-  const ownPlayersAdjacentToTarget = s.players.filter(p =>
-    p.team === team && (
-      // the moving player itself lands adjacent (drag case)
-      isAdjacent(action.target, action.target) ||
-      // OR another teammate is already adjacent to target
-      (p.id !== player.id && isAdjacent(p.position, action.target))
-    )
-  );
+  // ── 2. Advancing toward opponent goal (recalibrated: higher weight) ──────
+  const distGainToOppGoal = goalDistanceScore(s.ballPosition, team) - goalDistanceScore(action.target, team);
+  score += distGainToOppGoal * 20; // was 12 — now strong enough to compete with safety plays
 
-  // Check if moving player itself ends up adjacent to target
-  // For kicks: player stays where they are, ball goes to target
-  // For drags: player moves toward ball, so they end up adjacent to the new ball position
-  const playerEndsAdjacentToTarget = action.kind === 'drag' || action.kind === 'lofted-drag'
-    ? true  // by definition, dragging player moves toward ball so they stay adjacent
-    : isAdjacent(player.position, action.target); // kick: player stays, check if still adjacent
-
-  const teammateAdjacentToTarget = s.players.some(p =>
-    p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
-
-  const weMaintainControl = playerEndsAdjacentToTarget || teammateAdjacentToTarget;
-
-  // Strong bonus for keeping the ball under our control after the action
-  if (weMaintainControl) score += 40;
-
-  // ── 4. Chain pass setup value ─────────────────────────────────────────────
-  // If the ball lands on a teammate, we get a chain pass — enormous value
+  // ── 3. Passing to a more advanced teammate (chain pass) ──────────────────
   const chainReceiver = s.players.find(p =>
     p.id !== player.id && p.team === team &&
     p.position.x === action.target.x && p.position.y === action.target.y);
-  if (chainReceiver) score += 50; // chain pass available
+  if (chainReceiver) {
+    const receiverMoreAdvanced = goalDistanceScore(chainReceiver.position, team) <
+      goalDistanceScore(player.position, team);
+    score += receiverMoreAdvanced ? 80 : 50;
 
-  // If ball lands near (1 step) a teammate, they can chain next
-  const nearbyTeammateForChain = s.players.filter(p =>
+    // Evaluate the chain sequence this opens up (up to 3 passes deep)
+    const chainPotential = evaluateChainSequence(s, action.target, team, 0, 3);
+    score += chainPotential * 0.6; // 60% of future chain value
+  }
+
+  // Nearby teammate for future chain
+  const nearbyTeammates = s.players.filter(p =>
     p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
-  score += nearbyTeammateForChain.length * 15;
+  nearbyTeammates.forEach(p => {
+    const isMoreAdvanced = goalDistanceScore(p.position, team) < goalDistanceScore(player.position, team);
+    score += isMoreAdvanced ? 25 : 15;
+  });
 
-  // ── 5. Defensive clearance ────────────────────────────────────────────────
+  // ── 4. Possession quality after action ──────────────────────────────────
+  const playerEndsAdjacentToTarget = (action.kind === 'drag' || action.kind === 'lofted-drag')
+    ? true
+    : isAdjacent(player.position, action.target);
+  const teammateAdjacentToTarget = s.players.some(p =>
+    p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
+  const weMaintainControl = playerEndsAdjacentToTarget || teammateAdjacentToTarget;
+
+  // Possession bonus — but only if we're also moving the ball forward or keeping it safe
+  // Don't reward "move 1 square sideways to stay safe" as much as a real pass
+  if (weMaintainControl) {
+    // If not advancing AT ALL, reduce the possession bonus significantly
+    if (distGainToOppGoal <= 0 && !chainReceiver) score += 15; // was 40 — safety plays get less
+    else score += 30; // advancing AND maintaining = good
+  }
+
+  // ── 5. Drag as escape tool ───────────────────────────────────────────────
+  if (action.kind === 'drag' || action.kind === 'lofted-drag') {
+    const rivalWasAdjacentToBall = s.players.some(p =>
+      p.team === oppTeam && isAdjacent(p.position, s.ballPosition));
+    const rivalStillAdjacentAfterDrag = s.players.some(p =>
+      p.team === oppTeam && isAdjacent(p.position, action.target));
+    if (rivalWasAdjacentToBall && !rivalStillAdjacentAfterDrag) score += 35;
+  }
+
+  // ── 6. Defensive clearance (recalibrated: lower weight than advancing) ───
   const ballNearOwnGoal = ownGoal.some(g =>
     Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y) <= 4);
   if (ballNearOwnGoal) {
@@ -4029,59 +4045,48 @@ function scoreBallAction(s, player, action) {
       Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y)));
     const distAfter = Math.min(...ownGoal.map(g =>
       Math.abs(g.x - action.target.x) + Math.abs(g.y - action.target.y)));
-    score += (distAfter - distBefore) * 25;
+    score += (distAfter - distBefore) * 18; // was 25 — clearance still important but not dominant
   }
 
-  // ── 6. Contest situation: rival also adjacent to ball ─────────────────────
+  // ── 7. Contest situation ─────────────────────────────────────────────────
   const rivalsAdjacentToBall = s.players.filter(p =>
     p.team === oppTeam && isAdjacent(p.position, s.ballPosition));
   if (rivalsAdjacentToBall.length > 0) {
     const rivalsStillAdjacentAfter = s.players.filter(p =>
       p.team === oppTeam && isAdjacent(p.position, action.target)).length;
-
-    // Best outcome: we keep control AND rival loses adjacency
-    if (weMaintainControl && rivalsStillAdjacentAfter === 0) score += 70;
-    // We lose the ball AND rival gets it — worst outcome
+    if (weMaintainControl && rivalsStillAdjacentAfter === 0) score += 55;
     else if (!weMaintainControl && rivalsStillAdjacentAfter > 0) score -= 40;
-    // We lose adjacency but rival doesn't get it either — acceptable
-    else if (!weMaintainControl && rivalsStillAdjacentAfter === 0) score += 20;
-    // We keep it but rival also keeps adjacency — contested, not ideal
-    else if (weMaintainControl && rivalsStillAdjacentAfter > 0) score += 10;
+    else if (!weMaintainControl && rivalsStillAdjacentAfter === 0) score += 15;
+    else if (weMaintainControl && rivalsStillAdjacentAfter > 0) score += 5;
   }
 
-  // ── 7. Detect ALL human threat types from the target position ────────────
-  // Geometric detection — no game engine calls to avoid invalid parameter bugs.
+  // ── 8. Threat detection from target position ─────────────────────────────
   const rivalsAdjacentToTarget = s.players.filter(p =>
     p.team === oppTeam && isAdjacent(p.position, action.target));
-  const ownGoalPositions = ownGoal;
-
   if (rivalsAdjacentToTarget.length > 0) {
-    score -= 25;
-    // Check if any adjacent rival has a straight line to our goal from target
+    score -= 20;
     rivalsAdjacentToTarget.forEach(opp => {
-      ownGoalPositions.forEach(g => {
+      ownGoal.forEach(g => {
         const dx = Math.sign(g.x - action.target.x);
         const dy = Math.sign(g.y - action.target.y);
         if (dx === 0 && dy === 0) return;
         if (g.x !== action.target.x && g.y !== action.target.y &&
             Math.abs(g.x - action.target.x) !== Math.abs(g.y - action.target.y)) return;
-        // Check clear line
         let cx = action.target.x + dx, cy = action.target.y + dy;
         let clear = true;
         while ((cx !== g.x || cy !== g.y) && clear) {
           if (s.players.some(p => p.position.x === cx && p.position.y === cy)) clear = false;
           cx += dx; cy += dy;
         }
-        if (clear) score -= 120; // direct shot threat at our goal
+        if (clear) score -= 120;
       });
-      // Chain threat: rival adjacent to target also has teammates adjacent to them
       const chainable = s.players.some(p2 =>
         p2.team === oppTeam && p2.id !== opp.id && isAdjacent(p2.position, action.target));
-      if (chainable) score -= 30;
+      if (chainable) score -= 25;
     });
   }
 
-  // Drag threat: rival in straight line from target (can drag ball to them)
+  // Drag threats — proportional to proximity
   const directions8 = [
     {dx:0,dy:-1},{dx:1,dy:-1},{dx:1,dy:0},{dx:1,dy:1},
     {dx:0,dy:1},{dx:-1,dy:1},{dx:-1,dy:0},{dx:-1,dy:-1}
@@ -4093,13 +4098,13 @@ function scoreBallAction(s, player, action) {
       if (px < 0 || px >= BOARD_WIDTH || py < 0 || py >= BOARD_HEIGHT) break;
       const pl = s.players.find(p => p.position.x === px && p.position.y === py);
       if (pl) {
-        if (pl.team === oppTeam) score -= 35; // drag threat
-        break; // blocked
+        if (pl.team === oppTeam) score -= Math.round(40 * (1 - (i - 1) / 6));
+        break;
       }
     }
   });
 
-  // Avoid landing ball near own goal
+  // Avoid landing near own goal
   const nearOwnGoal = ownGoal.some(g =>
     Math.abs(g.x - action.target.x) <= 2 && Math.abs(g.y - action.target.y) <= 2);
   if (nearOwnGoal) score -= 60;
@@ -4121,12 +4126,41 @@ function scoreMoveAction(s, player, target) {
   const oppHasPossession = s.lastPlayerToTouchBallId != null &&
     s.players.find(p => p.id === s.lastPlayerToTouchBallId)?.team === oppTeam;
 
+  // ── Bug 2 fix: role-based positioning ───────────────────────────────────
+  // Assign each player an implicit role based on their index in the team:
+  // GK = goalkeeper (disciplined), DEF = defenders (stay back), ATT = attackers (push up).
+  const teamPlayers = s.players.filter(p => p.team === team)
+    .sort((a, b) => {
+      // Sort by distance to own goal: closest = most defensive
+      const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+      return Math.abs(a.position.y - ownGoalY) - Math.abs(b.position.y - ownGoalY);
+    });
+  const playerRoleIdx = teamPlayers.findIndex(p => p.id === player.id);
+  const totalPlayers = teamPlayers.length;
+  // 0-1: GK/DEF, 2-4: MID, 5+: ATT
+  const isDefensive = player.isGoalkeeper || playerRoleIdx < Math.floor(totalPlayers * 0.3);
+  const isAttacking = !player.isGoalkeeper && playerRoleIdx >= Math.floor(totalPlayers * 0.6);
+
   // ── Goalkeeper discipline ────────────────────────────────────────────────
   if (player.isGoalkeeper) {
     const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
     const inOwnArea = Math.abs(player.position.y - ownGoalY) <= 3;
     const targetInOwnArea = Math.abs(target.y - ownGoalY) <= 3;
     const wouldBeAdjacentBall = ball && isAdjacent(target, ball);
+
+    // Fix: only leave area if NO other teammate can reach the ball with this dice value
+    if (ball && !targetInOwnArea && wouldBeAdjacentBall) {
+      const otherTeammateCanReachBall = s.players.some(p => {
+        if (p.team !== team || p.id === player.id || p.isGoalkeeper) return false;
+        const distToBall = Math.max(
+          Math.abs(p.position.x - ball.x),
+          Math.abs(p.position.y - ball.y)
+        );
+        return distToBall <= (s.diceValue || 0);
+      });
+      if (otherTeammateCanReachBall) score -= 120; // someone else can get it — stay back
+    }
+
     if (inOwnArea && !targetInOwnArea && !wouldBeAdjacentBall) score -= 100;
     if (!inOwnArea && !targetInOwnArea && !wouldBeAdjacentBall) score -= 150;
     if (!inOwnArea && targetInOwnArea) score += 50;
@@ -4138,27 +4172,56 @@ function scoreMoveAction(s, player, target) {
   if (wouldBeAdjacent && !currentlyAdjacent) score += 20;
   if (wouldBeAdjacent) score += 8;
 
-  // ── Attacking movement ───────────────────────────────────────────────────
-  if (weHavePossession) {
-    // Push toward opponent goal
-    score += (goalDistanceScore(player.position, team) - goalDistanceScore(target, team)) * 5;
-    // Support chain: get 1 step from ball carrier
+  // ── Bug 5 fix: pre-position for next turn ────────────────────────────────
+  // If teammate has the ball, move to a square adjacent to where they might
+  // kick next (toward the opponent goal) to set up a chain pass.
+  if (weHavePossession && ball) {
     const carrier = s.players.find(p => p.id === s.lastPlayerToTouchBallId);
     if (carrier && carrier.id !== player.id) {
-      const distAfter = Math.abs(target.x - carrier.position.x) + Math.abs(target.y - carrier.position.y);
-      if (distAfter === 1) score += 22;
-      else if (distAfter === 2) score += 8;
+      // Find the best kick direction from carrier toward opp goal
+      const bestKickTarget = oppGoal.reduce((best, g) => {
+        const d = Math.abs(g.x - carrier.position.x) + Math.abs(g.y - carrier.position.y);
+        return d < best.d ? { pos: g, d } : best;
+      }, { pos: null, d: Infinity }).pos;
+
+      if (bestKickTarget) {
+        // Being adjacent to the midpoint between carrier and opp goal = chain support
+        const midX = Math.round((carrier.position.x + bestKickTarget.x) / 2);
+        const midY = Math.round((carrier.position.y + bestKickTarget.y) / 2);
+        const distToMid = Math.abs(target.x - midX) + Math.abs(target.y - midY);
+        if (distToMid <= 2) score += 15;
+      }
+      // Direct support: 1-2 steps from carrier
+      const distToCarrier = Math.abs(target.x - carrier.position.x) + Math.abs(target.y - carrier.position.y);
+      if (distToCarrier === 1) score += 22;
+      else if (distToCarrier === 2) score += 8;
     }
   }
 
-  // ── Defensive movement (only when opponent has possession) ───────────────
+  // ── Attacking movement ───────────────────────────────────────────────────
+  if (weHavePossession) {
+    const advance = (goalDistanceScore(player.position, team) - goalDistanceScore(target, team));
+    // Attackers push up more aggressively, defenders less
+    score += advance * (isAttacking ? 7 : isDefensive ? 2 : 4);
+  }
+
+  // ── Defensive movement ───────────────────────────────────────────────────
   if (oppHasPossession && ball) {
-    // Chase ball
     const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
     const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
-    score += (distBefore - distAfter) * 4;
+    // Defenders chase harder, attackers stay ready for counter
+    score += (distBefore - distAfter) * (isDefensive ? 6 : isAttacking ? 2 : 4);
 
-    // Mark ONE chain receiver — don't double-count per opponent
+    // Defensive players: stay between ball and own goal
+    if (isDefensive) {
+      const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+      const betweenBallAndGoal = team === 'home'
+        ? target.y > ball.y && target.y < ownGoalY
+        : target.y < ball.y && target.y > ownGoalY;
+      if (betweenBallAndGoal) score += 10;
+    }
+
+    // Mark chain receivers
     const oppsAdj = s.players.filter(p => p.team === oppTeam && isAdjacent(p.position, ball));
     if (oppsAdj.length > 0) {
       const chainReceivers = s.players.filter(p =>
@@ -4168,7 +4231,7 @@ function scoreMoveAction(s, player, target) {
     }
   }
 
-  // ── Neutral (no clear possession) ───────────────────────────────────────
+  // ── Neutral ──────────────────────────────────────────────────────────────
   if (!weHavePossession && !oppHasPossession && ball) {
     const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
     const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
@@ -4182,6 +4245,74 @@ function scoreMoveAction(s, player, target) {
   score -= nearTeammates * 4;
 
   return score;
+}
+
+// Simulates a chain pass sequence recursively, returning the best total score
+// achievable from a given ball position with available chain receivers.
+// maxDepth limits recursion (3 = up to 3 chain passes in one turn).
+function evaluateChainSequence(s, ballPos, chainTeam, depth, maxDepth) {
+  if (depth >= maxDepth) return 0;
+
+  const teamPlayers = s.players.filter(p => p.team === chainTeam);
+  const oppTeam = chainTeam === 'home' ? 'away' : 'home';
+  const ownGoalPositions = chainTeam === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+
+  // Find all valid chain pass targets from this ball position
+  // A chain pass can go to any adjacent player of the same team
+  const chainTargets = [];
+  teamPlayers.forEach(p => {
+    if (!isAdjacent(p.position, ballPos)) return;
+    // Check each direction for kick targets from this position
+    [1,2,3,4,6].forEach(dv => {
+      const kicks = getValidKickTargets(p, ballPos, dv, s.players);
+      kicks.validTargets.forEach(t => {
+        if (ownGoalPositions.some(g => g.x === t.x && g.y === t.y)) return; // never own goal
+        if (!chainTargets.some(c => c.x === t.x && c.y === t.y)) {
+          chainTargets.push(t);
+        }
+      });
+    });
+  });
+
+  if (chainTargets.length === 0) return 0;
+
+  let bestChainScore = 0;
+
+  chainTargets.forEach(t => {
+    // Direct goal from chain
+    if (isDirectGoalTarget(t, chainTeam)) {
+      bestChainScore = Math.max(bestChainScore, 800); // slightly less than first action goal
+      return;
+    }
+
+    let chainScore = 0;
+
+    // Advancing the ball toward goal
+    chainScore += (goalDistanceScore(ballPos, chainTeam) - goalDistanceScore(t, chainTeam)) * 18;
+
+    // Check if this chain pass reaches another teammate (enables further chain)
+    const nextReceiver = s.players.find(p =>
+      p.team === chainTeam && p.position.x === t.x && p.position.y === t.y);
+    if (nextReceiver) {
+      chainScore += 40; // chain continues
+      // Recurse to evaluate the next chain
+      const futureScore = evaluateChainSequence(s, t, chainTeam, depth + 1, maxDepth);
+      chainScore += futureScore * 0.7; // discount future value slightly
+    } else {
+      // Lands near a teammate — good position
+      const nearTeam = s.players.some(p =>
+        p.team === chainTeam && isAdjacent(p.position, t));
+      if (nearTeam) chainScore += 20;
+    }
+
+    // Avoid landing near opponent
+    const nearOpp = s.players.some(p => p.team === oppTeam && isAdjacent(p.position, t));
+    if (nearOpp) chainScore -= 20;
+
+    bestChainScore = Math.max(bestChainScore, chainScore);
+  });
+
+  return bestChainScore;
 }
 
 // Picks the bot's full move for the current turn: { playerId, kind: 'move'|'kick'|..., target }
@@ -4267,6 +4398,9 @@ function pickBotChainContinuation(s) {
   const team = s.currentPlayer;
 
   const scored = targets.map(t => {
+    // Never chain into own goal
+    const ownGoalPos = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+    if (ownGoalPos.some(g => g.x === t.x && g.y === t.y)) return { target: t, score: -9999 };
     let score = 0;
     // Direct goal — absolute priority
     if (isDirectGoalTarget(t, team)) score += 1000;
