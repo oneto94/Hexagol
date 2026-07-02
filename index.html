@@ -806,7 +806,8 @@ let onlineStatusUnsub = null;
 let onlineIsHost = false;
 let onlineStatus = 'idle';
 let onlineApplyingRemote = false;
-let onlineReceivedFirstState = false; // true after the first remote snapshot is applied
+let onlineReceivedFirstState = false;
+let onlineOpponentUid = null; // UID del rival para el cálculo de ELO al terminar // true after the first remote snapshot is applied
 
 // ── Firestore helpers ────────────────────────────────────────────────────────
 // Firestore preserves arrays, nulls, and empty objects exactly as written —
@@ -1142,8 +1143,16 @@ async function loadOrCreateUserProfile(user) {
   const snap = await ref.get();
   if (snap.exists) {
     userProfile = snap.data();
-    // Sync display name / photo from Google if changed
     await ref.update({ lastSeen: firebase.firestore.FieldValue.serverTimestamp() });
+    // Preload saved custom team into the picker
+    if (userProfile.customTeam) {
+      onlineTeamPicker.home = {
+        mode: 'custom',
+        presetIdx: 0,
+        customName: userProfile.customTeam.name || 'Mi Equipo',
+        customKit: userProfile.customTeam.kit || defaultHomeKit(),
+      };
+    }
   } else {
     // New user — create profile
     const username = user.displayName || user.email?.split('@')[0] || 'Jugador';
@@ -1234,37 +1243,45 @@ function calculateEloChange(myElo, opponentElo, result, gamesPlayed) {
 
 async function updateEloAfterMatch(myResult, opponentUid) {
   if (!currentUser || currentUser.isAnonymous || !userProfile) return;
-  if (!opponentUid) return;
+  if (!opponentUid) {
+    // Opponent is a guest (no UID) — still update our own stats, use default ELO for calculation
+    const myChange = calculateEloChange(userProfile.elo, DEFAULT_ELO, myResult, userProfile.gamesPlayed);
+    userProfile.elo = Math.max(100, userProfile.elo + myChange);
+    userProfile.gamesPlayed++;
+    if (myResult === 'win') userProfile.wins++;
+    else if (myResult === 'loss') userProfile.losses++;
+    else userProfile.draws++;
+    await db.collection('users').doc(currentUser.uid).update({
+      elo: userProfile.elo,
+      gamesPlayed: userProfile.gamesPlayed,
+      wins: userProfile.wins,
+      losses: userProfile.losses,
+      draws: userProfile.draws,
+    });
+    return;
+  }
 
+  // Read opponent's current ELO to calculate the change
   const opponentSnap = await db.collection('users').doc(opponentUid).get();
-  if (!opponentSnap.exists) return;
-  const opponentProfile = opponentSnap.data();
+  const opponentElo = opponentSnap.exists ? (opponentSnap.data().elo || DEFAULT_ELO) : DEFAULT_ELO;
+  const opponentGames = opponentSnap.exists ? (opponentSnap.data().gamesPlayed || 0) : 0;
 
-  const myChange = calculateEloChange(userProfile.elo, opponentProfile.elo, myResult, userProfile.gamesPlayed);
-  const theirResult = myResult === 'win' ? 'loss' : myResult === 'loss' ? 'win' : 'draw';
-  const theirChange = calculateEloChange(opponentProfile.elo, userProfile.elo, theirResult, opponentProfile.gamesPlayed);
-
-  // Update my profile
+  const myChange = calculateEloChange(userProfile.elo, opponentElo, myResult, userProfile.gamesPlayed);
   userProfile.elo = Math.max(100, userProfile.elo + myChange);
   userProfile.gamesPlayed++;
   if (myResult === 'win') userProfile.wins++;
   else if (myResult === 'loss') userProfile.losses++;
   else userProfile.draws++;
 
-  const batch = db.batch();
-  batch.update(db.collection('users').doc(currentUser.uid), {
+  // Each player only writes their OWN document — Firestore rules allow this.
+  // The opponent does the same on their side when their game-over triggers.
+  await db.collection('users').doc(currentUser.uid).update({
     elo: userProfile.elo,
     gamesPlayed: userProfile.gamesPlayed,
     wins: userProfile.wins,
     losses: userProfile.losses,
     draws: userProfile.draws,
   });
-  batch.update(db.collection('users').doc(opponentUid), {
-    elo: Math.max(100, opponentProfile.elo + theirChange),
-    gamesPlayed: firebase.firestore.FieldValue.increment(1),
-    [`${theirResult}s`]: firebase.firestore.FieldValue.increment(1),
-  });
-  await batch.commit();
 }
 
 async function onlineCreateRoom(homeTeam, duration) {
@@ -1278,6 +1295,7 @@ async function onlineCreateRoom(homeTeam, duration) {
   await onlineRoomRef.set({
     status: 'waiting',
     homeTeam: sanitizeForFirestore(homeTeam),
+    homeUid: (currentUser && !currentUser.isAnonymous) ? currentUser.uid : null,
     duration,
     gameState: null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1300,6 +1318,7 @@ async function onlineCreateRoom(homeTeam, duration) {
     if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; }
 
     onlineStatus = 'connected';
+    onlineOpponentUid = data.awayUid || null; // guest's UID for ELO
 
     const guestTeam = data.awayTeam || TEAMS[1];
     const conflict = customKitsClash(
@@ -1347,8 +1366,13 @@ async function onlineJoinRoom(code, awayTeam) {
   onlineIsHost = false;
   onlineRoomRef = ref;
   onlineStatus = 'connected';
+  onlineOpponentUid = data.homeUid || null; // host's UID for ELO
 
-  await ref.update({ awayTeam: sanitizeForFirestore(awayTeam), status: 'playing' })
+  await ref.update({
+    awayTeam: sanitizeForFirestore(awayTeam),
+    awayUid: (currentUser && !currentUser.isAnonymous) ? currentUser.uid : null,
+    status: 'playing'
+  })
     .catch(err => { console.error('[Hexagol Online] Guest: error actualizando status:', err); alert('Error al unirse: ' + err.message); });
 
   attachOnlineStateListener();
@@ -1566,6 +1590,7 @@ function leaveOnlineRoom() {
   onlineStatus = 'idle';
   onlineApplyingRemote = false;
   onlineReceivedFirstState = false;
+  onlineOpponentUid = null;
   onlineRematchRequestedByMe = false;
   onlineIncomingRematchFrom = null;
 }
@@ -3659,7 +3684,24 @@ function playSoundsForTransition(prev, next) {
   if (lastType === 'move') { sounds.move(); return; }
 
   if (prev.gamePhase !== 'half-time' && next.gamePhase === 'half-time') { sounds.whistleShort(); return; }
-  if (prev.gamePhase !== 'game-over' && next.gamePhase === 'game-over') { sounds.whistleLong(); return; }
+  if (prev.gamePhase !== 'game-over' && next.gamePhase === 'game-over') {
+    sounds.whistleLong();
+    // Trigger ELO update for authenticated users in online mode.
+    // Both players hit this branch independently: the scorer via setState,
+    // the other via applyRemoteState. onlineOpponentUid was stored when
+    // the room was created/joined, so it's available on both sides.
+    if (next.gameMode === 'online' && onlineMyTeam && onlineOpponentUid) {
+      const myScore = next.score[onlineMyTeam];
+      const theirTeam = onlineMyTeam === 'home' ? 'away' : 'home';
+      const theirScore = next.score[theirTeam];
+      const result = myScore > theirScore ? 'win' : myScore < theirScore ? 'loss' : 'draw';
+      // Fire and forget — don't block the UI
+      updateEloAfterMatch(result, onlineOpponentUid).catch(err =>
+        console.warn('[Hexagol ELO] Update failed:', err)
+      );
+    }
+    return;
+  }
   if (prev.gamePhase !== 'turn-over' && next.gamePhase === 'turn-over') { sounds.turnTimeout(); return; }
 }
 
@@ -3812,14 +3854,41 @@ function isDirectGoalTarget(pos, team) {
   return goal.some(g => g.x === pos.x && g.y === pos.y);
 }
 
+// Returns squares that the OPPONENT could reach to drag the ball from,
+// given any possible dice value (1-6). Used to detect drag threats so the
+// bot doesn't naively leave its ball exposed to a rival in the same line.
+function findDragThreatPlayers(s) {
+  if (!s.ballPosition) return [];
+  const defendingTeam = s.currentPlayer;
+  const attackingTeam = defendingTeam === 'home' ? 'away' : 'home';
+  const ball = s.ballPosition;
+  const directions = [
+    { dx: 0, dy: -1 }, { dx: 1, dy: -1 }, { dx: 1, dy: 0 }, { dx: 1, dy: 1 },
+    { dx: 0, dy: 1 }, { dx: -1, dy: 1 }, { dx: -1, dy: 0 }, { dx: -1, dy: -1 },
+  ];
+  const threatPlayers = [];
+  directions.forEach(dir => {
+    // Walk along each direction from the ball — if an attacker is in that line
+    // with no blocker between them and the ball, they can drag it with the right dice.
+    for (let i = 1; i <= 6; i++) {
+      const pos = { x: ball.x + dir.dx * i, y: ball.y + dir.dy * i };
+      if (pos.x < 0 || pos.x >= BOARD_WIDTH || pos.y < 0 || pos.y >= BOARD_HEIGHT) break;
+      const player = s.players.find(p => p.position.x === pos.x && p.position.y === pos.y);
+      if (player) {
+        if (player.team === attackingTeam) threatPlayers.push(player);
+        break; // blocked — stop this direction
+      }
+    }
+  });
+  return threatPlayers;
+}
+
 // Finds the squares an opponent attacker could shoot from RIGHT NOW for a clear, unobstructed
 // shot on our goal — i.e. an opponent sits next to the ball, and the straight line from the ball
-// to our goal mouth has no other piece blocking it. This doesn't depend on the dice roll: a clear
-// lane is a clear lane regardless of how far the dice lets them kick (the goal posts are the target).
-// Returns the list of board squares that sit on such a dangerous lane (so the bot can occupy one).
+// to our goal mouth has no other piece blocking it.
 function findShotThreatSquares(s) {
   if (!s.ballPosition) return [];
-  const defendingTeam = s.currentPlayer; // the bot's own team, defending its goal
+  const defendingTeam = s.currentPlayer;
   const attackingTeam = defendingTeam === 'home' ? 'away' : 'home';
   const ownGoal = defendingTeam === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
 
@@ -3849,6 +3918,32 @@ function findShotThreatSquares(s) {
   return dangerSquares;
 }
 
+// Returns true if the human player has a direct shot at the bot's goal from the current ball position.
+function humanHasDirectShotThreat(s) {
+  if (!s.ballPosition) return false;
+  const botTeam = s.currentPlayer;
+  const humanTeam = botTeam === 'home' ? 'away' : 'home';
+  const ownGoal = botTeam === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  return s.players.some(p => {
+    if (p.team !== humanTeam || !isAdjacent(p.position, s.ballPosition)) return false;
+    // Check each goal position for a clear line from ball
+    return ownGoal.some(g => {
+      const dx = Math.sign(g.x - s.ballPosition.x);
+      const dy = Math.sign(g.y - s.ballPosition.y);
+      if (dx === 0 && dy === 0) return false;
+      // Must be a straight line (diagonal, horizontal, or vertical)
+      if (g.x !== s.ballPosition.x && g.y !== s.ballPosition.y &&
+          Math.abs(g.x - s.ballPosition.x) !== Math.abs(g.y - s.ballPosition.y)) return false;
+      let cx = s.ballPosition.x + dx, cy = s.ballPosition.y + dy;
+      while (cx !== g.x || cy !== g.y) {
+        if (s.players.some(pl => pl.position.x === cx && pl.position.y === cy)) return false;
+        cx += dx; cy += dy;
+      }
+      return true;
+    });
+  });
+}
+
 // Collects every legal ball-action this player could take (kick/drag/lofted variants),
 // tagged with the resulting ball position, exactly like handlePlayerSelection computes for a human.
 function collectBallActionsForPlayer(s, player) {
@@ -3871,31 +3966,147 @@ function collectBallActionsForPlayer(s, player) {
 
 function scoreBallAction(s, player, action) {
   const team = player.team;
-  const opponentGoal = team === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+  const oppTeam = team === 'home' ? 'away' : 'home';
+  const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
   let score = 0;
+
+  // Direct goal — highest priority
   if (isDirectGoalTarget(action.target, team)) score += 1000;
-  // Reward closing the distance to the opponent's goal.
-  score += (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(action.target, team)) * 10;
-  // Slightly prefer kicks/drags that land the ball on a teammate (keeps possession / enables chain).
+
+  // Closing distance to opponent goal
+  score += (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(action.target, team)) * 12;
+
+  // ── Defensive clearance priority ─────────────────────────────────────────
+  // If the ball is near our own goal, reward kicking it FAR away (despeje).
+  // This must outweigh blocking: clearing > obstructing.
+  const ballNearOwnGoal = ownGoal.some(g => Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y) <= 4);
+  if (ballNearOwnGoal) {
+    const distBefore = Math.min(...ownGoal.map(g => Math.abs(g.x - s.ballPosition.x) + Math.abs(g.y - s.ballPosition.y)));
+    const distAfter = Math.min(...ownGoal.map(g => Math.abs(g.x - action.target.x) + Math.abs(g.y - action.target.y)));
+    score += (distAfter - distBefore) * 30; // strong clearance bonus — outweighs blocking
+  }
+
+  // Landing on a teammate starts a chain — very valuable
   const receiver = s.players.find(p => p.position.x === action.target.x && p.position.y === action.target.y && p.team === team);
-  if (receiver) score += 8;
-  const opponentNear = s.players.some(p => p.team !== team && isAdjacent(p.position, action.target));
-  if (opponentNear) score -= 6;
+  if (receiver) score += 30;
+
+  // Landing near a teammate enables future chain
+  const nearTeammate = s.players.some(p => p.team === team && p.id !== player.id && isAdjacent(p.position, action.target));
+  if (nearTeammate) score += 12;
+
+  // Avoid landing ball near own goal
+  const nearOwnGoal = ownGoal.some(g => Math.abs(g.x - action.target.x) <= 2 && Math.abs(g.y - action.target.y) <= 2);
+  if (nearOwnGoal) score -= 60;
+
+  // ── Contest / clear when rival is also on the ball ───────────────────────
+  // This is the key tactical situation: both teams have players adjacent to
+  // the ball. The AI should prioritize moving it OUT of the rival's reach —
+  // either passing to safety or kicking it far enough that the human player
+  // can no longer reach it next turn.
+  const rivalAlsoAdjacentToBall = s.players.some(p =>
+    p.team === oppTeam && isAdjacent(p.position, s.ballPosition));
+  if (rivalAlsoAdjacentToBall) {
+    // Count how many human players can reach the target position
+    const rivalsCanReachTarget = s.players.filter(p =>
+      p.team === oppTeam && isAdjacent(p.position, action.target)).length;
+    const rivalsCantReachTarget = s.players.filter(p =>
+      p.team === oppTeam && isAdjacent(p.position, s.ballPosition) &&
+      !isAdjacent(p.position, action.target)).length;
+
+    // Strong bonus for moving ball OUT of all adjacent rivals' reach
+    if (rivalsCanReachTarget === 0) score += 60;
+    // Bonus proportional to how many rivals we lose from the contest
+    score += rivalsCantReachTarget * 25;
+    // Extra penalty if we leave it reachable by the same rival who had it
+    if (rivalsCanReachTarget > 0) score -= 30;
+  }
+
+  // ── Disrupt opponent chain pass setups ────────────────────────────────────
+  // Reward landing where no opponent is adjacent (they lose chain pass option)
+  const opponentsAdjacentToTarget = s.players.filter(p => p.team === oppTeam && isAdjacent(p.position, action.target));
+  if (opponentsAdjacentToTarget.length === 0) score += 10;
+  if (opponentsAdjacentToTarget.length > 0) {
+    score -= 20;
+    if (isDirectGoalTarget(action.target, oppTeam)) score -= 80;
+  }
+
+  if (action.kind === 'kick') score += 5;
   return score;
 }
 
 function scoreMoveAction(s, player, target) {
   const team = player.team;
+  const oppTeam = team === 'home' ? 'away' : 'home';
+  const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const oppGoal = team === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
   let score = 0;
-  const hasBall = s.ballPosition && isAdjacent(target, s.ballPosition);
-  if (hasBall) score += 5;
-  // Defenders without the ball drift back toward their own goal area; attackers without it push up.
-  const weHavePossession = s.lastPlayerToTouchBallId != null && s.players.find(p => p.id === s.lastPlayerToTouchBallId)?.team === team;
-  if (!weHavePossession && s.ballPosition) {
-    score += (Math.abs(player.position.y - s.ballPosition.y) - Math.abs(target.y - s.ballPosition.y)) * 2;
-  } else {
-    score += (goalDistanceScore(player.position, team) - goalDistanceScore(target, team)) * 1.5;
+
+  const ball = s.ballPosition;
+  const weHavePossession = s.lastPlayerToTouchBallId != null &&
+    s.players.find(p => p.id === s.lastPlayerToTouchBallId)?.team === team;
+  const oppHasPossession = s.lastPlayerToTouchBallId != null &&
+    s.players.find(p => p.id === s.lastPlayerToTouchBallId)?.team === oppTeam;
+
+  // ── Goalkeeper discipline ────────────────────────────────────────────────
+  if (player.isGoalkeeper) {
+    const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+    const inOwnArea = Math.abs(player.position.y - ownGoalY) <= 3;
+    const targetInOwnArea = Math.abs(target.y - ownGoalY) <= 3;
+    const wouldBeAdjacentBall = ball && isAdjacent(target, ball);
+    if (inOwnArea && !targetInOwnArea && !wouldBeAdjacentBall) score -= 100;
+    if (!inOwnArea && !targetInOwnArea && !wouldBeAdjacentBall) score -= 150;
+    if (!inOwnArea && targetInOwnArea) score += 50;
   }
+
+  // ── Ball adjacency ───────────────────────────────────────────────────────
+  const currentlyAdjacent = ball && isAdjacent(player.position, ball);
+  const wouldBeAdjacent = ball && isAdjacent(target, ball);
+  if (wouldBeAdjacent && !currentlyAdjacent) score += 20;
+  if (wouldBeAdjacent) score += 8;
+
+  // ── Attacking movement ───────────────────────────────────────────────────
+  if (weHavePossession) {
+    // Push toward opponent goal
+    score += (goalDistanceScore(player.position, team) - goalDistanceScore(target, team)) * 5;
+    // Support chain: get 1 step from ball carrier
+    const carrier = s.players.find(p => p.id === s.lastPlayerToTouchBallId);
+    if (carrier && carrier.id !== player.id) {
+      const distAfter = Math.abs(target.x - carrier.position.x) + Math.abs(target.y - carrier.position.y);
+      if (distAfter === 1) score += 22;
+      else if (distAfter === 2) score += 8;
+    }
+  }
+
+  // ── Defensive movement (only when opponent has possession) ───────────────
+  if (oppHasPossession && ball) {
+    // Chase ball
+    const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
+    const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
+    score += (distBefore - distAfter) * 4;
+
+    // Mark ONE chain receiver — don't double-count per opponent
+    const oppsAdj = s.players.filter(p => p.team === oppTeam && isAdjacent(p.position, ball));
+    if (oppsAdj.length > 0) {
+      const chainReceivers = s.players.filter(p =>
+        p.team === oppTeam && !oppsAdj.some(o => o.id === p.id) &&
+        oppsAdj.some(o => isAdjacent(o.position, p.position)));
+      if (chainReceivers.some(r => isAdjacent(target, r.position))) score += 14;
+    }
+  }
+
+  // ── Neutral (no clear possession) ───────────────────────────────────────
+  if (!weHavePossession && !oppHasPossession && ball) {
+    const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
+    const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
+    score += (distBefore - distAfter) * 3;
+  }
+
+  // Avoid clustering
+  const nearTeammates = s.players.filter(p =>
+    p.team === team && p.id !== player.id &&
+    Math.abs(p.position.x - target.x) <= 1 && Math.abs(p.position.y - target.y) <= 1).length;
+  score -= nearTeammates * 4;
+
   return score;
 }
 
@@ -3908,20 +4119,55 @@ function pickBotMove(s) {
   const dangerSquares = difficulty === 'easy' ? [] : findShotThreatSquares(s);
   const dangerKey = new Set(dangerSquares.map(p => `${p.x},${p.y}`));
 
+  // Detect drag threats: human players in line with the ball who could drag it
+  const dragThreatPlayers = difficulty === 'easy' ? [] : findDragThreatPlayers(s);
+  const dragThreatKeys = new Set(dragThreatPlayers.map(p => `${p.position.x},${p.position.y}`));
+
+  // Detect if human has a direct shot at our goal RIGHT NOW
+  const humanHasShot = difficulty !== 'easy' && humanHasDirectShotThreat(s);
+
   myPlayers.forEach(player => {
     const ballActions = collectBallActionsForPlayer(s, player);
     ballActions.forEach(a => {
       if (isActionOffside(player, a.target, s.players, s.ballPosition)) return;
-      candidates.push({ playerId: player.id, kind: a.kind, target: a.target, score: scoreBallAction(s, player, a) });
+      let score = scoreBallAction(s, player, a);
+
+      // Bug fix 2: when human has direct shot, moving the ball is ALWAYS better
+      // than any move candidate — add a flat urgency bonus to all ball actions
+      if (humanHasShot) score += 400;
+
+      // Bug fix 1: penalize moving ball to a target where a drag-threat player
+      // is still in line — we'd just hand them the drag on the new position too
+      if (s.ballPosition) {
+        const directions = [
+          { dx: 0, dy: -1 }, { dx: 1, dy: -1 }, { dx: 1, dy: 0 }, { dx: 1, dy: 1 },
+          { dx: 0, dy: 1 }, { dx: -1, dy: 1 }, { dx: -1, dy: 0 }, { dx: -1, dy: -1 },
+        ];
+        const newDragThreats = directions.some(dir => {
+          for (let i = 1; i <= 6; i++) {
+            const pos = { x: a.target.x + dir.dx * i, y: a.target.y + dir.dy * i };
+            if (pos.x < 0 || pos.x >= BOARD_WIDTH || pos.y < 0 || pos.y >= BOARD_HEIGHT) break;
+            const blocker = s.players.find(p => p.position.x === pos.x && p.position.y === pos.y);
+            if (blocker) {
+              if (dragThreatKeys.has(`${blocker.position.x},${blocker.position.y}`)) return true;
+              break;
+            }
+          }
+          return false;
+        });
+        if (newDragThreats) score -= 40; // still a drag threat after the move
+        else if (dragThreatPlayers.length > 0) score += 30; // we escaped their drag range
+      }
+
+      candidates.push({ playerId: player.id, kind: a.kind, target: a.target, score });
     });
     if (s.diceValue) {
       const moves = getValidMoves(player, s.diceValue, s.players, s.ballPosition);
       moves.forEach(target => {
         let score = scoreMoveAction(s, player, target);
-        // Stepping into a square that currently sits on a clear shooting lane to our own goal
-        // is worth more than almost anything else on defense — it physically blocks the shot
-        // (a piece on the lane becomes the new kick target instead of an open goal).
-        if (dangerKey.has(`${target.x},${target.y}`)) score += 500;
+        if (dangerKey.has(`${target.x},${target.y}`)) score += 200;
+        // If human has direct shot, don't just block — moving the ball is better
+        // (ball actions already get +400, so move candidates need no extra here)
         candidates.push({ playerId: player.id, kind: 'move', target, score });
       });
     }
@@ -3931,17 +4177,13 @@ function pickBotMove(s) {
   candidates.sort((a, b) => b.score - a.score);
 
   if (difficulty === 'easy') {
-    // Mostly random, with a mild bias toward the better half of the options.
-    const pool = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
+    const pool = candidates.slice(Math.floor(candidates.length / 2));
     return pool[Math.floor(Math.random() * pool.length)];
   }
-  if (difficulty === 'hard') {
-    // Best-scoring option, with a small random tiebreak among near-equal top picks.
-    const top = candidates.filter(c => c.score >= candidates[0].score - 2);
-    return top[Math.floor(Math.random() * top.length)];
-  }
-  // normal: best option most of the time, occasional second-best for variety.
-  if (candidates.length > 1 && Math.random() < 0.2) return candidates[1];
+  if (difficulty === 'hard') return candidates[0];
+
+  // normal: best option most of the time, occasional second-best for variety
+  if (candidates.length > 1 && Math.random() < 0.15) return candidates[1];
   return candidates[0];
 }
 
@@ -3949,7 +4191,22 @@ function pickBotChainContinuation(s) {
   const targets = s.validChainPassTargets || [];
   if (targets.length === 0) return null;
   const team = s.currentPlayer;
-  const scored = targets.map(t => ({ target: t, score: isDirectGoalTarget(t, team) ? 1000 : (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(t, team)) * 10 }));
+
+  const scored = targets.map(t => {
+    let score = 0;
+    // Direct goal — absolute priority
+    if (isDirectGoalTarget(t, team)) score += 1000;
+    // Closing distance to goal
+    score += (goalDistanceScore(s.ballPosition, team) - goalDistanceScore(t, team)) * 12;
+    // Landing on another teammate enables further chain
+    const receiver = s.players.find(p => p.position.x === t.x && p.position.y === t.y && p.team === team);
+    if (receiver) score += 25;
+    // Avoid danger zone
+    const oppNear = s.players.some(p => p.team !== team && isAdjacent(p.position, t));
+    if (oppNear) score -= 15;
+    return { target: t, score };
+  });
+
   scored.sort((a, b) => b.score - a.score);
   return scored[0].target;
 }
@@ -4025,20 +4282,25 @@ function runBotTurn() {
     }
     if (cur.gamePhase === 'selecting-piece' || cur.gamePhase === 'moving-piece') {
       const move = pickBotMove(cur);
-      if (!move) { setState(s2 => handleDeselectPlayer(s2, false)); setTimeout(step, 300); return; }
+      if (!move) { setState(s2 => advanceToNextTurn(s2, { skipSwapCheck: true })); setTimeout(step, 300); return; }
       setTimeout(() => {
+        // Select the player
         setState(s2 => handlePlayerSelection(s2, move.playerId));
         setTimeout(() => {
-          setState(s2 => handleSquareSelection(s2, move.target));
-          setTimeout(() => {
-            if (state.actionChoice) {
+          // Execute the move
+          setState(s2 => {
+            const afterMove = handleSquareSelection(s2, move.target);
+            // If an actionChoice appeared (ambiguous tile: move vs kick/drag),
+            // resolve it immediately in the same setState call to avoid timing issues
+            if (afterMove.actionChoice) {
               const wanted = move.kind;
-              const available = state.actionChoice.actions;
+              const available = afterMove.actionChoice.actions;
               const act = available.includes(wanted) ? wanted : available[0];
-              setState(s2 => handleActionExecution({ ...s2, actionChoice: null }, act, state.actionChoice.position));
+              return handleActionExecution({ ...afterMove, actionChoice: null }, act, afterMove.actionChoice.position);
             }
-            setTimeout(step, 500);
-          }, 400);
+            return afterMove;
+          });
+          setTimeout(step, 600);
         }, 400);
       }, 500);
       return;
@@ -5372,6 +5634,11 @@ function renderCustomKitEditor() {
       <button class="menu-btn" id="save-custom-kit-btn" style="background:var(--accent); border-color:var(--accent);">
         <div class="t" style="color:#fff;">✓ Listo</div>
       </button>
+      ${currentUser && !currentUser.isAnonymous ? `
+      <button class="menu-btn" id="save-kit-to-profile-btn">
+        <div class="t">💾 Guardar en mi perfil</div>
+        <div class="d">Este equipo aparecerá precargado la próxima vez.</div>
+      </button>` : ''}
       <button class="menu-btn" id="discard-custom-kit-btn"><div class="t">← Volver sin guardar</div></button>
     </div>
   </div>`;
@@ -6121,8 +6388,18 @@ function renderDicePanel(s) {
   if (s.gamePhase === 'game-over') {
     if (s.gameMode === 'online') {
       const requesterName = onlineIncomingRematchFrom ? getTeamName(s, onlineIncomingRematchFrom) : '';
+      const myScore = onlineMyTeam ? s.score[onlineMyTeam] : 0;
+      const theirTeam = onlineMyTeam === 'home' ? 'away' : 'home';
+      const theirScore = s.score[theirTeam];
+      const resultText = myScore > theirScore ? '🏆 ¡Ganaste!' : myScore < theirScore ? '😔 Perdiste' : '🤝 Empate';
+      const resultColor = myScore > theirScore ? '#1d6b2b' : myScore < theirScore ? '#dc2626' : '#6b7a64';
+      const eloInfo = userProfile && onlineOpponentUid
+        ? `<div style="font-size:0.75rem; color:#6b7a64; text-align:center; margin: 4px 0 6px;">⚡ ELO: ${userProfile.elo} · ${userProfile.wins}V ${userProfile.losses}D ${userProfile.draws}E</div>`
+        : '';
       return `<div class="dice-panel">
-        <h3>Partido finalizado</h3>
+        <div style="font-size:1.1rem; font-weight:800; color:${resultColor}; text-align:center; margin-bottom:4px;">${resultText}</div>
+        <div style="font-size:0.85rem; text-align:center; color:#384032; margin-bottom:6px;">${getTeamName(s,'home')} ${s.score.home} — ${s.score.away} ${getTeamName(s,'away')}</div>
+        ${eloInfo}
         ${onlineIncomingRematchFrom ? `
           <div class="rematch-prompt">
             <p>${requesterName} te pidió la revancha.</p>
@@ -6407,6 +6684,34 @@ function wireEvents() {
       onlineCustomEditorSide = null;
       currentMenuView = onlineKitEditorReturnView || 'online-setup';
       render();
+    };
+  }
+
+  const saveKitToProfileBtn = document.getElementById('save-kit-to-profile-btn');
+  if (saveKitToProfileBtn) {
+    saveKitToProfileBtn.onclick = async () => {
+      if (!onlineCustomEditorSide) return;
+      const picker = onlineTeamPicker[onlineCustomEditorSide];
+      if (!picker.customName || !picker.customName.trim()) picker.customName = 'Mi Equipo';
+      const teamToSave = {
+        name: picker.customName,
+        kit: picker.customKit,
+        mode: 'custom',
+      };
+      try {
+        await db.collection('users').doc(currentUser.uid).update({ customTeam: teamToSave });
+        if (userProfile) userProfile.customTeam = teamToSave;
+        saveKitToProfileBtn.textContent = '✓ Guardado';
+        saveKitToProfileBtn.disabled = true;
+        setTimeout(() => {
+          onlineCustomEditorSide = null;
+          currentMenuView = onlineKitEditorReturnView || 'online-setup';
+          render();
+        }, 800);
+      } catch (err) {
+        console.error('Error saving team to profile:', err);
+        alert('Error al guardar el equipo.');
+      }
     };
   }
 
