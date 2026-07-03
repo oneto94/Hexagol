@@ -35,6 +35,18 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Hexagol">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-9BKP766588"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-9BKP766588');
+  function trackEvent(name, params) {
+    if (typeof gtag !== 'undefined') gtag('event', name, params || {});
+  }
+</script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -939,16 +951,32 @@ function applyRemoteState(remote) {
 
   const remoteIsKickoff = !isFirstState && remote.isKickoffTurn && !state.isKickoffTurn;
   const remoteScoreChanged = !isFirstState && (remote.score.home !== state.score.home || remote.score.away !== state.score.away);
+  // Reset timer when half-time ends — covers case where both clients already have
+  // the same half number but timer is residual from the half-time countdown
+  const remoteHalfTimeEnded = !isFirstState && state.gamePhase === 'half-time' && remote.gamePhase === 'rolling';
 
   state = {
     ...remote,
     ...preservedRoll,
-    gameClock: (isFirstState || remoteIsNewHalf) ? remote.gameClock : state.gameClock,
-    timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf || remoteIsKickoff || remoteScoreChanged
+    gameClock: (isFirstState || remoteIsNewHalf || remoteHalfTimeEnded) ? remote.gameClock : state.gameClock,
+    timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf || remoteIsKickoff || remoteScoreChanged || remoteHalfTimeEnded
       ? (remote.turnDuration || state.turnDuration)
       : state.timer,
   };
   onlineReceivedFirstState = true;
+  // Fix 2: record wall-clock time when half-time state first arrives.
+  // Both clients start counting from when THEY receive it, but we use
+  // a fixed 30s window from arrival — see timer interval for usage.
+  if (prev.gamePhase !== 'half-time' && state.gamePhase === 'half-time') {
+    halfTimeStartedAt = Date.now();
+  } else if (state.gamePhase !== 'half-time') {
+    halfTimeStartedAt = null;
+  }
+  if (prev.gamePhase !== 'pre-game-roll' && state.gamePhase === 'pre-game-roll') {
+    preGameRollStartedAt = Date.now();
+  } else if (state.gamePhase !== 'pre-game-roll') {
+    preGameRollStartedAt = null;
+  }
   window.state = state;
   playSoundsForTransition(prev, state);
   currentMenuView = 'main';
@@ -1232,7 +1260,7 @@ async function saveUserProfile() {
 async function loginWithGoogle() {
   try {
     const result = await auth.signInWithPopup(googleProvider);
-    // onAuthStateChanged will handle profile load and re-render
+    trackEvent('login', { method: 'google' });
   } catch (err) {
     if (err.code !== 'auth/popup-closed-by-user') {
       console.error('Google login error:', err);
@@ -1267,6 +1295,7 @@ async function registerWithEmail(email, password, username) {
 async function loginAsGuest() {
   try {
     await auth.signInAnonymously();
+    trackEvent('login', { method: 'anonymous' });
     currentMenuView = 'main';
     render();
   } catch (err) {
@@ -1381,7 +1410,9 @@ async function onlineCreateRoom(homeTeam, duration) {
       : guestTeam;
 
     const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration);
-    state = initialState;
+    // Fix 1: start with 30s timer for the pre-game roll phase, using wall-clock reference
+    preGameRollStartedAt = Date.now();
+    state = { ...initialState, timer: 30 };
     window.state = state;
 
     // Attach the listener BEFORE writing to Firestore. This ensures the
@@ -3701,18 +3732,27 @@ function updateClockDisplaySurgically() {
     return;
   }
 
+  // Update countdown spans in pre-game-roll and half-time panels
+  const countdownEl = document.getElementById('halftime-countdown') || document.getElementById('pregame-countdown');
+  if (countdownEl && state.gameMode === 'online') {
+    countdownEl.textContent = state.timer + 's';
+  }
+
   if (clockEl) clockEl.textContent = '⏱ ' + formatClock(state.gameClock);
 
   const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(state.gamePhase)
     && state.gameMode !== 'tutorial';
-  if (isTimerActive && timerFillEl && timerLabelEl) {
-    const timerPct = Math.max(0, Math.min(100, (state.timer / state.turnDuration) * 100));
-    const timerLow = state.timer <= Math.ceil(state.turnDuration * 0.3);
+  const isCountdownActive = isTimerActive ||
+    (state.gameMode === 'online' && ['pre-game-roll', 'half-time'].includes(state.gamePhase));
+  if (isCountdownActive && timerFillEl && timerLabelEl) {
+    const maxTime = ['pre-game-roll', 'half-time'].includes(state.gamePhase) ? 30 : state.turnDuration;
+    const timerPct = Math.max(0, Math.min(100, (state.timer / maxTime) * 100));
+    const timerLow = state.timer <= Math.ceil(maxTime * 0.3);
     timerFillEl.style.width = timerPct + '%';
     timerFillEl.classList.toggle('low', timerLow);
     timerLabelEl.textContent = '⏳ ' + state.timer + 's';
     timerLabelEl.classList.toggle('low', timerLow);
-  } else if (!isTimerActive && (timerFillEl || timerLabelEl)) {
+  } else if (!isCountdownActive && (timerFillEl || timerLabelEl)) {
     // The timer row's very presence in the DOM depends on isTimerActive — if
     // that just flipped, a surgical text update can't add/remove the row
     // itself, so fall back to a full render to keep the markup correct.
@@ -3737,21 +3777,26 @@ function playSoundsForTransition(prev, next) {
   if (prev.gamePhase !== 'half-time' && next.gamePhase === 'half-time') { sounds.whistleShort(); return; }
   if (prev.gamePhase !== 'game-over' && next.gamePhase === 'game-over') {
     sounds.whistleLong();
-    // Trigger ELO update for authenticated users in online mode.
-    // Both players hit this branch independently: the scorer via setState,
-    // the other via applyRemoteState. onlineOpponentUid was stored when
-    // the room was created/joined, so it's available on both sides.
+    // Track match completion
+    trackEvent('match_complete', {
+      game_mode: next.gameMode,
+      score_home: next.score.home,
+      score_away: next.score.away,
+      half_duration: next.halfDurationMinutes,
+    });
     if (next.gameMode === 'online' && onlineMyTeam && onlineOpponentUid) {
       const myScore = next.score[onlineMyTeam];
       const theirTeam = onlineMyTeam === 'home' ? 'away' : 'home';
-      const theirScore = next.score[theirTeam];
-      const result = myScore > theirScore ? 'win' : myScore < theirScore ? 'loss' : 'draw';
-      // Fire and forget — don't block the UI
+      const result = myScore > next.score[theirTeam] ? 'win' : myScore < next.score[theirTeam] ? 'loss' : 'draw';
+      trackEvent('online_match_complete', { result });
       updateEloAfterMatch(result, onlineOpponentUid).catch(err =>
         console.warn('[Hexagol ELO] Update failed:', err)
       );
     }
     return;
+  }
+  if (prev.score.home !== next.score.home || prev.score.away !== next.score.away) {
+    trackEvent('goal_scored', { game_mode: next.gameMode });
   }
   if (prev.gamePhase !== 'turn-over' && next.gamePhase === 'turn-over') { sounds.turnTimeout(); return; }
 }
@@ -3881,7 +3926,10 @@ function handleOwnGoal(s) {
 
 function handleEndHalfOrMatch(s) {
   if (s.half === 1) {
-    return { ...logAction(s, '¡Medio tiempo!', 'game-event'), gamePhase: 'half-time', isClockRunning: false };
+    const halfTimeState = { ...logAction(s, '¡Medio tiempo!', 'game-event'), gamePhase: 'half-time', isClockRunning: false };
+    // Fix 2: in online mode, start a 30s countdown for auto second half start
+    if (s.gameMode === 'online') halfTimeStartedAt = Date.now();
+    return s.gameMode === 'online' ? { ...halfTimeState, timer: 30 } : halfTimeState;
   }
   const homeName = getTeamName(s, 'home'), awayName = getTeamName(s, 'away');
   let msg = '¡Fin del partido! ';
@@ -6029,6 +6077,13 @@ function renderMainMenu() {
         <div class="d">Mové jugadores y la pelota libremente, sin turnos ni reglas.</div>
       </button>
     </div>
+    <div style="margin-top:16px; text-align:center;">
+      <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
+         onclick="trackEvent('cafecito_click', {source:'main_menu'})"
+         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        ❤️ Donaciones
+      </a>
+    </div>
   </div>`;
 }
 
@@ -6985,7 +7040,10 @@ function renderDicePanel(s) {
   if (s.gamePhase === 'half-time') {
     return `<div class="dice-panel"><h3>Medio tiempo</h3>${
       state.gameMode === 'online' && !onlineIsHost
-        ? `<div class="rematch-waiting">⏳ Esperando que el rival inicie el 2do tiempo...</div>`
+        ? `<div class="rematch-waiting">⏳ Esperando 2do tiempo... <span id="halftime-countdown" style="font-weight:800;">${state.timer}s</span></div>`
+        : state.gameMode === 'online' && onlineIsHost
+        ? `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">Comenzar 2do tiempo →</button>
+           <div style="font-size:0.72rem; color:#6b7a64; text-align:center; margin-top:6px;">Auto-inicio en <b id="halftime-countdown">${state.timer}s</b></div>`
         : `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">Comenzar 2do tiempo →</button>`
     }</div>`;
   }
@@ -7007,6 +7065,11 @@ function renderDicePanel(s) {
         <div style="font-size:0.85rem; text-align:center; color:#384032; margin-bottom:6px;">${myTeamName} ${myScore} — ${theirScore} ${theirTeamName}</div>
         ${eloInfo}
         <button class="btn ghost" id="share-result-btn" style="width:100%; margin-bottom:6px;">📤 Compartir resultado</button>
+        <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
+           onclick="trackEvent('cafecito_click', {source:'game_over'})"
+           style="display:block;text-align:center;font-size:0.75rem;color:#6b7a64;margin-bottom:8px;text-decoration:none;">
+          ☕ ❤️ Donaciones — si te gustó el juego
+        </a>
         ${onlineIncomingRematchFrom ? `
           <div class="rematch-prompt">
             <p>${requesterName} te pidió la revancha.</p>
@@ -7845,10 +7908,12 @@ function resolveKickoffWinner(s) {
     const newPlayers = movePlayersForKickoff(getInitialPlayers(), startingTeam);
     startClock();
     startTurnTimer();
+    preGameRollStartedAt = null;
     const finalState = {
       ...s, players: newPlayers, currentPlayer: startingTeam, gamePhase: 'rolling',
       kickoffTeam: startingTeam, turnCount: 1, isClockRunning: true, homeRoll: null, awayRoll: null,
-      isKickoffTurn: true, stats: { ...s.stats, possession: { ...s.stats.possession, [startingTeam]: 1 } },
+      isKickoffTurn: true, timer: s.turnDuration,
+      stats: { ...s.stats, possession: { ...s.stats.possession, [startingTeam]: 1 } },
     };
     return logAction(finalState, msg, 'game-event', startingTeam);
   }
@@ -7934,24 +7999,153 @@ function startClock() {
 
 function startTurnTimer() {
   if (turnTimerIntervalHandle) clearInterval(turnTimerIntervalHandle);
+  startTurnTimer._lastTick = null; // reset second tracker
+
+  // Fix 3: track when the tab was hidden to correct timer on return (online only)
+  let hiddenAt = null;
+  const onVisibilityChange = () => {
+    if (state.gameMode !== 'online') return;
+    if (document.visibilityState === 'hidden') {
+      hiddenAt = Date.now();
+    } else if (hiddenAt !== null) {
+      // Tab came back — calculate real elapsed time and apply correction
+      const elapsed = Math.floor((Date.now() - hiddenAt) / 1000);
+      hiddenAt = null;
+      if (elapsed > 0) {
+        const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass', 'pre-game-roll', 'half-time'].includes(state.gamePhase)
+          && state.gameMode === 'online';
+        if (!isTimerActive) return;
+        const newTimer = Math.max(0, state.timer - elapsed);
+        if (newTimer === 0) {
+          // Timer expired while tab was hidden — trigger timeout now
+          if (state.gamePhase === 'half-time') {
+            startSecondHalfOnlineAuto();
+          } else if (state.gamePhase === 'pre-game-roll') {
+            autoRollPreGame();
+          } else {
+            setState(s => advanceTurnByTimeout(s));
+          }
+        } else {
+          setLocalOnlyState(s => ({ ...s, timer: newTimer }));
+        }
+      }
+    }
+  };
+  // Remove previous listener if any and add fresh one
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
   turnTimerIntervalHandle = setInterval(() => {
-    const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(state.gamePhase)
+    const isNormalTurn = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(state.gamePhase)
       && state.gameMode !== 'tutorial'
       && state.gameMode !== 'training';
+
+    // Normal turn timer (non-wall-clock): only decrement once per second
+    // despite the interval running at 250ms for smoother wall-clock timers
+    if (isNormalTurn) {
+      if (document.visibilityState === 'hidden') return;
+      // Use a separate second tracker to avoid decrementing 4x per second
+      if (!startTurnTimer._lastTick) startTurnTimer._lastTick = Date.now();
+      const now = Date.now();
+      if (now - startTurnTimer._lastTick < 950) return; // not a full second yet
+      startTurnTimer._lastTick = now;
+      if (state.timer > 0) {
+        setLocalOnlyState(s => ({ ...s, timer: s.timer - 1 }));
+        return;
+      }
+      setState(s => advanceTurnByTimeout(s));
+      return;
+    }
+
+    // Fix 1: pre-game-roll timeout (online only) — wall-clock based
+    const isPreGameRoll = state.gamePhase === 'pre-game-roll' && state.gameMode === 'online';
+    if (isPreGameRoll) {
+      if (preGameRollStartedAt === null) preGameRollStartedAt = Date.now(); // safety
+      const elapsed = Math.floor((Date.now() - preGameRollStartedAt) / 1000);
+      const remaining = Math.max(0, 30 - elapsed);
+      if (state.timer !== remaining) {
+        setLocalOnlyState(s => ({ ...s, timer: remaining }));
+      }
+      if (remaining === 0) autoRollPreGame();
+      return;
+    }
+
+    // Fix 2: half-time auto-start (online only) — wall-clock based
+    // Use wall-clock time from halfTimeStartedAt so host and guest trigger
+    // at the same real-world moment regardless of network latency.
+    const isHalfTime = state.gamePhase === 'half-time' && state.gameMode === 'online';
+    if (isHalfTime) {
+      if (halfTimeStartedAt === null) halfTimeStartedAt = Date.now(); // safety
+      const elapsed = Math.floor((Date.now() - halfTimeStartedAt) / 1000);
+      const remaining = Math.max(0, 30 - elapsed);
+      // Update displayed timer surgically
+      if (state.timer !== remaining) {
+        setLocalOnlyState(s => ({ ...s, timer: remaining }));
+      }
+      if (remaining === 0) startSecondHalfOnlineAuto();
+      return;
+    }
+
+    const isTimerActive = isNormalTurn;
     if (!isTimerActive) return;
-    if (state.gameMode === 'online' && document.visibilityState === 'hidden') return;
+
+    // Fix 3: skip tick if hidden (correction happens in visibilitychange handler)
+    if (document.visibilityState === 'hidden') return;
+
     if (state.timer > 0) {
-      // Cosmetic local-only tick, like the original's TICK_TURN_TIMER dispatched
-      // straight to the local reducer with no online write. Both players' clocks
-      // count down independently; nothing here touches Firebase.
       setLocalOnlyState(s => ({ ...s, timer: s.timer - 1 }));
       return;
     }
-    // Timeout reached — this is a real rule event (turn is forfeited). Just like
-    // the original (which didn't gate this by isCreator), whichever client's
-    // local timer reaches zero first drives the synced state change.
+
+    // Timer reached 0 — handle each phase
+    if (isPreGameRoll) {
+      autoRollPreGame();
+      return;
+    }
     setState(s => advanceTurnByTimeout(s));
-  }, 1000);
+  }, 250); // 250ms for smooth wall-clock timer display (pre-game-roll and half-time)
+}
+
+// Fix 1: auto-roll for whichever side hasn't rolled yet in pre-game-roll
+function autoRollPreGame() {
+  if (state.gamePhase !== 'pre-game-roll' || state.gameMode !== 'online') return;
+  preGameRollStartedAt = null;
+  if (onlineMyTeam === 'home' && state.homeRoll === null) {
+    // Host auto-rolls for themselves
+    doPreGameRoll('home');
+  } else if (onlineMyTeam === 'away' && state.awayRoll === null) {
+    if (state.homeRoll !== null) {
+      // Host already rolled — guest can roll now
+      doPreGameRoll('away');
+    } else {
+      // Host hasn't rolled yet — restart the countdown from now and wait
+      preGameRollStartedAt = Date.now();
+    }
+  }
+}
+
+// Fix 2: auto-start second half after 30s (online only, each client drives it)
+// Uses wall-clock time (halfTimeStartedAt) instead of a local countdown to avoid
+// desync between host and guest who receive the half-time state at different times.
+let halfTimeStartedAt = null;
+let preGameRollStartedAt = null; // wall-clock reference for pre-game-roll timer
+
+function startSecondHalfOnlineAuto() {
+  if (state.gamePhase !== 'half-time' || state.gameMode !== 'online') return;
+  setState(s => {
+    if (s.gamePhase !== 'half-time') return s; // already started
+    const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
+    const newPlayers = movePlayersForKickoff(getInitialPlayers(), secondHalfKickoff);
+    const kickoffTeamName = getTeamName(s, secondHalfKickoff);
+    const news = {
+      ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
+      currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
+      lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
+      isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
+    };
+    return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
+  });
+  halfTimeStartedAt = null;
 }
 
 function wireAuthEvents() {
