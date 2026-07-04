@@ -6100,11 +6100,16 @@ function renderMainMenu() {
         <div class="d">Mové jugadores y la pelota libremente, sin turnos ni reglas.</div>
       </button>
     </div>
-    <div style="margin-top:16px; text-align:center;">
+    <div style="margin-top:16px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
       <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('cafecito_click', {source:'main_menu'})"
          style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
         ❤️ Donaciones
+      </a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform" target="_blank" rel="noopener"
+         onclick="trackEvent('bug_report_click')"
+         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        🐛 Reportar bug
       </a>
     </div>
   </div>`;
