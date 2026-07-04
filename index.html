@@ -166,6 +166,8 @@
 
     /* Panel: hard cap at 20vh */
     .panel { max-height: 20vh; min-height: 0; border-radius: 8px; padding: 3px 6px; gap: 2px; overflow: hidden; }
+    /* Expanded panel for game-over and half-time — needs to show more content */
+    .panel.panel-expanded { max-height: 60vh; overflow-y: auto; }
 
     /* Hide stats, log, and dice panel title */
     .panel-stats-section, .panel-log-section { display: none !important; }
@@ -3728,6 +3730,13 @@ function updateClockDisplaySurgically() {
   const timerLabelEl = document.getElementById('turn-timer-label');
 
   if (!clockEl && !timerFillEl && !timerLabelEl) {
+    // During half-time and pre-game-roll, no clock/timer elements exist in the DOM
+    // but we still need to update the countdown span surgically — don't full render
+    const countdownEl2 = document.getElementById('halftime-countdown') || document.getElementById('pregame-countdown');
+    if (countdownEl2 && state.gameMode === 'online') {
+      countdownEl2.textContent = state.timer + 's';
+      return; // countdown updated surgically, no need for full render
+    }
     render();
     return;
   }
@@ -6896,7 +6905,7 @@ function renderGameScreen(s) {
     <button class="chat-fab" id="chat-fab-btn" title="Chat">
       💬${onlineChatUnread > 0 ? `<span class="chat-fab-badge">${onlineChatUnread > 9 ? '9+' : onlineChatUnread}</span>` : ''}
     </button>` : ''}
-    <div class="panel">
+    <div class="panel ${['game-over','half-time'].includes(s.gamePhase) ? 'panel-expanded' : ''}">
       <div class="mini-scoreboard">
         <div class="mini-team home">
           <span class="kit-dot" style="background:${homeKit}; border-color:${homeBorder};"></span>
