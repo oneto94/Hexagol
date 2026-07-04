@@ -979,6 +979,20 @@ function applyRemoteState(remote) {
   } else if (state.gamePhase !== 'pre-game-roll') {
     preGameRollStartedAt = null;
   }
+
+  // When host roll arrives at guest: reset countdown so guest rolls quickly
+  // instead of waiting up to 30s for the timer to expire naturally
+  if (state.gamePhase === 'pre-game-roll' && state.gameMode === 'online') {
+    // Host just rolled — guest should roll soon
+    if (onlineMyTeam === 'away' && state.awayRoll === null &&
+        prev.homeRoll === null && state.homeRoll !== null) {
+      preGameRollStartedAt = Date.now() - 25000; // 5 seconds left
+    }
+    // Tie — both rolls reset to null: restart countdown fresh
+    if (prev.homeRoll !== null && state.homeRoll === null) {
+      preGameRollStartedAt = Date.now();
+    }
+  }
   window.state = state;
   playSoundsForTransition(prev, state);
   currentMenuView = 'main';
