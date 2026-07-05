@@ -6157,7 +6157,7 @@ function renderOnlineSetup() {
       <div>
         <span class="field-label">Duración por tiempo</span>
         <div class="duration-row" id="online-duration-row">
-          ${[2, 5, 10, 15].map(m => `<button data-online-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
+          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-online-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
       </div>
     </div>
@@ -6630,8 +6630,14 @@ function renderSetup() {
       <div>
         <span class="field-label">Duración por tiempo</span>
         <div class="duration-row" id="duration-row">
-          ${[2, 5, 10, 15].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
+          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
+          <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
+          Sin límite de turno <span style="font-size:0.75rem;color:#8a9582;">(modo relajado para principiantes)</span>
+        </label>
       </div>
     </div>
     <div class="menu-grid">
@@ -6677,8 +6683,14 @@ function renderAiSetup() {
       <div>
         <span class="field-label">Duración por tiempo</span>
         <div class="duration-row" id="duration-row">
-          ${[2, 5, 10, 15].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
+          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
+      </div>
+      <div style="margin-top:10px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
+          <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
+          Sin límite de turno <span style="font-size:0.75rem;color:#8a9582;">(modo relajado para principiantes)</span>
+        </label>
       </div>
     </div>
     <div class="menu-grid">
@@ -7122,7 +7134,7 @@ function renderDicePanel(s) {
   const teamName = getTeamName(s, s.currentPlayer);
   const isZero = s.gamePhase === 'turn-over';
   const diceDisplay = s.diceValue !== null ? s.diceValue : '🎲';
-  const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(s.gamePhase);
+  const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(s.gamePhase) && s.turnDuration !== 9999;
   const timerPct = isTimerActive ? Math.max(0, Math.min(100, (s.timer / s.turnDuration) * 100)) : 100;
   const timerLow = isTimerActive && s.timer <= Math.ceil(s.turnDuration * 0.3);
   return `
@@ -7502,7 +7514,8 @@ function wireEvents() {
       if (homeIdx === awayIdx) { awayTeam = TEAMS[(awayIdx + 1) % TEAMS.length]; }
       const { finalHomeTeam, finalAwayTeam, clashResolved } = resolveKitClash(homeTeam, awayTeam);
       const fresh = getInitialState();
-      const turnDur = setupDuration <= 5 ? (setupDuration <= 2 ? 10 : 20) : TURN_DURATION;
+      const noTurnTimer = document.getElementById('no-turn-timer-check')?.checked;
+      const turnDur = noTurnTimer ? 9999 : setupDuration <= 2 ? 10 : setupDuration <= 5 ? 20 : TURN_DURATION;
       setState({
         ...fresh, homeTeam: finalHomeTeam, awayTeam: finalAwayTeam,
         gamePhase: 'pre-game-roll', halfDurationMinutes: setupDuration, gameClock: setupDuration * 60,
@@ -7528,7 +7541,7 @@ function wireEvents() {
       if (homeIdx === awayIdx) { awayTeam = TEAMS[(awayIdx + 1) % TEAMS.length]; }
       const { finalHomeTeam, finalAwayTeam, clashResolved } = resolveKitClash(homeTeam, awayTeam);
       const fresh = getInitialState();
-      const turnDur = setupDuration <= 5 ? (setupDuration <= 2 ? 10 : 20) : TURN_DURATION;
+      const turnDur = document.getElementById('no-turn-timer-check')?.checked ? 9999 : setupDuration <= 2 ? 10 : setupDuration <= 5 ? 20 : TURN_DURATION;
       const aiTeam = aiHumanSide === 'home' ? 'away' : 'home';
       setState({
         ...fresh, homeTeam: finalHomeTeam, awayTeam: finalAwayTeam, gameMode: 'vs-ai',
