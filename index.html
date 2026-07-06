@@ -6,7 +6,8 @@
 <title>Hexagol — Fútbol de Dados Online</title>
 <meta name="description" content="Hexagol es un juego de fútbol por turnos con dados. Jugá online contra amigos o la computadora, competí en ligas y subí tu ELO. Gratis y sin descargas.">
 <meta name="keywords" content="hexagol, fútbol de dados, juego de mesa online, estrategia por turnos, juego online gratis">
-<meta name="author" content="Hexagol">
+<meta name="author" content="Ignacio Oneto">
+  <meta name="copyright" content="© 2026 Ignacio Oneto. Todos los derechos reservados.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://hexagol.com.ar">
 
@@ -6386,6 +6387,11 @@ function renderLanding() {
     <button id="lang-toggle-btn" style="margin-top:16px;background:none;border:1px solid #c8d4c0;border-radius:999px;padding:5px 14px;font-size:0.8rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
       🌐 ${t('landing.lang')}
     </button>
+    <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
+      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
+    </div>
   </div>`;
 }
 
@@ -6501,6 +6507,11 @@ function renderMainMenu() {
       <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
         🌐 ${t('landing.lang')}
       </button>
+    </div>
+    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
+      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -7463,7 +7474,7 @@ function renderGameScreen(s) {
     </div>
     <div class="chat-messages" id="chat-messages">
       ${onlineChatMessages.length === 0
-        ? `<div class="chat-empty">Todavía no hay mensajes. ¡Decí algo!</div>`
+        ? `<div class="chat-empty">${lang === 'en' ? 'No messages yet. Say something!' : 'Todavía no hay mensajes. ¡Decí algo!'}</div>`
         : onlineChatMessages.map(m => `<div class="chat-msg ${m.from === onlineMyTeam ? 'mine' : 'theirs'}">${escapeHtml(m.text)}</div>`).join('')}
     </div>
     <div class="chat-quick-row">
@@ -8751,6 +8762,63 @@ document.addEventListener('click', e => {
   const btn = e.target.closest('#lang-toggle-btn, #menu-lang-btn');
   if (btn) setLang(lang === 'es' ? 'en' : 'es');
 });
+
+// Legal modal
+function showLegalModal(type) {
+  const existing = document.getElementById('legal-modal');
+  if (existing) existing.remove();
+
+  const termsES = `<h2>Términos de Uso — Hexagol</h2>
+<p><b>Última actualización:</b> julio de 2026</p>
+<h3>1. Aceptación</h3><p>Al acceder y usar Hexagol (hexagol.com.ar), aceptás estos Términos de Uso.</p>
+<h3>2. Propiedad intelectual</h3><p>Todo el contenido de Hexagol — incluyendo el código, diseño, gráficos, nombre y mecánicas de juego — es propiedad exclusiva de <b>Ignacio Oneto</b> y está protegido por las leyes de derecho de autor de Argentina y tratados internacionales. Queda prohibido copiar, modificar, distribuir o vender el contenido sin autorización expresa y por escrito del autor.</p>
+<h3>3. Uso permitido</h3><p>Podés usar Hexagol de forma gratuita para entretenimiento personal. No podés reproducirlo, usarlo comercialmente ni intentar modificar el código o la base de datos.</p>
+<h3>4. Cuentas</h3><p>Al crear una cuenta aceptás proporcionar información verídica. Sos responsable de la seguridad de tu cuenta.</p>
+<h3>5. Donaciones</h3><p>Las donaciones son voluntarias y no otorgan derechos adicionales sobre el juego.</p>
+<h3>6. Disponibilidad</h3><p>Hexagol se ofrece "tal cual está". El autor puede modificar o discontinuar el servicio en cualquier momento.</p>
+<h3>7. Contacto</h3><p>ignacio.oneto@gmail.com</p>`;
+
+  const privacyES = `<h2>Política de Privacidad — Hexagol</h2>
+<p><b>Última actualización:</b> julio de 2026 · <b>Responsable:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
+<h3>Datos que recolectamos</h3><p><b>Al crear una cuenta:</b> nombre de usuario, email y contraseña (encriptada por Firebase). <b>Al jugar:</b> estadísticas de partidas (victorias, derrotas, ELO). <b>Automáticamente:</b> datos de uso anónimos via Google Analytics 4 (páginas, tiempo, dispositivo, país).</p>
+<h3>Para qué los usamos</h3><p>Para proveer el servicio, mostrar la tabla de líderes y mejorar el juego. No vendemos ni compartimos tus datos con terceros con fines comerciales.</p>
+<h3>Servicios de terceros</h3><p>Firebase (Google) para autenticación y base de datos. Google Analytics para análisis anónimo.</p>
+<h3>Tus derechos</h3><p>Bajo la Ley 25.326 (Argentina) y el GDPR, podés acceder, corregir o solicitar la eliminación de tus datos escribiendo a ignacio.oneto@gmail.com.</p>
+<h3>Menores</h3><p>Hexagol no está dirigido a menores de 13 años.</p>`;
+
+  const termsEN = `<h2>Terms of Use — Hexagol</h2>
+<p><b>Last updated:</b> July 2026</p>
+<h3>1. Acceptance</h3><p>By accessing and using Hexagol (hexagol.com.ar), you accept these Terms of Use.</p>
+<h3>2. Intellectual Property</h3><p>All content of Hexagol — including code, design, graphics, name and game mechanics — is the exclusive property of <b>Ignacio Oneto</b> and is protected by Argentine copyright law and international treaties. Copying, modifying, distributing or selling the content without express written authorization is prohibited.</p>
+<h3>3. Permitted Use</h3><p>You may use Hexagol free of charge for personal entertainment. You may not reproduce it, use it commercially, or attempt to modify the code or database.</p>
+<h3>4. Accounts</h3><p>By creating an account you agree to provide truthful information. You are responsible for the security of your account.</p>
+<h3>5. Donations</h3><p>Donations are voluntary and do not grant additional rights over the game.</p>
+<h3>6. Availability</h3><p>Hexagol is provided "as is". The author may modify or discontinue the service at any time.</p>
+<h3>7. Contact</h3><p>ignacio.oneto@gmail.com</p>`;
+
+  const privacyEN = `<h2>Privacy Policy — Hexagol</h2>
+<p><b>Last updated:</b> July 2026 · <b>Controller:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
+<h3>Data We Collect</h3><p><b>When creating an account:</b> username, email and password (encrypted by Firebase). <b>When playing:</b> match statistics (wins, losses, ELO). <b>Automatically:</b> anonymous usage data via Google Analytics 4 (pages, time, device, country).</p>
+<h3>How We Use It</h3><p>To provide the service, show the global leaderboard and improve the game. We do not sell or share your data with third parties for commercial purposes.</p>
+<h3>Third-Party Services</h3><p>Firebase (Google) for authentication and database. Google Analytics for anonymous analysis.</p>
+<h3>Your Rights</h3><p>Under Argentine Law 25.326 and the GDPR, you may access, correct or request deletion of your data by writing to ignacio.oneto@gmail.com.</p>
+<h3>Minors</h3><p>Hexagol is not directed at children under 13.</p>`;
+
+  const content = type === 'terms'
+    ? (lang === 'en' ? termsEN : termsES)
+    : (lang === 'en' ? privacyEN : privacyES);
+
+  const modal = document.createElement('div');
+  modal.id = 'legal-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:12px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;position:relative;font-size:0.85rem;line-height:1.6;color:#1c2b22;">
+      <button onclick="document.getElementById('legal-modal').remove()" style="position:sticky;top:0;float:right;background:#f0f4ee;border:none;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:0.8rem;">✕</button>
+      ${content}
+    </div>`;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
 
 // Register PWA service worker
 if ('serviceWorker' in navigator) {
