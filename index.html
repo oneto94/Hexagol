@@ -862,6 +862,345 @@ const db = firebase.firestore();
 const auth = firebase.auth();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+/* =========================================================
+   i18n — Sistema de traducción ES / EN
+   Uso: t('clave') o t('clave', { param: valor })
+   ========================================================= */
+let lang = localStorage.getItem('hexagol_lang') || 'es';
+
+function setLang(l) {
+  lang = l;
+  localStorage.setItem('hexagol_lang', l);
+  render();
+}
+
+function t(key, params) {
+  const str = (i18n[lang] && i18n[lang][key]) || i18n['es'][key] || key;
+  if (!params) return str;
+  return str.replace(/\{(\w+)\}/g, (_, k) => params[k] !== undefined ? params[k] : '{' + k + '}');
+}
+
+const i18n = {
+  es: {
+    // Landing
+    'landing.subtitle': 'Fútbol de dados · Estrategia por turnos',
+    'landing.google': 'Continuar con Google',
+    'landing.email': '✉️ Registrarse con email',
+    'landing.divider': 'o',
+    'landing.guest': 'Jugar como invitado →',
+    'landing.feature.online': 'Online multijugador',
+    'landing.feature.ai': 'Vs. IA con dificultad',
+    'landing.feature.league': 'Liga y torneo',
+    'landing.lang': 'English',
+    // Auth
+    'auth.create': 'Crear cuenta',
+    'auth.login': 'Iniciar sesión',
+    'auth.username': 'Nombre de usuario',
+    'auth.email': 'Email',
+    'auth.password': 'Contraseña (mín. 6 caracteres)',
+    'auth.submit.login': 'Iniciar sesión',
+    'auth.submit.register': 'Crear cuenta',
+    'auth.loading': 'Cargando...',
+    'auth.switch.to.register': '¿No tenés cuenta?',
+    'auth.switch.to.login': '¿Ya tenés cuenta?',
+    'auth.switch.register': 'Registrarse',
+    'auth.switch.login': 'Iniciar sesión',
+    'auth.back': '← Volver',
+    // Menu
+    'menu.title': '⚽ Hexagol',
+    'menu.subtitle': 'Fútbol de dados — estrategia por turnos',
+    'menu.online': '🌐 Jugar online',
+    'menu.online.desc': 'Jugá contra otra persona en cualquier parte del mundo.',
+    'menu.local': '1 vs 1 local',
+    'menu.local.desc': 'Dos jugadores comparten el mismo dispositivo y se turnan.',
+    'menu.ai': '🤖 Vs. Computadora',
+    'menu.ai.desc': 'Jugá solo contra un rival manejado por la máquina.',
+    'menu.tutorial': '🎓 Tutorial',
+    'menu.tutorial.desc': 'Aprendé las reglas paso a paso con un partido guiado.',
+    'menu.league': '🏆 Liga / Torneo',
+    'menu.league.desc': 'Armá un fixture de ida y vuelta entre varios equipos.',
+    'menu.rules': 'Cómo se juega',
+    'menu.rules.desc': 'Reglas rápidas antes de empezar tu primer partido.',
+    'menu.leaderboard': '🏅 Tabla de líderes',
+    'menu.leaderboard.desc': 'Los mejores jugadores por ELO a nivel global.',
+    'menu.training': '🧪 Entrenamiento libre',
+    'menu.training.desc': 'Mové jugadores y la pelota libremente, sin turnos ni reglas.',
+    'menu.donate': '❤️ Donaciones',
+    'menu.community': '💬 Comunidad',
+    'menu.bug': '🐛 Reportar bug',
+    // User chip
+    'user.guest': 'Invitado',
+    'user.guest.desc': 'Creá una cuenta para guardar tu progreso',
+    'user.logout': 'salir',
+    // Setup
+    'setup.title': 'Configurar partido',
+    'setup.subtitle': 'Elige los equipos y la duración de cada tiempo.',
+    'setup.duration': 'Duración por tiempo',
+    'setup.start': 'Comenzar partido →',
+    'setup.back': '← Volver',
+    'setup.notimer': 'Sin límite de turno',
+    'setup.notimer.desc': '(modo relajado para principiantes)',
+    // AI
+    'ai.title': '🤖 Vs. Computadora',
+    'ai.difficulty': 'Dificultad',
+    'ai.easy': 'Fácil',
+    'ai.normal': 'Normal',
+    'ai.hard': 'Difícil',
+    // Online setup
+    'online.create': 'Crear sala',
+    'online.join': 'Unirse con código',
+    'online.quick': 'Partida rápida',
+    'online.waiting': 'Esperando rival...',
+    'online.searching': 'Buscando rival...',
+    'online.copy': 'Copiar código',
+    'online.copied': '¡Copiado!',
+    'online.cancel': '✕ Cancelar sala',
+    'online.back': '← Volver',
+    'online.join.title': '🔑 Unirse a sala',
+    'online.join.subtitle': 'Pedile el código a tu rival e ingresalo acá.',
+    'online.join.btn': 'Unirse →',
+    'online.waiting.title': 'Sala creada',
+    'online.waiting.hint': 'Tu rival debe ingresar este código en <b>Unirse con código</b>.',
+    // Game over
+    'gameover.win': '🏆 ¡Ganaste!',
+    'gameover.loss': '😔 Perdiste',
+    'gameover.draw': '🤝 Empate',
+    'gameover.share': '📤 Compartir resultado',
+    'gameover.rematch': '🔁 Pedir revancha',
+    'gameover.waiting': '⏳ Esperando que el rival acepte la revancha...',
+    'gameover.back': 'Volver al menú',
+    'gameover.league': '🏆 Volver a la liga',
+    'gameover.finished': 'Partido finalizado',
+    'rematch.request': 'te pidió la revancha.',
+    'rematch.accept': '✓ Aceptar',
+    'rematch.decline': '✕ No, gracias',
+    // Leaderboard
+    'lb.title': '🏅 Tabla de líderes',
+    'lb.subtitle': 'Top jugadores por ELO global',
+    'lb.loading': 'Cargando...',
+    'lb.empty': 'Todavía no hay jugadores con partidas. ¡Sé el primero!',
+    'lb.back': '← Volver',
+    'lb.myposition': 'Tu posición: fuera del top 50',
+    // Rules
+    'rules.title': 'Cómo se juega',
+    'rules.back': '← Volver',
+    // Pre-game roll
+    'pregame.title': 'Sorteo inicial',
+    'pregame.subtitle': 'Quien saque más alto empieza con el balón.',
+    // Half time
+    'halftime.title': 'Medio tiempo',
+    'halftime.start2nd': 'Comenzar 2do tiempo →',
+    'halftime.waiting': 'Esperando 2do tiempo...',
+    'halftime.autoinicio': 'Auto-inicio en',
+    // In-game
+    'game.roll': 'Lanzar dado',
+    'game.skip': 'Pasar turno',
+    'game.reiniciar': 'Reiniciar',
+    'game.menu': 'Menú principal',
+    'game.stats': 'Estadísticas',
+    'game.log': 'Jugadas',
+    'game.possession': 'Posesión',
+    'game.shots': 'Remates',
+    'game.offsides': 'Offsides',
+    'game.turn': 'Turno de',
+    'game.half': 'T.',
+    'game.turnlabel': 'Turno',
+    // Game messages
+    'msg.zero': '¡Sacaste un 0! Pierdes el turno.',
+    'msg.rolled': 'Sacaste un {value}. Elige un jugador de {team} para mover.',
+    'msg.choose': 'Elige un jugador de {team} para mover.',
+    'msg.goal': '⚽ ¡GOL de {scorer}! Repone {conceder}. Lanza el dado.',
+    'msg.halftime': '¡Medio tiempo!',
+    'msg.kickoff': 'Comienza el {half}. Saca {team}.',
+    'msg.second': 'segundo tiempo',
+    'msg.offside': '¡Fuera de juego! Mové al jugador marcado a una posición válida.',
+    'msg.chain': lang === 'en' ? 'Chain pass. Choose where to continue or end the play.' : 'Pase en cadena. Elegí dónde continuar o terminá la jugada.',
+    'msg.chain.stop': 'Terminar jugada acá',
+    'msg.swap': 'Podés intercambiar al jugador con el arquero.',
+    'msg.swap.skip': 'No cambiar, finalizar turno',
+    'msg.timeout': '¡Tiempo agotado!',
+    'msg.disconnect': 'se desconectó. Ganás por abandono.',
+    // Share
+    'share.win': '¡Gané',
+    'share.loss': 'Perdí',
+    'share.draw': 'Empaté',
+    'share.text': '{result} {score} jugando Hexagol con {myTeam} vs {theirTeam}{elo} ⚽🎲\n👉 hexagol.com.ar',
+    // Chat
+    'chat.empty': 'Todavía no hay mensajes. ¡Decí algo!',
+    'chat.placeholder': 'Mensaje...',
+    'chat.send': 'Enviar',
+    // Reconnect
+    'reconnect.title': 'Partida en progreso',
+    'reconnect.desc': 'Tenés una partida online en curso. ¿Querés reconectarte?',
+    'reconnect.yes': 'Reconectarme',
+    'reconnect.no': 'No, volver al menú',
+    // Training
+    'training.reset': '↺ Resetear posiciones',
+    'training.back': '← Volver al menú',
+    'training.dice': 'Elegí el valor del dado',
+    'training.move': 'Tocá cualquier casilla para mover el jugador ahí.',
+  },
+  en: {
+    // Landing
+    'landing.subtitle': 'Dice football · Turn-based strategy',
+    'landing.google': 'Continue with Google',
+    'landing.email': '✉️ Sign up with email',
+    'landing.divider': 'or',
+    'landing.guest': 'Play as guest →',
+    'landing.feature.online': 'Online multiplayer',
+    'landing.feature.ai': 'vs AI with difficulty',
+    'landing.feature.league': 'League & tournament',
+    'landing.lang': 'Español',
+    // Auth
+    'auth.create': 'Create account',
+    'auth.login': 'Log in',
+    'auth.username': 'Username',
+    'auth.email': 'Email',
+    'auth.password': 'Password (min. 6 characters)',
+    'auth.submit.login': 'Log in',
+    'auth.submit.register': 'Create account',
+    'auth.loading': 'Loading...',
+    'auth.switch.to.register': "Don't have an account?",
+    'auth.switch.to.login': 'Already have an account?',
+    'auth.switch.register': 'Sign up',
+    'auth.switch.login': 'Log in',
+    'auth.back': '← Back',
+    // Menu
+    'menu.title': '⚽ Hexagol',
+    'menu.subtitle': 'Dice football — turn-based strategy',
+    'menu.online': '🌐 Play online',
+    'menu.online.desc': 'Play against someone anywhere in the world.',
+    'menu.local': '1 vs 1 local',
+    'menu.local.desc': 'Two players share the same device and take turns.',
+    'menu.ai': '🤖 vs Computer',
+    'menu.ai.desc': 'Play alone against a machine-controlled opponent.',
+    'menu.tutorial': '🎓 Tutorial',
+    'menu.tutorial.desc': 'Learn the rules step by step with a guided match.',
+    'menu.league': '🏆 League / Tournament',
+    'menu.league.desc': 'Set up a home-and-away fixture between teams.',
+    'menu.rules': 'How to play',
+    'menu.rules.desc': 'Quick rules before your first match.',
+    'menu.leaderboard': '🏅 Leaderboard',
+    'menu.leaderboard.desc': 'Top players by global ELO rating.',
+    'menu.training': '🧪 Free training',
+    'menu.training.desc': 'Move players and the ball freely, no turns or rules.',
+    'menu.donate': '❤️ Donate',
+    'menu.community': '💬 Community',
+    'menu.bug': '🐛 Report bug',
+    // User chip
+    'user.guest': 'Guest',
+    'user.guest.desc': 'Create an account to save your progress',
+    'user.logout': 'sign out',
+    // Setup
+    'setup.title': 'Match setup',
+    'setup.subtitle': 'Choose teams and half duration.',
+    'setup.duration': 'Duration per half',
+    'setup.start': 'Start match →',
+    'setup.back': '← Back',
+    'setup.notimer': 'No turn timer',
+    'setup.notimer.desc': '(relaxed mode for beginners)',
+    // AI
+    'ai.title': '🤖 vs Computer',
+    'ai.difficulty': 'Difficulty',
+    'ai.easy': 'Easy',
+    'ai.normal': 'Normal',
+    'ai.hard': 'Hard',
+    // Online setup
+    'online.create': 'Create room',
+    'online.join': 'Join with code',
+    'online.quick': 'Quick match',
+    'online.waiting': 'Waiting for opponent...',
+    'online.searching': 'Searching for opponent...',
+    'online.copy': 'Copy code',
+    'online.copied': 'Copied!',
+    'online.cancel': '✕ Cancel room',
+    'online.back': '← Back',
+    'online.join.title': '🔑 Join room',
+    'online.join.subtitle': 'Ask your opponent for the code and enter it here.',
+    'online.join.btn': 'Join →',
+    'online.waiting.title': 'Room created',
+    'online.waiting.hint': 'Your opponent must enter this code in <b>Join with code</b>.',
+    // Game over
+    'gameover.win': '🏆 You won!',
+    'gameover.loss': '😔 You lost',
+    'gameover.draw': '🤝 Draw',
+    'gameover.share': '📤 Share result',
+    'gameover.rematch': '🔁 Request rematch',
+    'gameover.waiting': '⏳ Waiting for opponent to accept rematch...',
+    'gameover.back': 'Back to menu',
+    'gameover.league': '🏆 Back to league',
+    'gameover.finished': 'Match finished',
+    'rematch.request': 'requested a rematch.',
+    'rematch.accept': '✓ Accept',
+    'rematch.decline': '✕ No thanks',
+    // Leaderboard
+    'lb.title': '🏅 Leaderboard',
+    'lb.subtitle': 'Top players by global ELO',
+    'lb.loading': 'Loading...',
+    'lb.empty': 'No players with matches yet. Be the first!',
+    'lb.back': '← Back',
+    'lb.myposition': 'Your position: outside top 50',
+    // Rules
+    'rules.title': 'How to play',
+    'rules.back': '← Back',
+    // Pre-game roll
+    'pregame.title': 'Kickoff draw',
+    'pregame.subtitle': 'Highest roll starts with the ball.',
+    // Half time
+    'halftime.title': 'Half time',
+    'halftime.start2nd': 'Start 2nd half →',
+    'halftime.waiting': 'Waiting for 2nd half...',
+    'halftime.autoinicio': 'Auto-start in',
+    // In-game
+    'game.roll': 'Roll dice',
+    'game.skip': 'Skip turn',
+    'game.reiniciar': 'Restart',
+    'game.menu': 'Main menu',
+    'game.stats': 'Statistics',
+    'game.log': 'Actions',
+    'game.possession': 'Possession',
+    'game.shots': 'Shots',
+    'game.offsides': 'Offsides',
+    'game.turn': 'Turn —',
+    'game.half': 'H.',
+    'game.turnlabel': 'Turn',
+    // Game messages
+    'msg.zero': 'You rolled 0! You lose your turn.',
+    'msg.rolled': 'You rolled {value}. Choose a {team} player to move.',
+    'msg.choose': 'Choose a {team} player to move.',
+    'msg.goal': '⚽ GOAL by {scorer}! {conceder} kicks off.',
+    'msg.halftime': 'Half time!',
+    'msg.kickoff': '{half} begins. {team} kicks off.',
+    'msg.second': 'Second half',
+    'msg.offside': 'Offside! Move the marked player to a valid position.',
+    'msg.chain': 'Chain pass. Choose where to continue or end the play.',
+    'msg.chain.stop': 'End play here',
+    'msg.swap': 'You can swap this player with the goalkeeper.',
+    'msg.swap.skip': 'Keep, end turn',
+    'msg.timeout': "Time's up!",
+    'msg.disconnect': 'disconnected. You win by forfeit.',
+    // Share
+    'share.win': 'I won',
+    'share.loss': 'I lost',
+    'share.draw': 'I drew',
+    'share.text': '{result} {score} playing Hexagol with {myTeam} vs {theirTeam}{elo} ⚽🎲\n👉 hexagol.com.ar',
+    // Chat
+    'chat.empty': 'No messages yet. Say something!',
+    'chat.placeholder': 'Message...',
+    'chat.send': 'Send',
+    // Reconnect
+    'reconnect.title': 'Match in progress',
+    'reconnect.desc': 'You have an online match in progress. Reconnect?',
+    'reconnect.yes': 'Reconnect',
+    'reconnect.no': 'No, back to menu',
+    // Training
+    'training.reset': '↺ Reset positions',
+    'training.back': '← Back to menu',
+    'training.dice': 'Choose dice value',
+    'training.move': 'Tap any square to move the player there.',
+  }
+};
+
 // Online session state
 let onlineRoomId = null;
 let onlineMyTeam = null;
@@ -911,7 +1250,7 @@ function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration) {
     gameClock: duration * 60,
     turnDuration: turnDur,
     timer: turnDur,
-    message: 'Tiren los dados para decidir quién empieza.',
+    message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
   };
 }
 
@@ -1129,7 +1468,7 @@ let onlineChatMessages = [];
 let onlineChatOpen = false;
 let onlineChatUnread = 0;
 let onlineChatEverLoaded = false;
-const CHAT_QUICK_PHRASES = ['¡Buena jugada!', 'Mala suerte 😅', 'Vamos!', 'jaja', 'GG', '¿Revancha?'];
+const CHAT_QUICK_PHRASES = lang === 'en' ? ['Good play!', 'Bad luck 😅', 'Let\'s go!', 'haha', 'GG', 'Rematch?'] : ['¡Buena jugada!', 'Mala suerte 😅', 'Vamos!', 'jaja', 'GG', '¿Revancha?'];
 
 function attachOnlineChat() {
   if (!onlineRoomRef) return;
@@ -1181,7 +1520,7 @@ function renderChatPanel() {
   if (!messagesEl) { render(); return; }
   const wasScrolledToBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 20;
   messagesEl.innerHTML = onlineChatMessages.length === 0
-    ? `<div class="chat-empty">Todavía no hay mensajes. ¡Decí algo!</div>`
+    ? `<div class="chat-empty">${lang === 'en' ? 'No messages yet. Say something!' : 'Todavía no hay mensajes. ¡Decí algo!'}</div>`
     : onlineChatMessages.map(m => `<div class="chat-msg ${m.from === onlineMyTeam ? 'mine' : 'theirs'}">${escapeHtml(m.text)}</div>`).join('');
   if (wasScrolledToBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
   if (chatFab) {
@@ -1244,7 +1583,7 @@ async function loadOrCreateUserProfile(user) {
       onlineTeamPicker.home = {
         mode: 'custom',
         presetIdx: 0,
-        customName: userProfile.customTeam.name || 'Mi Equipo',
+        customName: userProfile.customTeam.name || (lang === 'en' ? 'My Team' : 'Mi Equipo'),
         customKit: userProfile.customTeam.kit || defaultHomeKit(),
       };
     }
@@ -1290,7 +1629,7 @@ async function loginWithEmail(email, password) {
     await auth.signInWithEmailAndPassword(email, password);
   } catch (err) {
     if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-      throw new Error('Email o contraseña incorrectos.');
+      throw new Error(lang === 'en' ? 'Incorrect email or password.' : 'Email o contraseña incorrectos.');
     }
     throw new Error(err.message);
   }
@@ -1303,7 +1642,7 @@ async function registerWithEmail(email, password, username) {
     // onAuthStateChanged fires and calls loadOrCreateUserProfile with the new display name
   } catch (err) {
     if (err.code === 'auth/email-already-in-use') throw new Error('Ese email ya tiene una cuenta.');
-    if (err.code === 'auth/weak-password') throw new Error('La contraseña debe tener al menos 6 caracteres.');
+    if (err.code === 'auth/weak-password') throw new Error(lang === 'en' ? 'Password must be at least 6 characters.' : 'La contraseña debe tener al menos 6 caracteres.');
     throw new Error(err.message);
   }
 }
@@ -1580,8 +1919,8 @@ function handleOpponentDisconnected() {
     ...state,
     gamePhase: 'game-over',
     isClockRunning: false,
-    message: `${opponentName} se desconectó. Ganás vos por abandono.`,
-    toastToShow: { title: 'Rival desconectado', description: `${opponentName} perdió la conexión. Ganás la partida por abandono.` },
+    message: `${opponentName} ${t('msg.disconnect')}`,
+    toastToShow: { title: lang === 'en' ? 'Opponent disconnected' : 'Rival desconectado', description: lang === 'en' ? `${opponentName} lost connection. You win by forfeit.` : `${opponentName} perdió la conexión. Ganás la partida por abandono.` },
   };
   render();
 }
@@ -1658,7 +1997,7 @@ function startOnlineRematch() {
     halfDurationMinutes: state.halfDurationMinutes,
     gameClock: state.halfDurationMinutes * 60,
     turnDuration: state.turnDuration, timer: state.turnDuration,
-    message: 'Revancha. Tiren los dados para decidir quién empieza.',
+    message: lang === 'en' ? 'Rematch. Roll the dice to decide who starts.' : 'Revancha. Tiren los dados para decidir quién empieza.',
   };
   clearOnlineRematchNode();
   onlineReceivedFirstState = false; // treat the host's first write as authoritative again
@@ -1753,13 +2092,13 @@ const LEAGUE_STORAGE_KEY = 'hexagol_league_save';
    palette/format means a custom team renders through the existing jersey
    drawing code (getJerseyFillDef) with zero changes there. */
 const KIT_DESIGNS = [
-  { id: 'solid', name: 'Sólido' },
-  { id: 'vertical-stripes', name: 'Rayas verticales' },
-  { id: 'horizontal-stripe', name: 'Franja horizontal' },
-  { id: 'sash', name: 'Banda cruzada' },
-  { id: 'v-shape', name: 'En V' },
-  { id: 'double-vertical-stripe', name: 'Doble franja vertical' },
-  { id: 'triple-horizontal-stripe', name: 'Triple franja horizontal' },
+  { id: 'solid', name: 'Sólido', nameEn: 'Solid' },
+  { id: 'vertical-stripes', name: 'Rayas verticales', nameEn: 'Vertical stripes' },
+  { id: 'horizontal-stripe', name: 'Franja horizontal', nameEn: 'Horizontal stripe' },
+  { id: 'sash', name: 'Banda cruzada', nameEn: 'Sash' },
+  { id: 'v-shape', name: 'En V', nameEn: 'V-shape' },
+  { id: 'double-vertical-stripe', name: 'Doble franja vertical', nameEn: 'Double vertical stripe' },
+  { id: 'triple-horizontal-stripe', name: 'Triple franja horizontal', nameEn: 'Triple horizontal stripe' },
 ];
 const KIT_COLOR_PALETTE = [
   { name: 'Rojo', value: '0 84% 60%' },
@@ -1812,7 +2151,7 @@ function customKitsClash(kit1, kit2) {
 function buildCustomTeam(name, kit, idSuffix) {
   return {
     id: 'custom-' + idSuffix,
-    name: name || 'Mi Equipo',
+    name: name || (lang === 'en' ? 'My Team' : 'Mi Equipo'),
     design: kit.design,
     primaryColor: kit.primaryColor,
     secondaryColor: kit.design !== 'solid' ? kit.secondaryColor : undefined,
@@ -2914,6 +3253,7 @@ const tutorialScript = [
     {
         id: 'welcome',
         message: '¡Bienvenido a Hexagol! Este tutorial te guiará por las reglas. Para empezar, lanza el dado.',
+        messageEn: 'Welcome to Hexagol! This tutorial will guide you through the rules. To start, roll the dice.',
         highlightId: 'dice-roll-button',
         action: { type: 'click_element', payload: { elementId: 'dice-roll-button' } },
         initialState: {
@@ -2927,6 +3267,7 @@ const tutorialScript = [
     {
         id: 'move-intro',
         message: '¡Sacaste un 4! El número del dado indica cuántas casillas puedes moverte. Selecciona al jugador #8.',
+        messageEn: 'You rolled 4! The dice number shows how many squares you can move. Select player #8.',
         highlightId: 'player-8-home',
         action: { type: 'click_player', payload: { playerNumber: 8, team: 'home' } },
         initialState: {
@@ -2939,6 +3280,7 @@ const tutorialScript = [
     {
         id: 'move-execute',
         message: 'Excelente. Muévelo 4 casillas en diagonal a la casilla N10.',
+        messageEn: 'Great. Move them 4 squares diagonally to square N10.',
         highlightId: 'square-13-10',
         action: { type: 'click_square', payload: { position: { x: 13, y: 10 } } },
         initialState: {
@@ -2952,6 +3294,7 @@ const tutorialScript = [
     {
         id: 'kick-intro',
         message: '¡Vamos a chutar! Un jugador adyacente al balón puede chutarlo. Selecciona al jugador #9.',
+        messageEn: "Let's kick! A player next to the ball can kick it. Select player #9.",
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -2964,6 +3307,7 @@ const tutorialScript = [
     {
         id: 'kick-execute',
         message: '¡Perfecto! Al chutar, el jugador ocupa la casilla del balón. Chuta el balón 4 casillas hacia adelante a J6.',
+        messageEn: 'Perfect! When kicking, the player moves to the ball square. Kick the ball 4 squares forward to J6.',
         highlightId: 'square-9-6',
         action: { type: 'click_square', payload: { position: { x: 9, y: 6 } } },
         initialState: {
@@ -2977,6 +3321,7 @@ const tutorialScript = [
     {
         id: 'drag-intro',
         message: 'Ahora, "arrastrar". Cuesta moverte HASTA el balón, y el resto para arrastrarlo. Selecciona al jugador #7.',
+        messageEn: 'Now, "drag". It costs moves to reach the ball, and the rest to drag it. Select player #7.',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -2989,6 +3334,7 @@ const tutorialScript = [
     {
         id: 'drag-execute',
         message: 'Moverse 2 casillas a la bola cuesta 2. Te quedan 2 para arrastrar. Arrástralo a L14.',
+        messageEn: 'Moving 2 squares to the ball costs 2. You have 2 left to drag. Drag it to L14.',
         highlightId: 'square-11-14',
         action: { type: 'click_square', payload: { position: { x: 11, y: 14 } } },
         initialState: {
@@ -3002,6 +3348,7 @@ const tutorialScript = [
     {
         id: 'lofted-pass-intro',
         message: 'El "Pase Elevado" te permite pasar por encima de tus compañeros. Selecciona al jugador #9.',
+        messageEn: 'The "Lofted Pass" lets you pass over your teammates. Select player #9.',
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -3017,6 +3364,7 @@ const tutorialScript = [
     {
         id: 'lofted-pass-execute',
         message: 'Ahora, realiza un pase elevado por encima de tu compañero (#8) hacia la casilla vacía N14.',
+        messageEn: 'Now, make a lofted pass over your teammate (#8) to the empty square N14.',
         highlightId: 'square-13-14',
         action: { type: 'click_square', payload: { position: { x: 13, y: 14 } } },
         initialState: {
@@ -3033,6 +3381,7 @@ const tutorialScript = [
     {
         id: 'lofted-drag-intro',
         message: 'El "Arrastre Elevado" combina arrastre y pase elevado. Si arrastras sobre un compañero, el balón lo ignora. Selecciona al jugador #7.',
+        messageEn: 'The "Lofted Drag" combines drag and lofted pass. If you drag over a teammate, the ball ignores them. Select player #7.',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3048,6 +3397,7 @@ const tutorialScript = [
     {
         id: 'lofted-drag-execute',
         message: 'Cuesta 2 llegar. Te quedan 4. Arrastra el balón 4 casillas a J8, pasando por encima de tu compañero.',
+        messageEn: 'It costs 2 to reach the ball. You have 4 left. Drag the ball 4 squares to J8, over your teammate.',
         highlightId: 'square-9-8',
         action: { type: 'click_square', payload: { position: { x: 9, y: 8 } } },
         initialState: {
@@ -3064,6 +3414,7 @@ const tutorialScript = [
     {
         id: 'stacking-move-over-opponent-intro',
         message: 'Puedes moverte por encima de otros jugadores. Selecciona al jugador #8 para saltar por encima del rival.',
+        messageEn: 'You can move over other players. Select player #8 to jump over the opponent.',
         highlightId: 'player-8-home',
         action: { type: 'click_player', payload: { playerNumber: 8, team: 'home' } },
         initialState: {
@@ -3079,6 +3430,7 @@ const tutorialScript = [
     {
         id: 'stacking-move-over-opponent-execute',
         message: 'Ahora muévelo 4 casillas en línea recta hasta J10, pasando por encima del jugador rival.',
+        messageEn: 'Now move them 4 squares in a straight line to J10, over the opponent.',
         highlightId: 'square-9-10',
         action: { type: 'click_square', payload: { position: { x: 9, y: 10 } } },
         initialState: {
@@ -3094,6 +3446,7 @@ const tutorialScript = [
     {
         id: 'stacking-on-teammate-intro',
         message: 'También puedes apilar hasta 2 jugadores de tu equipo en una misma casilla. Selecciona al jugador #7.',
+        messageEn: 'You can also stack up to 2 of your players on the same square. Select player #7.',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3109,6 +3462,7 @@ const tutorialScript = [
     {
         id: 'stacking-on-teammate-execute',
         message: 'Mueve al jugador #7 dos casillas para apilarlo con el jugador #8 en la casilla M12.',
+        messageEn: 'Move player #7 two squares to stack with player #8 at square M12.',
         highlightId: 'square-12-12',
         action: { type: 'click_square', payload: { position: { x: 12, y: 12 } } },
         initialState: {
@@ -3125,6 +3479,7 @@ const tutorialScript = [
     {
         id: 'defensive-stacking-intro',
         message: 'Ahora, tácticas defensivas. El rival está listo para un pase. ¡Evítalo seleccionando a tu jugador #7!',
+        messageEn: 'Now, defensive tactics. The opponent is ready to pass. Stop it by selecting your player #7!',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3141,6 +3496,7 @@ const tutorialScript = [
     {
         id: 'defensive-stacking-execute',
         message: '¡Exacto! Ahora muévelo para apilarlo sobre el receptor rival (#8). Esto bloquea un posible pase en cadena.',
+        messageEn: 'Exactly! Now move them to stack on the opponent receiver (#8). This blocks a possible chain pass.',
         highlightId: 'square-12-11',
         action: { type: 'click_square', payload: { position: { x: 12, y: 11 } } },
         initialState: {
@@ -3157,6 +3513,7 @@ const tutorialScript = [
     {
         id: 'pass-blocking-intro',
         message: 'También puedes bloquear un pase interceptando la línea de visión. Selecciona a tu jugador #4 para cortar la jugada.',
+        messageEn: 'You can also block a pass by intercepting the line of sight. Select your player #4 to cut the play.',
         highlightId: 'player-4-home',
         action: { type: 'click_player', payload: { playerNumber: 4, team: 'home' } },
         initialState: {
@@ -3173,6 +3530,7 @@ const tutorialScript = [
     {
         id: 'pass-blocking-execute',
         message: '¡Bien! Ahora muévelo 2 casillas a la posición L10, bloqueando el camino entre el balón y el receptor.',
+        messageEn: 'Good! Now move them 2 squares to position L10, blocking the path between the ball and the receiver.',
         highlightId: 'square-11-10',
         action: { type: 'click_square', payload: { position: { x: 11, y: 10 } } },
         initialState: {
@@ -3190,6 +3548,7 @@ const tutorialScript = [
     {
         id: 'chain-pass-intro',
         message: 'Pase en Cadena: Un pase a un compañero permite otro pase inmediato. Selecciona al jugador #9 para empezar.',
+        messageEn: 'Chain Pass: A pass to a teammate allows another immediate pass. Select player #9 to start.',
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -3206,6 +3565,7 @@ const tutorialScript = [
     {
         id: 'chain-pass-select-target',
         message: '¡Bien! Ahora pásale el balón a tu compañero #10, que está en la casilla K10.',
+        messageEn: 'Good! Now pass the ball to your teammate #10, who is at square K10.',
         highlightId: 'square-10-10',
         action: { type: 'click_square', payload: { position: { x: 10, y: 10 } } },
         initialState: {
@@ -3222,6 +3582,7 @@ const tutorialScript = [
     {
         id: 'chain-pass-execute',
         message: '¡Pase conectado! Ahora el #10 puede pasar 4 casillas. Pásasela a tu compañero #11 en O10.',
+        messageEn: 'Pass connected! Now #10 can pass 4 squares. Pass it to your teammate #11 at O10.',
         highlightId: 'square-14-10',
         action: { type: 'click_square', payload: { position: { x: 14, y: 10 } } },
         initialState: {
@@ -3238,6 +3599,7 @@ const tutorialScript = [
     {
         id: 'chain-pass-final-kick',
         message: '¡Excelente! El jugador #11 ahora puede realizar el pase final de 4 casillas. ¡Patea el balón a S10!',
+        messageEn: 'Excellent! Player #11 can now make the final 4-square pass. Kick the ball to S10!',
         highlightId: 'square-18-10',
         action: { type: 'click_square', payload: { position: { x: 18, y: 10 } } },
         initialState: {
@@ -3255,6 +3617,7 @@ const tutorialScript = [
     {
         id: 'goal-block-gk-intro',
         message: '¡Peligro! El rival solo tiene un camino para marcar. Mueve a tu arquero para bloquear el tiro. Selecciónalo.',
+        messageEn: 'Danger! The opponent only has one path to score. Move your goalkeeper to block the shot. Select them.',
         highlightId: 'player-1-home',
         action: { type: 'click_player', payload: { playerNumber: 1, team: 'home' } },
         initialState: {
@@ -3271,6 +3634,7 @@ const tutorialScript = [
     {
         id: 'goal-block-gk-execute',
         message: '¡Rápido! El único tiro posible es a J24. ¡Muévelo a la línea de tiro en J22 para interceptar!',
+        messageEn: 'Quick! The only possible shot is to J24. Move them to the shot line at J22 to intercept!',
         highlightId: 'square-9-22',
         action: { type: 'click_square', payload: { position: { x: 9, y: 22 } } },
         initialState: {
@@ -3287,6 +3651,7 @@ const tutorialScript = [
     {
         id: 'goal-block-defender-intro',
         message: 'También puedes usar un defensor. El rival tiene tiro libre. Selecciona a tu defensor #4.',
+        messageEn: 'You can also use a defender. The opponent has a clear shot. Select your defender #4.',
         highlightId: 'player-4-home',
         action: { type: 'click_player', payload: { playerNumber: 4, team: 'home' } },
         initialState: {
@@ -3302,6 +3667,7 @@ const tutorialScript = [
     {
         id: 'goal-block-defender-execute',
         message: '¡Bien! Ahora muévelo 2 casillas a la línea de tiro en J21 para bloquear el gol.',
+        messageEn: 'Good! Now move them 2 squares to the shot line at J21 to block the goal.',
         highlightId: 'square-9-21',
         action: { type: 'click_square', payload: { position: { x: 9, y: 21 } } },
         initialState: {
@@ -3318,6 +3684,7 @@ const tutorialScript = [
     {
         id: 'gk-move-intro',
         message: 'El arquero se mueve al 50% de coste en su área. Con un dado de 3 puede moverse hasta 6 casillas. ¡Selecciónalo!',
+        messageEn: 'The goalkeeper moves at 50% cost in their area. With a dice of 3 they can move up to 6 squares. Select them!',
         highlightId: 'player-1-home',
         action: { type: 'click_player', payload: { playerNumber: 1, team: 'home' } },
         initialState: {
@@ -3330,6 +3697,7 @@ const tutorialScript = [
     {
         id: 'gk-move-execute',
         message: 'Observa su gran alcance. Muévelo 5 casillas a E19 en línea recta.',
+        messageEn: 'See their great range. Move them 5 squares to E19 in a straight line.',
         highlightId: 'square-4-19',
         action: { type: 'click_square', payload: { position: { x: 4, y: 19 } } },
         initialState: {
@@ -3342,6 +3710,7 @@ const tutorialScript = [
     {
         id: 'gk-kick-intro',
         message: 'El chute del arquero se duplica si él y el balón están en el área. Sacaste 3 (chute de 6). Selecciónalo.',
+        messageEn: "The goalkeeper's kick doubles if both they and the ball are in the area. You rolled 3 (kick of 6). Select them.",
         highlightId: 'player-1-home',
         action: { type: 'click_player', payload: { playerNumber: 1, team: 'home' } },
         initialState: {
@@ -3354,6 +3723,7 @@ const tutorialScript = [
     {
         id: 'gk-kick-execute',
         message: '¡Un despeje potente! Chuta el balón 6 casillas hasta J15.',
+        messageEn: 'A powerful clearance! Kick the ball 6 squares to J15.',
         highlightId: 'square-9-15',
         action: { type: 'click_square', payload: { position: { x: 9, y: 15 } } },
         initialState: {
@@ -3366,6 +3736,7 @@ const tutorialScript = [
     {
         id: 'gk-swap-intro',
         message: 'Si el GK termina fuera de su área, puedes cambiarlo por un compañero que esté dentro. Intercambia con el jugador #5.',
+        messageEn: 'If the GK ends up outside their area, you can swap them with a teammate inside. Swap with player #5.',
         highlightId: 'player-5-home',
         action: { type: 'click_player', payload: { playerNumber: 5, team: 'home' } },
         initialState: {
@@ -3382,6 +3753,7 @@ const tutorialScript = [
     {
         id: 'gk-swap-skip-intro',
         message: 'También puedes omitir el cambio y finalizar tu turno. Haz clic en el botón para continuar.',
+        messageEn: 'You can also skip the swap and end your turn. Click the button to continue.',
         highlightId: 'skip-swap-button',
         action: { type: 'click_element', payload: { elementId: 'skip-swap-button' } },
         initialState: {
@@ -3399,6 +3771,7 @@ const tutorialScript = [
     {
         id: 'offside-explain-position',
         message: 'FUERA DE JUEGO: El jugador #11 está adelantado. La infracción ocurre si se le pasa el balón. Selecciona al pasador, #10.',
+        messageEn: 'OFFSIDE: Player #11 is ahead. The infraction occurs if the ball is passed to them. Select the passer, #10.',
         highlightId: 'player-10-home',
         action: { type: 'click_player', payload: { playerNumber: 10, team: 'home' } },
         initialState: {
@@ -3416,6 +3789,7 @@ const tutorialScript = [
     {
         id: 'offside-cause-infraction',
         message: 'Ahora, demuestra la infracción. Pasa el balón a la casilla K5, adyacente a tu compañero adelantado.',
+        messageEn: 'Now, demonstrate the infraction. Pass the ball to square K5, next to your advanced teammate.',
         highlightId: 'square-10-5',
         action: { type: 'click_square', payload: { position: { x: 10, y: 5 } } },
         initialState: {
@@ -3433,6 +3807,7 @@ const tutorialScript = [
     {
         id: 'offside-resolve-intro',
         message: '¡INFRACCIÓN! El rival debe mover al jugador adelantado. Selecciona al jugador #11 para reposicionarlo.',
+        messageEn: 'INFRACTION! The opponent must move the advanced player. Select player #11 to reposition them.',
         highlightId: 'player-11-home',
         action: { type: 'click_player', payload: { playerNumber: 11, team: 'home' } },
         initialState: {
@@ -3451,6 +3826,7 @@ const tutorialScript = [
     {
         id: 'offside-resolve-execute',
         message: 'La línea de fuera de juego está en y=8. Mueve al jugador a la casilla J8 para corregir su posición.',
+        messageEn: 'The offside line is at y=8. Move the player to square J8 to correct their position.',
         highlightId: 'square-9-8',
         action: { type: 'click_square', payload: { position: { x: 9, y: 8 } } },
         initialState: {
@@ -3470,6 +3846,7 @@ const tutorialScript = [
     {
         id: 'goal-intro',
         message: 'El objetivo final: ¡marcar un GOL! Selecciona a tu jugador #9.',
+        messageEn: 'The final objective: score a GOAL! Select your player #9.',
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -3484,6 +3861,7 @@ const tutorialScript = [
     {
         id: 'goal-execute',
         message: 'Ahora, ¡chuta a la portería rival en J24 para marcar!',
+        messageEn: 'Now, shoot at the opponent goal at J24 to score!',
         highlightId: 'square-9-24',
         action: { type: 'click_square', payload: { position: { x: 9, y: 24 } } },
         initialState: {
@@ -3499,6 +3877,7 @@ const tutorialScript = [
     {
         id: 'blocked-ball-intro',
         message: 'Si el balón está rodeado por rivales, se considera "bloqueado" y el juego se reinicia. Lanza el dado para ver qué pasa.',
+        messageEn: 'If the ball is surrounded by opponents, it is "blocked" and the game resets. Roll the dice to see what happens.',
         highlightId: 'dice-roll-button',
         action: { type: 'click_element', payload: { elementId: 'dice-roll-button' } },
         initialState: {
@@ -3521,6 +3900,7 @@ const tutorialScript = [
     {
         id: 'end',
         message: '¡Felicidades! Has completado el tutorial y ya sabes todo lo necesario para dominar Hexagol. ¡Mucha suerte!',
+        messageEn: 'Congratulations! You have completed the tutorial and know everything you need to master Hexagol. Good luck!',
         highlightId: '',
         action: { type: 'click_element', payload: { elementId: 'final-ok-button' } }, // A dummy action to end the tutorial
         initialState: {
@@ -3607,7 +3987,7 @@ function getInitialState() {
     offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
     swapCandidates: [],
     toastToShow: null,
-    gameLog: [{ turn: 0, message: 'El partido está por comenzar.', actionType: 'game-event' }],
+    gameLog: [{ turn: 0, message: lang === 'en' ? 'Match is about to begin.' : 'El partido está por comenzar.', actionType: 'game-event' }],
     stats: { possession: { home: 0, away: 0 }, shotsOnGoal: { home: 0, away: 0 }, offsides: { home: 0, away: 0 } },
     matchStats: { goals: {}, assists: {} },
     assistProviderId: null,
@@ -3851,11 +4231,11 @@ function advanceToNextTurn(s, opts) {
       if (teammatesInArea.length > 0) {
         const news = {
           ...s, gamePhase: 'goalkeeper-swap', swapCandidates: [gk.id, ...teammatesInArea.map(p => p.id)],
-          message: 'El arquero está fuera del área. Elige un jugador para cambiar, o finaliza el turno.',
+          message: lang === 'en' ? 'Goalkeeper is out of the area. Choose a player to swap, or end the turn.' : 'El arquero está fuera del área. Elige un jugador para cambiar, o finaliza el turno.',
           turnStartState: null, swapTimer: GOALKEEPER_SWAP_DURATION,
           ...freshActionState(), isKickoffTurn: false, assistProviderId: null,
         };
-        return logAction(news, 'El arquero está fuera del área. Puedes intercambiarlo.', 'game-event');
+        return logAction(news, lang === 'en' ? 'Goalkeeper is out of the area. You can swap them.' : 'El arquero está fuera del área. Puedes intercambiarlo.', 'game-event');
       }
     }
   }
@@ -3869,7 +4249,7 @@ function advanceToNextTurn(s, opts) {
     const { offsidePlayers, offsideLineY } = checkForOffside(players, currentPlayer, offsideCheckBall, s.lastPlayerToTouchBallId);
     if (offsidePlayers.length > 0 && offsideLineY !== null) {
       const nextStats = { ...s.stats, offsides: { ...s.stats.offsides, [currentPlayer]: s.stats.offsides[currentPlayer] + 1 } };
-      const msg = `¡Fuera de juego! ${teamToKickOffName}, debes mover a los jugadores resaltados.`;
+      const msg = lang === 'en' ? `Offside! ${teamToKickOffName}, move the highlighted players.` : `¡Fuera de juego! ${teamToKickOffName}, debes mover a los jugadores resaltados.`;
       const news = {
         ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'resolving-offside', diceValue: null,
         ...freshActionState(), validOffsideMoves: [], offsidePlayerIds: offsidePlayers.map(p => p.id),
@@ -3884,19 +4264,19 @@ function advanceToNextTurn(s, opts) {
   if (isBallTotallyBlocked(ballPosition, players, nextPlayer)) {
     const teamCausingBlockName = getTeamName(s, currentPlayer);
     const playersForKickoff = movePlayersForKickoff(getInitialPlayers(), nextPlayer);
-    const msg = `¡Balón bloqueado! Saca ${teamToKickOffName}. Lanza el dado.`;
+    const msg = lang === 'en' ? `Ball blocked! ${teamToKickOffName} kicks off. Roll the dice.` : `¡Balón bloqueado! Saca ${teamToKickOffName}. Lanza el dado.`;
     const news = {
       ...s, players: playersForKickoff, ballPosition: { ...INITIAL_BALL_POSITION }, currentPlayer: nextPlayer,
       gamePhase: 'rolling', diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, offsidePlayerIds: [], validOffsideMoves: [], swapCandidates: [],
-      timer: s.turnDuration, toastToShow: { title: '¡Juego trabado!', description: `${teamCausingBlockName} ha bloqueado el balón. Se reinicia el saque.` },
+      timer: s.turnDuration, toastToShow: { title: lang === 'en' ? 'Ball blocked!' : '¡Juego trabado!', description: lang === 'en' ? `${teamCausingBlockName} has blocked the ball. Resetting kickoff.` : `${teamCausingBlockName} ha bloqueado el balón. Se reinicia el saque.` },
       turnStartState: null, isKickoffTurn: true, assistProviderId: null,
     };
     return logAction(news, msg, 'game-event', currentPlayer);
   }
 
   const nextStats = { ...s.stats, possession: { ...s.stats.possession, [nextPlayer]: s.stats.possession[nextPlayer] + 1 } };
-  const baseMsg = `Turno de ${teamToKickOffName}. Lanza el dado.`;
+  const baseMsg = lang === 'en' ? `${teamToKickOffName}'s turn. Roll the dice.` : `Turno de ${teamToKickOffName}. Lanza el dado.`;
   const news = {
     ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
@@ -3919,13 +4299,13 @@ function handleGoal(s) {
   const scorerName = getTeamName(s, scoringTeam);
   const newScore = { ...s.score, [scoringTeam]: s.score[scoringTeam] + 1 };
   const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
-  const msg = `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
+  const msg = lang === 'en' ? `GOAL by ${scorerName}! ${concederName} kicks off.` : `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
   const news = {
     ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
     currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
     turnStartState: null, lastAction: null, isKickoffTurn: true, matchStats: newMatchStats, assistProviderId: null,
-    toastToShow: { title: '¡GOOOOL!', description: `${scorerName} ha marcado.` },
+    toastToShow: { title: lang === 'en' ? '⚽ GOAAAL!' : '¡GOOOOL!', description: lang === 'en' ? `${scorerName} scored!` : `${scorerName} ha marcado.` },
   };
   return logAction(news, msg, 'goal', scoringTeam);
 }
@@ -3936,29 +4316,29 @@ function handleOwnGoal(s) {
   const concederName = getTeamName(s, team);
   const newScore = { ...s.score, [scoringTeam]: s.score[scoringTeam] + 1 };
   const newPlayers = movePlayersForKickoff(getInitialPlayers(), team);
-  const msg = `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
+  const msg = lang === 'en' ? `OWN GOAL by ${concederName}!` : `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
   const news = {
     ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
     currentPlayer: team, gamePhase: 'rolling', diceValue: null, ...freshActionState(),
     lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
     turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
-    toastToShow: { title: '¡AUTOGOL!', description: `${concederName} ha marcado en propia puerta.` },
+    toastToShow: { title: lang === 'en' ? '⚽ OWN GOAL!' : '¡AUTOGOL!', description: lang === 'en' ? `${concederName} scored an own goal.` : `${concederName} ha marcado en propia puerta.` },
   };
   return logAction(news, msg, 'goal', scoringTeam);
 }
 
 function handleEndHalfOrMatch(s) {
   if (s.half === 1) {
-    const halfTimeState = { ...logAction(s, '¡Medio tiempo!', 'game-event'), gamePhase: 'half-time', isClockRunning: false };
+    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false };
     // Fix 2: in online mode, start a 30s countdown for auto second half start
     if (s.gameMode === 'online') halfTimeStartedAt = Date.now();
     return s.gameMode === 'online' ? { ...halfTimeState, timer: 30 } : halfTimeState;
   }
   const homeName = getTeamName(s, 'home'), awayName = getTeamName(s, 'away');
-  let msg = '¡Fin del partido! ';
+  let msg = lang === 'en' ? "Match over! " : '¡Fin del partido! ';
   if (s.score.home > s.score.away) msg += `${homeName} ha ganado.`;
   else if (s.score.away > s.score.home) msg += `${awayName} ha ganado.`;
-  else msg += 'El resultado es un empate.';
+  else msg += lang === 'en' ? 'The result is a draw.' : 'El resultado es un empate.';
   return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
 }
 
@@ -4804,7 +5184,7 @@ function runBotTurn() {
         } else {
           step.chainDepth = 0;
           setState(s2 => {
-            const logState = logAction(s2, 'El equipo rival termina la jugada.', 'game-event');
+            const logState = logAction(s2, lang === 'en' ? 'Opponent ends the play.' : 'El equipo rival termina la jugada.', 'game-event');
             const reverted = { ...logState, players: s2.turnStartState.players, ballPosition: s2.turnStartState.ballPosition, lastPlayerToTouchBallId: s2.turnStartState.lastPlayerToTouchBallId };
             return advanceToNextTurn(reverted);
           });
@@ -4911,7 +5291,7 @@ function startTutorial() {
   const step0 = tutorialScript[0];
   return {
     ...getInitialState(), gameMode: 'tutorial', gamePhase: 'tutorial',
-    message: step0.message, players: [...step0.initialState.players],
+    message: (lang === 'en' && step0.messageEn) ? step0.messageEn : step0.message, players: [...step0.initialState.players],
     ballPosition: step0.initialState.ballPosition ? { ...step0.initialState.ballPosition } : null,
     diceValue: step0.initialState.diceValue ?? null,
     homeTeam: TEAMS.find(t => t.id === 'estudiantes'), awayTeam: TEAMS.find(t => t.id === 'colegiales'),
@@ -4942,7 +5322,7 @@ function startSandbox() {
     turnCount: 1,
     isClockRunning: false,
     isKickoffTurn: true,
-    message: 'Entrenamiento — elegí el valor del dado para empezar.',
+    message: lang === 'en' ? 'Training — choose the dice value to start.' : 'Entrenamiento — elegí el valor del dado para empezar.',
   };
 }
 
@@ -5014,7 +5394,7 @@ function advanceTutorial(s) {
     players: [...nextStep.initialState.players],
     ballPosition: nextStep.initialState.ballPosition ? { ...nextStep.initialState.ballPosition } : null,
     diceValue: nextStep.initialState.diceValue ?? null,
-    message: nextStep.message,
+    message: (lang === 'en' && nextStep.messageEn) ? nextStep.messageEn : nextStep.message,
     offsidePlayerIds: nextStep.initialState.offsidePlayerIds ?? [],
     selectedPlayerId: null,
     validMoves: [], validKickTargets: [], validDragTargets: [],
@@ -5037,7 +5417,7 @@ function handleTutorialAction(userAction) {
   if (s.gameMode !== 'tutorial' || s.isTutorialAnimating) return;
   const currentStep = tutorialScript[s.tutorialStep];
   if (!tutorialActionsMatch(userAction, currentStep.action)) {
-    setState({ toastToShow: { title: 'Todavía no', description: 'Seguí la indicación resaltada en el tablero.', variant: 'destructive' } });
+    setState({ toastToShow: { title: lang === 'en' ? 'Not yet' : 'Todavía no', description: lang === 'en' ? 'Follow the highlighted hint on the board.' : 'Seguí la indicación resaltada en el tablero.', variant: 'destructive' } });
     return;
   }
   setState({ isTutorialAnimating: true });
@@ -5048,7 +5428,7 @@ function handleTutorialAction(userAction) {
     if (nextStepIndex >= tutorialScript.length) {
       currentMenuView = 'main';
       setState(getInitialState());
-      setState({ toastToShow: { title: '¡Tutorial completado!', description: 'Ya estás listo para jugar. Elige un modo de juego.' } });
+      setState({ toastToShow: { title: lang === 'en' ? 'Tutorial complete!' : '¡Tutorial completado!', description: lang === 'en' ? 'You are ready to play. Choose a game mode.' : 'Ya estás listo para jugar. Elige un modo de juego.' } });
       return;
     }
     setState(s2 => ({ ...advanceTutorial(s2), isTutorialAnimating: false }));
@@ -5086,8 +5466,8 @@ function startLeagueMatch(s, matchId) {
     homeTeam: finalHomeTeam, awayTeam: finalAwayTeam, gamePhase: 'pre-game-roll',
     halfDurationMinutes: s.leagueState.matchDurationMinutes, gameClock: s.leagueState.matchDurationMinutes * 60,
     turnDuration: turnDur, timer: turnDur,
-    message: `Jornada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Tiren los dados.`,
-    toastToShow: clashResolved ? { title: 'Conflicto de camisetas', description: `${awayTeamData.name} usará su camiseta alternativa.` } : null,
+    message: lang === 'en' ? `Round ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Roll the dice.` : `Jornada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Tiren los dados.`,
+    toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeamData.name} will use their alternate kit.` : `${awayTeamData.name} usará su camiseta alternativa.` } : null,
   };
 }
 
@@ -5143,7 +5523,7 @@ function finishLeagueMatch(s) {
     const champion = getSortedLeagueTeams(updatedTeams, updatedSchedule)[0];
     return {
       ...getInitialState(), gameMode: 'league', gamePhase: 'league-over', leagueState: updatedLeagueState,
-      message: `¡${champion.name} es el campeón de la liga!`,
+      message: lang === 'en' ? `${champion.name} is the league champion!` : `¡${champion.name} es el campeón de la liga!`,
     };
   }
   return {
@@ -5160,7 +5540,7 @@ function handleDeselectPlayer(s, showToast) {
     gamePhase: 'selecting-piece',
     message: `Sacaste un ${s.diceValue}. Elige un jugador de ${teamName} para mover.`,
   });
-  if (showToast) patch.toastToShow = { title: 'Movimiento inválido', description: 'No puedes moverte a esa casilla.', variant: 'destructive' };
+  if (showToast) patch.toastToShow = { title: lang === 'en' ? 'Invalid move' : 'Movimiento inválido', description: lang === 'en' ? 'You cannot move to that square.' : 'No puedes moverte a esa casilla.', variant: 'destructive' };
   return { ...s, ...patch };
 }
 
@@ -5177,8 +5557,8 @@ function handlePlayerSelection(s, playerId) {
     const isTarget = s.validChainPassTargets.some(p => p.x === clickedPlayer.position.x && p.y === clickedPlayer.position.y);
     const isInvalid = s.invalidOffsideChainPassTargets.some(p => p.x === clickedPlayer.position.x && p.y === clickedPlayer.position.y);
     if (isTarget) return handleActionExecution(s, 'chain-pass', clickedPlayer.position);
-    if (isInvalid) return { ...s, toastToShow: { title: 'Jugada Ilegal', description: 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
-    return { ...s, toastToShow: { title: 'Pase inválido', description: 'No puedes continuar la cadena con ese jugador.', variant: 'destructive' } };
+    if (isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+    return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid pass' : 'Pase inválido', description: lang === 'en' ? 'You cannot continue the chain with that player.' : 'No puedes continuar la cadena con ese jugador.', variant: 'destructive' } };
   }
 
   if (s.gamePhase === 'goalkeeper-swap') {
@@ -5192,7 +5572,7 @@ function handlePlayerSelection(s, playerId) {
       if (p.id === playerToSwap.id) return { ...p, position: gk.position };
       return p;
     });
-    const logState = logAction(s, `El arquero #${gk.playerNumber} intercambia posición con el jugador #${playerToSwap.playerNumber}.`, 'move');
+    const logState = logAction(s, lang === 'en' ? `Goalkeeper #${gk.playerNumber} swaps with player #${playerToSwap.playerNumber}.` : `El arquero #${gk.playerNumber} intercambia posición con el jugador #${playerToSwap.playerNumber}.`, 'move');
     const afterSwap = { ...logState, players: newPlayers, swapCandidates: [], lastAction: { from: gk.position, to: playerToSwap.position } };
     return advanceToNextTurn(afterSwap, { skipSwapCheck: true });
   }
@@ -5202,7 +5582,7 @@ function handlePlayerSelection(s, playerId) {
       const player = s.players.find(p => p.id === playerId);
       if (!player || !s.offsideContext || !s.ballPosition) return s;
       const validMoves = getValidOffsideResolutionMoves(player, s.offsideContext.offsideLineY, s.players, s.ballPosition);
-      return { ...s, selectedPlayerId: playerId, validOffsideMoves: validMoves, message: `Mueve al jugador ${player.playerNumber} a una de las casillas resaltadas.` };
+      return { ...s, selectedPlayerId: playerId, validOffsideMoves: validMoves, message: lang === 'en' ? `Move player ${player.playerNumber} to one of the highlighted squares.` : `Mueve al jugador ${player.playerNumber} a una de las casillas resaltadas.` };
     }
     return s;
   }
@@ -5210,7 +5590,7 @@ function handlePlayerSelection(s, playerId) {
   if ((s.gamePhase === 'selecting-piece' || s.gamePhase === 'moving-piece') && clickedPlayer.team === s.currentPlayer) {
     if (clickedPlayer.id === s.selectedPlayerId) return handleDeselectPlayer(s, false);
     if (!s.diceValue || !s.ballPosition) {
-      return { ...s, toastToShow: { title: 'Lanza el dado', description: 'Debes lanzar el dado antes de seleccionar un jugador.', variant: 'destructive' } };
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Roll the dice' : 'Lanza el dado', description: lang === 'en' ? 'You must roll before selecting a player.' : 'Debes lanzar el dado antes de seleccionar un jugador.', variant: 'destructive' } };
     }
 
     const newValidMoves = getValidMoves(clickedPlayer, s.diceValue, s.players, s.ballPosition);
@@ -5264,7 +5644,7 @@ function handlePlayerSelection(s, playerId) {
       invalidOffsideLoftedDragTargets: loftedDragResult.invalidOffsideTargets,
       validChainPassTargets: [], invalidOffsideChainPassTargets: [],
       chainPassReceivers: newChainReceivers, chainPassInitiatorId: null,
-      gamePhase: 'moving-piece', message: `Jugador #${clickedPlayer.playerNumber} (${teamName}) seleccionado.`,
+      gamePhase: 'moving-piece', message: lang === 'en' ? `Player #${clickedPlayer.playerNumber} (${teamName}) selected.` : `Jugador #${clickedPlayer.playerNumber} (${teamName}) seleccionado.`,
     };
   }
 
@@ -5284,14 +5664,14 @@ function handleSquareSelection(s, position) {
   if (gamePhase === 'resolving-offside') {
     if (!selectedPlayerId) return s;
     const isTarget = s.validOffsideMoves.some(p => p.x === position.x && p.y === position.y);
-    if (!isTarget) return { ...s, toastToShow: { title: 'Movimiento inválido', description: 'Debes mover al jugador en fuera de juego a una casilla permitida.', variant: 'destructive' } };
+    if (!isTarget) return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid move' : 'Movimiento inválido', description: lang === 'en' ? 'You must move the offside player to a valid square.' : 'Debes mover al jugador a una casilla permitida.', variant: 'destructive' } };
     const newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position } : p);
     const remaining = s.offsidePlayerIds.filter(id => id !== selectedPlayerId);
     if (remaining.length > 0) {
-      return { ...s, players: newPlayers, offsidePlayerIds: remaining, selectedPlayerId: null, validOffsideMoves: [], message: `¡Bien! Aún quedan ${remaining.length} jugadores por mover.` };
+      return { ...s, players: newPlayers, offsidePlayerIds: remaining, selectedPlayerId: null, validOffsideMoves: [], message: lang === 'en' ? `Good! ${remaining.length} player(s) still to move.` : `¡Bien! Aún quedan ${remaining.length} jugadores por mover.` };
     }
     const nextPlayerName = getTeamName(s, s.currentPlayer);
-    const msg = `Fuera de juego resuelto. Turno de ${nextPlayerName}. Lanza el dado.`;
+    const msg = lang === 'en' ? `Offside resolved. ${nextPlayerName}'s turn. Roll the dice.` : `Fuera de juego resuelto. Turno de ${nextPlayerName}. Lanza el dado.`;
     const logState = logAction(s, msg, 'game-event', s.currentPlayer);
     return { ...logState, players: newPlayers, gamePhase: 'rolling', selectedPlayerId: null, offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null, timer: s.turnDuration };
   }
@@ -5299,8 +5679,8 @@ function handleSquareSelection(s, position) {
   if (gamePhase === 'chain-pass') {
     const isTarget = validChainPassTargets.some(p => p.x === position.x && p.y === position.y);
     const isInvalid = invalidOffsideChainPassTargets.some(p => p.x === position.x && p.y === position.y);
-    if (!isTarget && !isInvalid) return { ...s, toastToShow: { title: 'Movimiento inválido', description: 'No puedes pasar el balón a esa casilla.', variant: 'destructive' } };
-    if (isInvalid) return { ...s, toastToShow: { title: 'Jugada Ilegal', description: 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+    if (!isTarget && !isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid move' : 'Movimiento inválido', description: lang === 'en' ? 'You cannot pass the ball to that square.' : 'No puedes pasar el balón a esa casilla.', variant: 'destructive' } };
+    if (isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     return handleActionExecution({ ...s, actionChoice: null }, 'chain-pass', position);
   }
 
@@ -5320,7 +5700,7 @@ function handleSquareSelection(s, position) {
       (invalidOffsideDragTargets ?? []).some(p => p.x === position.x && p.y === position.y) ||
       (invalidOffsideLoftedDragTargets ?? []).some(p => p.x === position.x && p.y === position.y) ||
       isActionOffside(actingPlayer, position, players, ballPosition);
-    if (isInvalidOffside) return { ...s, toastToShow: { title: 'Jugada Ilegal', description: 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+    if (isInvalidOffside) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     return handleDeselectPlayer(s, false);
   }
 
@@ -5351,8 +5731,8 @@ function handleActionExecution(s, executedAction, position) {
     const playerNewPos = ballPosition;
     let newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p);
     const logMsg = executedAction === 'drag'
-      ? `Jugador #${actingPlayer.playerNumber} arrastra el balón a (${position.x}, ${position.y}).`
-      : `Jugador #${actingPlayer.playerNumber} arrastra el balón por encima a (${position.x}, ${position.y}).`;
+      ? (lang === 'en' ? `Player #${actingPlayer.playerNumber} drags the ball to (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} arrastra el balón a (${position.x}, ${position.y}).`)
+      : (lang === 'en' ? `Player #${actingPlayer.playerNumber} lofts the ball to (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} arrastra el balón por encima a (${position.x}, ${position.y}).`);
     const logState = logAction(s, logMsg, executedAction);
 
     const dir = { dx: Math.sign(position.x - playerNewPos.x), dy: Math.sign(position.y - playerNewPos.y) };
@@ -5369,12 +5749,12 @@ function handleActionExecution(s, executedAction, position) {
     }
 
     if (isActionOffside(actingPlayer, finalBallPos, players, ballPosition)) {
-      return { ...s, toastToShow: { title: 'Jugada inválida', description: 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     }
 
     const opponentGoal = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
     if (opponentGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) {
-      const goalLog = logAction(s, `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
+      const goalLog = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} drags toward goal!` : `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
       const withStat = { ...goalLog, stats: { ...goalLog.stats, shotsOnGoal: { ...goalLog.stats.shotsOnGoal, [currentPlayer]: goalLog.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
@@ -5395,7 +5775,7 @@ function handleActionExecution(s, executedAction, position) {
         assistProviderId: selectedPlayerId, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
         lastAction: { from: ballPosition, to: finalBallPos },
-        message: `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
+        message: lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}! Choose an action for the chain.` : `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
         actionChoice: null, validMoves: [], validKickTargets: [], invalidOffsideKickTargets: [],
         validDragTargets: [], invalidOffsideDragTargets: [], validLoftedPassTargets: [],
         validLoftedDragTargets: [], invalidOffsideLoftedDragTargets: [], selectedPlayerId: receivingTeammate.id,
@@ -5407,7 +5787,7 @@ function handleActionExecution(s, executedAction, position) {
   }
 
   if (executedAction === 'move') {
-    const logState = logAction(s, `Jugador #${actingPlayer.playerNumber} se mueve a (${position.x}, ${position.y}).`, 'move');
+    const logState = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} moves to (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} se mueve a (${position.x}, ${position.y}).`, 'move');
     const newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position } : p);
     const nextChange = { ...logState, players: newPlayers, lastAction: { from: actingPlayer.position, to: position } };
     return advanceToNextTurn(nextChange);
@@ -5418,13 +5798,13 @@ function handleActionExecution(s, executedAction, position) {
     const currentPasser = executedAction === 'chain-pass' ? players.find(p => p.id === s.chainPassInitiatorId) : actingPlayer;
 
     if (isActionOffside(currentPasser, position, players, startPos)) {
-      return { ...s, toastToShow: { title: 'Jugada inválida', description: 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     }
 
     const opponentGoal = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
     if (opponentGoal.some(p => p.x === position.x && p.y === position.y)) {
       const shooter = executedAction === 'chain-pass' ? s.players.find(p => p.id === s.chainPassInitiatorId) : actingPlayer;
-      const logState = logAction(s, `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
+      const logState = logAction(s, lang === 'en' ? `Player #${shooter.playerNumber} shoots!` : `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
       const withStat = { ...logState, stats: { ...logState.stats, shotsOnGoal: { ...logState.stats.shotsOnGoal, [currentPlayer]: logState.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
@@ -5434,7 +5814,7 @@ function handleActionExecution(s, executedAction, position) {
     const playersOnTarget = players.filter(p => p.position.x === position.x && p.position.y === position.y);
     const opponentOnTarget = playersOnTarget.find(p => p.team !== currentPlayer);
     if (opponentOnTarget) {
-      const logState = logAction(s, `El balón es bloqueado por #${opponentOnTarget.playerNumber} rival.`, 'kick');
+      const logState = logAction(s, lang === 'en' ? `Ball blocked by opponent #${opponentOnTarget.playerNumber}.` : `El balón es bloqueado por #${opponentOnTarget.playerNumber} rival.`, 'kick');
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
       const nextChange = { ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } };
@@ -5445,7 +5825,7 @@ function handleActionExecution(s, executedAction, position) {
     if (receivingTeammate) {
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
-      const logState = logAction(s, `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
+      const logState = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
       const chainResult = getValidChainPassTargets(receivingTeammate, newPlayers);
       const nextReceivers = [];
       chainResult.validTargets.forEach(pos => {
@@ -5457,14 +5837,14 @@ function handleActionExecution(s, executedAction, position) {
         lastPlayerToTouchBallId: currentPasser.id, chainPassInitiatorId: receivingTeammate.id,
         assistProviderId: currentPasser.id, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
-        lastAction: { from: startPos, to: position }, message: `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
+        lastAction: { from: startPos, to: position }, message: lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}! Choose an action for the chain.` : `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
         actionChoice: null, validMoves: [], validKickTargets: [], invalidOffsideKickTargets: [],
         validDragTargets: [], invalidOffsideDragTargets: [], validLoftedPassTargets: [],
         validLoftedDragTargets: [], invalidOffsideLoftedDragTargets: [], selectedPlayerId: receivingTeammate.id,
       };
     }
 
-    const logState = logAction(s, `Pase a (${position.x}, ${position.y}).`, 'kick');
+    const logState = logAction(s, lang === 'en' ? `Pass to (${position.x}, ${position.y}).` : `Pase a (${position.x}, ${position.y}).`, 'kick');
     const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
     const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
     const lastTouchId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
@@ -5951,7 +6331,6 @@ function formatClock(totalSeconds) {
    ========================================================================= */
 
 function renderLanding() {
-  // Mini board preview SVG — a simplified static view of the board
   const previewSvg = `<svg viewBox="0 0 190 250" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;">
     <rect width="190" height="250" fill="#4a7c59"/>
     ${Array.from({length:7}, (_,r) => Array.from({length:5}, (_,c) =>
@@ -5975,39 +6354,42 @@ function renderLanding() {
   <div class="landing-screen">
     <div class="landing-logo">⚽</div>
     <h1 class="landing-title">Hexagol</h1>
-    <p class="landing-subtitle">Fútbol de dados · Estrategia por turnos</p>
+    <p class="landing-subtitle">${t('landing.subtitle')}</p>
     <div class="landing-preview">${previewSvg}</div>
     <div class="landing-actions">
       <button class="landing-btn landing-btn-google" id="landing-google-btn">
         <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continuar con Google
+        ${t('landing.google')}
       </button>
       <button class="landing-btn landing-btn-email" id="landing-email-btn">
-        ✉️ Registrarse con email
+        ${t('landing.email')}
       </button>
-      <div class="landing-divider">o</div>
+      <div class="landing-divider">${t('landing.divider')}</div>
       <button class="landing-btn landing-btn-guest" id="landing-guest-btn">
-        Jugar como invitado →
+        ${t('landing.guest')}
       </button>
     </div>
     <div class="landing-features">
       <div class="landing-feature">
         <div class="landing-feature-icon">🌐</div>
-        <div class="landing-feature-label">Online multijugador</div>
+        <div class="landing-feature-label">${t('landing.feature.online')}</div>
       </div>
       <div class="landing-feature">
         <div class="landing-feature-icon">🤖</div>
-        <div class="landing-feature-label">Vs. IA con dificultad</div>
+        <div class="landing-feature-label">${t('landing.feature.ai')}</div>
       </div>
       <div class="landing-feature">
         <div class="landing-feature-icon">🏆</div>
-        <div class="landing-feature-label">Liga y torneo</div>
+        <div class="landing-feature-label">${t('landing.feature.league')}</div>
       </div>
     </div>
+    <button id="lang-toggle-btn" style="margin-top:16px;background:none;border:1px solid #c8d4c0;border-radius:999px;padding:5px 14px;font-size:0.8rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
+      🌐 ${t('landing.lang')}
+    </button>
   </div>`;
 }
 
-let authFormMode = 'login'; // 'login' | 'register'
+let authFormMode = 'login';
 let authFormError = '';
 let authFormLoading = false;
 
@@ -6015,26 +6397,26 @@ function renderAuthScreen() {
   const isRegister = authFormMode === 'register';
   return `
   <div class="menu-screen auth-screen">
-    <h1>${isRegister ? 'Crear cuenta' : 'Iniciar sesión'}</h1>
+    <h1>${isRegister ? t('auth.create') : t('auth.login')}</h1>
     <div class="auth-form">
-      ${isRegister ? `<input type="text" class="auth-input" id="auth-username" placeholder="Nombre de usuario" maxlength="24" autocomplete="username"/>` : ''}
-      <input type="email" class="auth-input" id="auth-email" placeholder="Email" autocomplete="email"/>
-      <input type="password" class="auth-input" id="auth-password" placeholder="Contraseña (mín. 6 caracteres)" autocomplete="${isRegister ? 'new-password' : 'current-password'}"/>
+      ${isRegister ? `<input type="text" class="auth-input" id="auth-username" placeholder="${t('auth.username')}" maxlength="24" autocomplete="username"/>` : ''}
+      <input type="email" class="auth-input" id="auth-email" placeholder="${t('auth.email')}" autocomplete="email"/>
+      <input type="password" class="auth-input" id="auth-password" placeholder="${t('auth.password')}" autocomplete="${isRegister ? 'new-password' : 'current-password'}"/>
       ${authFormError ? `<div class="auth-error">${authFormError}</div>` : ''}
       <button class="btn" id="auth-submit-btn" style="width:100%;" ${authFormLoading ? 'disabled' : ''}>
-        ${authFormLoading ? 'Cargando...' : isRegister ? 'Crear cuenta' : 'Iniciar sesión'}
+        ${authFormLoading ? t('auth.loading') : isRegister ? t('auth.submit.register') : t('auth.submit.login')}
       </button>
       <button class="landing-btn landing-btn-google" id="auth-google-btn" style="margin-top:4px;">
         <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
-        Continuar con Google
+        ${t('landing.google')}
       </button>
     </div>
     <div class="auth-switch">
-      ${isRegister ? '¿Ya tenés cuenta?' : '¿No tenés cuenta?'}
-      <button id="auth-switch-btn">${isRegister ? 'Iniciar sesión' : 'Registrarse'}</button>
+      ${isRegister ? t('auth.switch.to.login') : t('auth.switch.to.register')}
+      <button id="auth-switch-btn">${isRegister ? t('auth.switch.login') : t('auth.switch.register')}</button>
     </div>
     <div class="auth-switch" style="margin-top:4px;">
-      <button id="auth-back-btn" style="color:#b0bba8;">← Volver</button>
+      <button id="auth-back-btn" style="color:#b0bba8;">${t('auth.back')}</button>
     </div>
   </div>`;
 }
@@ -6055,67 +6437,70 @@ function renderMainMenu() {
         <div class="user-chip-name">${userProfile.username}</div>
         <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}V ${userProfile.losses}D</div>
       </div>
-      <button class="user-chip-logout" id="logout-btn" title="Cerrar sesión">salir</button>
+      <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
     <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
       <div class="user-chip-avatar" style="background:#9aa593;">👤</div>
       <div>
-        <div class="user-chip-name">Invitado</div>
-        <div class="user-chip-elo">Creá una cuenta para guardar tu progreso</div>
+        <div class="user-chip-name">${t('user.guest')}</div>
+        <div class="user-chip-elo">${t('user.guest.desc')}</div>
       </div>
     </div>` : ''}
-    <h1>⚽ Hexagol</h1>
-    <div class="subtitle">Fútbol de dados — estrategia por turnos</div>
+    <h1>${t('menu.title')}</h1>
+    <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="online-setup" style="border-color: var(--accent); background: #f0f4ff;">
-        <div class="t">🌐 Jugar online</div>
-        <div class="d">Jugá contra otra persona en cualquier parte del mundo.</div>
+        <div class="t">${t('menu.online')}</div>
+        <div class="d">${t('menu.online.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="setup">
-        <div class="t">1 vs 1 local</div>
-        <div class="d">Dos jugadores comparten el mismo dispositivo y se turnan.</div>
+        <div class="t">${t('menu.local')}</div>
+        <div class="d">${t('menu.local.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="ai-setup">
-        <div class="t">🤖 Vs. Computadora</div>
-        <div class="d">Jugá solo contra un rival manejado por la máquina.</div>
+        <div class="t">${t('menu.ai')}</div>
+        <div class="d">${t('menu.ai.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="tutorial">
-        <div class="t">🎓 Tutorial</div>
-        <div class="d">Aprendé las reglas paso a paso con un partido guiado.</div>
+        <div class="t">${t('menu.tutorial')}</div>
+        <div class="d">${t('menu.tutorial.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="league-entry">
-        <div class="t">🏆 Liga / Torneo</div>
-        <div class="d">Armá un fixture de ida y vuelta entre varios equipos.</div>
+        <div class="t">${t('menu.league')}</div>
+        <div class="d">${t('menu.league.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="rules">
-        <div class="t">Cómo se juega</div>
-        <div class="d">Reglas rápidas antes de empezar tu primer partido.</div>
+        <div class="t">${t('menu.rules')}</div>
+        <div class="d">${t('menu.rules.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="leaderboard">
-        <div class="t">🏅 Tabla de líderes</div>
-        <div class="d">Los mejores jugadores por ELO a nivel global.</div>
+        <div class="t">${t('menu.leaderboard')}</div>
+        <div class="d">${t('menu.leaderboard.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="sandbox">
-        <div class="t">🧪 Entrenamiento libre</div>
-        <div class="d">Mové jugadores y la pelota libremente, sin turnos ni reglas.</div>
+        <div class="t">${t('menu.training')}</div>
+        <div class="d">${t('menu.training.desc')}</div>
       </button>
     </div>
     <div style="margin-top:16px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
       <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('cafecito_click', {source:'main_menu'})"
          style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        ❤️ Donaciones
+        ${t('menu.donate')}
       </a>
       <a href="https://chat.whatsapp.com/DSUWimZMKPR01m09Gop2nA" target="_blank" rel="noopener"
          onclick="trackEvent('whatsapp_community_click')"
          style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        💬 Comunidad
+        ${t('menu.community')}
       </a>
       <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform" target="_blank" rel="noopener"
          onclick="trackEvent('bug_report_click')"
          style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        🐛 Reportar bug
+        ${t('menu.bug')}
       </a>
+      <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
+        🌐 ${t('landing.lang')}
+      </button>
     </div>
   </div>`;
 }
@@ -6123,7 +6508,12 @@ function renderMainMenu() {
 
 function renderTeamPickerCard(side) {
   const picker = onlineTeamPicker[side];
-  const label = side === 'home' ? 'Tu equipo' : 'Equipo visitante (sugerido)';
+  const label = side === 'home'
+    ? (lang === 'en' ? 'Your team' : 'Tu equipo')
+    : (lang === 'en' ? 'Opponent team (suggested)' : 'Equipo visitante (sugerido)');
+  const presetBtn = lang === 'en' ? 'Preset' : 'Predefinido';
+  const customBtn = lang === 'en' ? 'Custom' : 'Personalizado';
+  const editBtn = lang === 'en' ? '✎ Edit' : '✎ Editar';
   const presetOptions = TEAMS.map((t, i) => `<option value="${i}" ${picker.presetIdx === i ? 'selected' : ''}>${t.name}</option>`).join('');
   const customTeam = picker.mode === 'custom' ? buildCustomTeam(picker.customName, picker.customKit, side) : null;
 
@@ -6131,8 +6521,8 @@ function renderTeamPickerCard(side) {
   <div class="team-picker-card">
     <span class="field-label">${label}</span>
     <div class="team-picker-toggle">
-      <button class="picker-toggle-btn ${picker.mode === 'preset' ? 'active' : ''}" data-team-mode="${side}:preset">Predefinido</button>
-      <button class="picker-toggle-btn ${picker.mode === 'custom' ? 'active' : ''}" data-team-mode="${side}:custom">Personalizado</button>
+      <button class="picker-toggle-btn ${picker.mode === 'preset' ? 'active' : ''}" data-team-mode="${side}:preset">${presetBtn}</button>
+      <button class="picker-toggle-btn ${picker.mode === 'custom' ? 'active' : ''}" data-team-mode="${side}:custom">${customBtn}</button>
     </div>
     ${picker.mode === 'preset' ? `
       <select class="team-pick" id="online-${side}-select">${presetOptions}</select>
@@ -6141,46 +6531,11 @@ function renderTeamPickerCard(side) {
         ${jerseyDot(customTeam, 28)}
         <div class="custom-team-summary-text">
           <strong>${customTeam.name}</strong>
-          <span>${KIT_DESIGNS.find(d => d.id === picker.customKit.design)?.name || 'Sólido'}</span>
+          <span>${(() => { const d = KIT_DESIGNS.find(d => d.id === picker.customKit.design); return d ? (lang === 'en' ? d.nameEn : d.name) : (lang === 'en' ? 'Solid' : 'Sólido'); })()}</span>
         </div>
-        <button class="btn ghost" id="edit-custom-kit-${side}" style="margin-left:auto; padding:6px 12px; font-size:0.74rem;">✎ Editar</button>
+        <button class="btn ghost" id="edit-custom-kit-${side}" style="margin-left:auto; padding:6px 12px; font-size:0.74rem;">${editBtn}</button>
       </div>
     `}
-  </div>`;
-}
-
-function renderOnlineSetup() {
-  return `
-  <div class="menu-screen">
-    <h1>🌐 Jugar online</h1>
-    <div class="subtitle">Creá una sala o unite a una existente.</div>
-    <div class="setup-row">
-      <div class="team-picker-grid">
-        ${renderTeamPickerCard('home')}
-        ${renderTeamPickerCard('away')}
-      </div>
-      <div>
-        <span class="field-label">Duración por tiempo</span>
-        <div class="duration-row" id="online-duration-row">
-          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-online-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
-        </div>
-      </div>
-    </div>
-    <div class="menu-grid">
-      <button class="menu-btn" id="online-create-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">🏠 Crear sala</div>
-        <div class="d" style="color:rgba(255,255,255,0.75);">Generás un código y se lo compartís a tu rival.</div>
-      </button>
-      <button class="menu-btn" id="online-quick-btn">
-        <div class="t">⚡ Partida rápida</div>
-        <div class="d">Te emparejamos con alguien disponible automáticamente.</div>
-      </button>
-      <button class="menu-btn" data-menu="online-join">
-        <div class="t">🔑 Unirse con código</div>
-        <div class="d">Tenés el código de una sala y querés entrar.</div>
-      </button>
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
-    </div>
   </div>`;
 }
 
@@ -6193,6 +6548,21 @@ function renderCustomKitEditor() {
   const needsSecondary = kit.design !== 'solid';
   const needsTertiary = kit.design === 'double-vertical-stripe' || kit.design === 'triple-horizontal-stripe';
 
+  const jerseyTitle = side === 'home'
+    ? (lang === 'en' ? 'Your kit' : 'Tu camiseta')
+    : (lang === 'en' ? 'Away kit' : 'Camiseta visitante');
+  const subtitle = lang === 'en' ? 'Choose name, design and colors for your team.' : 'Elegí nombre, diseño y colores para tu equipo.';
+  const teamNamePlaceholder = lang === 'en' ? 'Team name' : 'Nombre del equipo';
+  const designLabel = lang === 'en' ? 'Design' : 'Diseño';
+  const primaryLabel = lang === 'en' ? 'Primary color' : 'Color primario';
+  const secondaryLabel = lang === 'en' ? 'Secondary color' : 'Color secundario';
+  const tertiaryLabel = lang === 'en' ? 'Tertiary color' : 'Color terciario';
+  const textLabel = lang === 'en' ? 'Text / number color' : 'Color del texto/número';
+  const saveDesc = lang === 'en' ? 'This team will be preloaded next time.' : 'Este equipo aparecerá precargado la próxima vez.';
+  const saveProfile = lang === 'en' ? '💾 Save to profile' : '💾 Guardar en mi perfil';
+  const discard = lang === 'en' ? '← Back without saving' : '← Volver sin guardar';
+  const done = lang === 'en' ? '✓ Done' : '✓ Listo';
+
   const colorSwatches = (paletteVar, current, fieldName) => KIT_COLOR_PALETTE.map(c => `
     <button class="color-swatch ${current === c.value ? 'active' : ''}" data-kit-color="${fieldName}:${c.value}" title="${c.name}" style="background:${hsl(c.value)};"></button>
   `).join('');
@@ -6203,58 +6573,89 @@ function renderCustomKitEditor() {
 
   return `
   <div class="menu-screen">
-    <h1>🎨 ${side === 'home' ? 'Tu camiseta' : 'Camiseta visitante'}</h1>
-    <div class="subtitle">Elegí nombre, diseño y colores para tu equipo.</div>
-
+    <h1>🎨 ${jerseyTitle}</h1>
+    <div class="subtitle">${subtitle}</div>
     <div class="kit-editor-preview">
       ${jerseyDot(previewTeam, 64)}
-      <input type="text" id="custom-team-name" class="online-team-name-input" placeholder="Nombre del equipo" maxlength="24" value="${(picker.customName || '').replace(/"/g, '&quot;')}" />
+      <input type="text" id="custom-team-name" class="online-team-name-input" placeholder="${teamNamePlaceholder}" maxlength="24" value="${(picker.customName || '').replace(/"/g, '&quot;')}" />
     </div>
-
     <div class="kit-editor-section">
-      <span class="field-label">Diseño</span>
+      <span class="field-label">${designLabel}</span>
       <div class="kit-design-grid">
         ${KIT_DESIGNS.map(d => `
           <button class="kit-design-btn ${kit.design === d.id ? 'active' : ''}" data-kit-design="${d.id}">
             ${jerseyDot({ design: d.id, primaryColor: kit.primaryColor, secondaryColor: kit.secondaryColor, tertiaryColor: kit.tertiaryColor }, 22)}
-            <span>${d.name}</span>
+            <span>${lang === 'en' ? d.nameEn : d.name}</span>
           </button>
         `).join('')}
       </div>
     </div>
-
     <div class="kit-editor-section">
-      <span class="field-label">Color primario</span>
+      <span class="field-label">${primaryLabel}</span>
       <div class="color-swatch-row">${colorSwatches(null, kit.primaryColor, 'primaryColor')}</div>
     </div>
-
     ${needsSecondary ? `
     <div class="kit-editor-section">
-      <span class="field-label">Color secundario</span>
+      <span class="field-label">${secondaryLabel}</span>
       <div class="color-swatch-row">${colorSwatches(null, kit.secondaryColor, 'secondaryColor')}</div>
     </div>` : ''}
-
     ${needsTertiary ? `
     <div class="kit-editor-section">
-      <span class="field-label">Color terciario</span>
+      <span class="field-label">${tertiaryLabel}</span>
       <div class="color-swatch-row">${colorSwatches(null, kit.tertiaryColor, 'tertiaryColor')}</div>
     </div>` : ''}
-
     <div class="kit-editor-section">
-      <span class="field-label">Color del texto/número</span>
+      <span class="field-label">${textLabel}</span>
       <div class="color-swatch-row">${textSwatches}</div>
     </div>
-
     <div class="menu-grid" style="margin-top:14px;">
       <button class="menu-btn" id="save-custom-kit-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">✓ Listo</div>
+        <div class="t" style="color:#fff;">${done}</div>
       </button>
       ${currentUser && !currentUser.isAnonymous ? `
       <button class="menu-btn" id="save-kit-to-profile-btn">
-        <div class="t">💾 Guardar en mi perfil</div>
-        <div class="d">Este equipo aparecerá precargado la próxima vez.</div>
+        <div class="t">${saveProfile}</div>
+        <div class="d">${saveDesc}</div>
       </button>` : ''}
-      <button class="menu-btn" id="discard-custom-kit-btn"><div class="t">← Volver sin guardar</div></button>
+      <button class="menu-btn" id="discard-custom-kit-btn"><div class="t">${discard}</div></button>
+    </div>
+  </div>`;
+}
+
+function renderOnlineSetup() {
+  const createDesc = lang === 'en' ? 'Generate a code and share it with your opponent.' : 'Generás un código y se lo compartís a tu rival.';
+  const quickDesc = lang === 'en' ? 'We match you with someone available automatically.' : 'Te emparejamos con alguien disponible automáticamente.';
+  const joinDesc = lang === 'en' ? 'You have a room code and want to enter.' : 'Tenés el código de una sala y querés entrar.';
+  return `
+  <div class="menu-screen">
+    <h1>${t('menu.online')}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Create a room or join an existing one.' : 'Creá una sala o unite a una existente.'}</div>
+    <div class="setup-row">
+      <div class="team-picker-grid">
+        ${renderTeamPickerCard('home')}
+        ${renderTeamPickerCard('away')}
+      </div>
+      <div>
+        <span class="field-label">${t('setup.duration')}</span>
+        <div class="duration-row" id="online-duration-row">
+          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-online-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
+        </div>
+      </div>
+    </div>
+    <div class="menu-grid">
+      <button class="menu-btn" id="online-create-btn" style="background:var(--accent); border-color:var(--accent);">
+        <div class="t" style="color:#fff;">🏠 ${t('online.create')}</div>
+        <div class="d" style="color:rgba(255,255,255,0.75);">${createDesc}</div>
+      </button>
+      <button class="menu-btn" id="online-quick-btn">
+        <div class="t">⚡ ${t('online.quick')}</div>
+        <div class="d">${quickDesc}</div>
+      </button>
+      <button class="menu-btn" data-menu="online-join">
+        <div class="t">🔑 ${t('online.join')}</div>
+        <div class="d">${joinDesc}</div>
+      </button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
   </div>`;
 }
@@ -6262,44 +6663,48 @@ function renderCustomKitEditor() {
 function renderOnlineJoin() {
   return `
   <div class="menu-screen">
-    <h1>🔑 Unirse a sala</h1>
-    <div class="subtitle">Pedile el código a tu rival e ingresalo acá.</div>
+    <h1>${t('online.join.title')}</h1>
+    <div class="subtitle">${t('online.join.subtitle')}</div>
     <input class="online-input" id="join-code-input" maxlength="6" placeholder="XXXXXX" autocomplete="off" spellcheck="false" />
     <div class="setup-row" style="margin-top:14px;">
       ${renderTeamPickerCard('home')}
     </div>
     <div class="menu-grid" style="margin-top:10px;">
       <button class="menu-btn" id="online-join-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">Entrar a la sala →</div>
+        <div class="t" style="color:#fff;">${t('online.join.btn')}</div>
       </button>
-      <button class="menu-btn" data-menu="online-setup"><div class="t">← Volver</div></button>
+      <button class="menu-btn" data-menu="online-setup"><div class="t">${t('online.back')}</div></button>
     </div>
   </div>`;
 }
 
 function renderOnlineWaiting() {
+  const expiryNote = lang === 'en' ? 'Room expires in 10 minutes.' : 'La sala expira en 10 minutos.';
+  const connectingDesc = lang === 'en'
+    ? `Room ${onlineRoomId || ''} — waiting for host to start.`
+    : `Sala ${onlineRoomId || ''} — esperando que el anfitrión arranque el partido.`;
   if (onlineIsHost) {
     return `
     <div class="menu-screen" style="text-align:center;">
-      <h1>🏠 Sala creada</h1>
-      <div class="subtitle">Compartí este código con tu rival.</div>
+      <h1>🏠 ${t('online.waiting.title')}</h1>
+      <div class="subtitle">${lang === 'en' ? 'Share this code with your opponent.' : 'Compartí este código con tu rival.'}</div>
       <div class="room-code-display" id="room-code-display">${onlineRoomId || '...'}</div>
-      <p style="font-size:0.85rem; color:#6b7a64; margin: 0 0 20px;">Tu rival debe ingresar este código en <b>Unirse con código</b>.<br>La sala expira en 10 minutos.</p>
-      <span class="online-badge waiting"><span class="online-dot"></span> Esperando rival...</span>
+      <p style="font-size:0.85rem; color:#6b7a64; margin: 0 0 20px;">${t('online.waiting.hint')}<br>${expiryNote}</p>
+      <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.waiting')}</span>
       <div class="menu-grid" style="margin-top:20px;">
-        <button class="menu-btn" id="online-cancel-btn"><div class="t">✕ Cancelar sala</div></button>
+        <button class="menu-btn" id="online-cancel-btn"><div class="t">${t('online.cancel')}</div></button>
       </div>
     </div>`;
   }
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>🔗 Conectando...</h1>
-    <div class="subtitle">Sala ${onlineRoomId || ''} — esperando que el anfitrión arranque el partido.</div>
+    <h1>🔗 ${lang === 'en' ? 'Connecting...' : 'Conectando...'}</h1>
+    <div class="subtitle">${connectingDesc}</div>
     <div style="margin: 30px 0;">
-      <span class="online-badge waiting"><span class="online-dot"></span> Conectando...</span>
+      <span class="online-badge waiting"><span class="online-dot"></span> ${lang === 'en' ? 'Connecting...' : 'Conectando...'}</span>
     </div>
     <div class="menu-grid">
-      <button class="menu-btn" id="online-cancel-btn"><div class="t">✕ Cancelar</div></button>
+      <button class="menu-btn" id="online-cancel-btn"><div class="t">${t('online.cancel')}</div></button>
     </div>
   </div>`;
 }
@@ -6307,30 +6712,32 @@ function renderOnlineWaiting() {
 function renderOnlineSearching() {
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>⚡ Buscando rival</h1>
-    <div class="subtitle">Conectándote con alguien disponible...</div>
+    <h1>⚡ ${lang === 'en' ? 'Finding opponent' : 'Buscando rival'}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Connecting you with someone available...' : 'Conectándote con alguien disponible...'}</div>
     <div style="margin: 30px 0;">
-      <span class="online-badge waiting"><span class="online-dot"></span> Buscando...</span>
+      <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.searching')}</span>
     </div>
     <div class="menu-grid">
-      <button class="menu-btn" id="online-cancel-btn"><div class="t">✕ Cancelar</div></button>
+      <button class="menu-btn" id="online-cancel-btn"><div class="t">${lang === 'en' ? '✕ Cancel' : '✕ Cancelar'}</div></button>
     </div>
   </div>`;
 }
 
 function renderOnlineReconnect() {
+  const returnDesc = lang === 'en' ? 'Pick up right where you left off.' : 'Retomás justo donde la dejaste.';
+  const declineDesc = lang === 'en' ? 'That match will be forfeited for your opponent.' : 'Esa partida queda abandonada para tu rival.';
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>🔄 Partida en curso</h1>
-    <div class="subtitle">Encontramos un partido online que no terminaste. ¿Querés volver a conectarte?</div>
+    <h1>🔄 ${t('reconnect.title')}</h1>
+    <div class="subtitle">${t('reconnect.desc')}</div>
     <div class="menu-grid" style="margin-top:18px;">
       <button class="menu-btn" id="reconnect-accept-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">↩ Volver a la partida</div>
-        <div class="d" style="color:rgba(255,255,255,0.75);">Retomás justo donde la dejaste.</div>
+        <div class="t" style="color:#fff;">↩ ${t('reconnect.yes')}</div>
+        <div class="d" style="color:rgba(255,255,255,0.75);">${returnDesc}</div>
       </button>
       <button class="menu-btn" id="reconnect-decline-btn">
-        <div class="t">No, ir al menú</div>
-        <div class="d">Esa partida queda abandonada para tu rival.</div>
+        <div class="t">${t('reconnect.no')}</div>
+        <div class="d">${declineDesc}</div>
       </button>
     </div>
   </div>`;
@@ -6521,7 +6928,7 @@ async function loadLeaderboard() {
         .map(doc => ({ uid: doc.id, ...doc.data() }))
         .filter(u => (u.gamesPlayed || 0) >= 1);
     } catch (err2) {
-      leaderboardError = 'No se pudo cargar la tabla. Intentá de nuevo.';
+      leaderboardError = lang === 'en' ? 'Could not load the table. Try again.' : 'No se pudo cargar la tabla. Intentá de nuevo.';
     }
   }
   leaderboardLoading = false;
@@ -6530,51 +6937,97 @@ async function loadLeaderboard() {
 
 function renderLeaderboard() {
   const myUid = currentUser?.uid;
+  const playerLabel = lang === 'en' ? 'Player' : 'Jugador';
   const rows = leaderboardLoading
-    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">Cargando...</div>`
+    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">${t('lb.loading')}</div>`
     : leaderboardError
     ? `<div style="text-align:center; padding:24px; color:#dc2626;">${leaderboardError}</div>`
     : !leaderboardData || leaderboardData.length === 0
-    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">Todavía no hay jugadores con partidas. ¡Sé el primero!</div>`
+    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">${t('lb.empty')}</div>`
     : leaderboardData.map((u, i) => {
         const isMe = u.uid === myUid;
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
         const winRate = u.gamesPlayed > 0
           ? Math.round((u.wins / u.gamesPlayed) * 100) : 0;
+        const wLabel = lang === 'en' ? 'W' : 'V';
+        const lLabel = lang === 'en' ? 'L' : 'D';
         return `<div class="lb-row ${isMe ? 'lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
-          <span class="lb-name">${escapeHtml(u.username || 'Jugador')}</span>
+          <span class="lb-name">${escapeHtml(u.username || playerLabel)}</span>
           <span class="lb-elo">⚡ ${u.elo || 1200}</span>
-          <span class="lb-record">${u.wins || 0}V ${u.losses || 0}D · ${winRate}%</span>
+          <span class="lb-record">${u.wins || 0}${wLabel} ${u.losses || 0}${lLabel} · ${winRate}%</span>
         </div>`;
       }).join('');
 
-  // Find current user's position if not in top 50
   let myPosition = '';
   if (myUid && leaderboardData && !leaderboardData.some(u => u.uid === myUid) && userProfile) {
     myPosition = `<div class="lb-my-position">
-      Tu posición: fuera del top 50 · ⚡ ${userProfile.elo} ELO
+      ${t('lb.myposition')} · ⚡ ${userProfile.elo} ELO
     </div>`;
   }
 
   return `
   <div class="menu-screen" style="max-width:600px;">
-    <h1>🏅 Tabla de líderes</h1>
-    <div class="subtitle">Top jugadores por ELO global</div>
+    <h1>${t('lb.title')}</h1>
+    <div class="subtitle">${t('lb.subtitle')}</div>
     <div class="lb-table">${rows}</div>
     ${myPosition}
     <div class="menu-grid" style="margin-top:14px;">
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('lb.back')}</div></button>
     </div>
   </div>`;
 }
 
 function renderRules() {
+  if (lang === 'en') return `
+  <div class="menu-screen rules-screen" style="text-align:left; max-width:680px;">
+    <h1 style="text-align:center;">${t('rules.title')}</h1>
+    <div class="rules-body">
+      <h3 class="rules-section-title">🎲 Turn & dice</h3>
+      <p><b>Turns:</b> each team rolls a dice with values 0, 1, 2, 3, 4 or 6. A <b>0 makes you lose your turn</b> automatically. Each turn has a time limit — if it runs out, the turn passes automatically.</p>
+
+      <h3 class="rules-section-title">🚶 Movement</h3>
+      <p>You choose a player and move them in a <b>straight line in any of 8 directions</b>, up to the number of squares shown on the dice.</p>
+      ${diagramMovement()}
+
+      <h3 class="rules-section-title">⚽ Kick & drag</h3>
+      <p>If your player is next to the ball, they can <b>kick it</b> <span style="color:#dc2626">●</span> (red icon). Otherwise, they can <b>drag it</b> by moving toward it <span style="color:#1c2b22">●</span> (dark icon). There are also <b>lofted</b> versions that jump over obstacles.</p>
+      ${diagramKick()}
+
+      <h3 class="rules-section-title">⛓ Chain pass</h3>
+      <p>If the ball lands on a square with a teammate, you can <b>keep playing</b> with an extra pass without spending another turn. The receiving teammate is highlighted with a golden ring.</p>
+      ${diagramChainPass()}
+
+      <h3 class="rules-section-title">📦 Stacking</h3>
+      <p>Up to <b>3 players</b> can share a square (max 2 from the same team). All remain visible and can be selected individually.</p>
+      ${diagramStacking()}
+
+      <h3 class="rules-section-title">🚩 Offside</h3>
+      <p>If you leave your own players further forward than the ball <i>and</i> the second-to-last opponent defender, you must move that piece back before continuing. The offending player flashes red.</p>
+      ${diagramOffside()}
+
+      <h3 class="rules-section-title">🥅 Goal & goalkeeper</h3>
+      <p>Get the ball to the <b>5 central squares</b> of the opponent's back line. The goalkeeper, inside their large area, <b>moves and kicks at double</b> the dice value.</p>
+      ${diagramGoal()}
+
+      <h3 class="rules-section-title">🎮 Game modes</h3>
+      <p><b>1 vs 1 local:</b> two people share the same device and take turns.</p>
+      <p><b>🌐 Online:</b> play against someone anywhere in the world with a room code.</p>
+      <p><b>🤖 vs Computer:</b> machine-controlled opponent with Easy / Normal / Hard levels.</p>
+      <p><b>🏆 League / Tournament:</b> home-and-away fixture between 2 to 8 teams with standings.</p>
+      <p><b>🧪 Training:</b> free match with no clock or timer, with manual dice selection.</p>
+      <p><b>🎓 Tutorial:</b> guided step-by-step match with instructions on the board.</p>
+      <div class="rules-scroll-hint" id="rules-scroll-hint"></div>
+    </div>
+    <div class="menu-grid" style="margin-top:14px;">
+      <button class="menu-btn" data-menu="back"><div class="t">${t('rules.back')}</div></button>
+    </div>
+  </div>`;
+
   return `
   <div class="menu-screen rules-screen" style="text-align:left; max-width:680px;">
-    <h1 style="text-align:center;">Cómo se juega</h1>
+    <h1 style="text-align:center;">${t('rules.title')}</h1>
     <div class="rules-body">
-
       <h3 class="rules-section-title">🎲 Turno y dado</h3>
       <p><b>Turnos:</b> cada equipo lanza un dado con valores 0, 1, 2, 3, 4 o 6. Un <b>0 hace que pierdas el turno</b> automáticamente. El tiempo por jugada es limitado — si se agota, el turno pasa solo.</p>
 
@@ -6612,7 +7065,7 @@ function renderRules() {
       <div class="rules-scroll-hint" id="rules-scroll-hint"></div>
     </div>
     <div class="menu-grid" style="margin-top:14px;">
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('rules.back')}</div></button>
     </div>
   </div>`;
 }
@@ -6622,18 +7075,18 @@ function renderSetup() {
   const awayOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===1?'selected':''}>${t.name}</option>`).join('');
   return `
   <div class="menu-screen">
-    <h1>Configurar partido</h1>
-    <div class="subtitle">Elige los equipos y la duración de cada tiempo.</div>
+    <h1>${t('setup.title')}</h1>
+    <div class="subtitle">${t('setup.subtitle')}</div>
     <div class="setup-row">
       <div>
-        <span class="field-label">Equipos</span>
+        <span class="field-label">${lang === 'en' ? 'Teams' : 'Equipos'}</span>
         <div class="team-select-grid">
           <select class="team-pick" id="home-team-select">${homeOptions}</select>
           <select class="team-pick" id="away-team-select">${awayOptions}</select>
         </div>
       </div>
       <div>
-        <span class="field-label">Duración por tiempo</span>
+        <span class="field-label">${t('setup.duration')}</span>
         <div class="duration-row" id="duration-row">
           ${[2, 5, 10, 20, 30, 45].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
@@ -6641,15 +7094,15 @@ function renderSetup() {
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
-          Sin límite de turno <span style="font-size:0.75rem;color:#8a9582;">(modo relajado para principiantes)</span>
+          ${t('setup.notimer')} <span style="font-size:0.75rem;color:#8a9582;">${t('setup.notimer.desc')}</span>
         </label>
       </div>
     </div>
     <div class="menu-grid">
       <button class="menu-btn" id="start-match-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">Comenzar partido →</div>
+        <div class="t" style="color:#fff;">${t('setup.start')}</div>
       </button>
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
   </div>`;
 }
@@ -6660,33 +7113,36 @@ let aiDifficultyChoice = 'normal';
 function renderAiSetup() {
   const homeOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===0?'selected':''}>${t.name}</option>`).join('');
   const awayOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===1?'selected':''}>${t.name}</option>`).join('');
+  const sideHome = lang === 'en' ? 'Home team' : 'Equipo local';
+  const sideAway = lang === 'en' ? 'Away team' : 'Equipo visitante';
+  const youControl = lang === 'en' ? 'You control' : 'Vos controlás';
   return `
   <div class="menu-screen">
-    <h1>🤖 Vs. Computadora</h1>
-    <div class="subtitle">Elige tu equipo, el rival, la dificultad y la duración.</div>
+    <h1>${t('ai.title')}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Choose your team, opponent, difficulty and duration.' : 'Elige tu equipo, el rival, la dificultad y la duración.'}</div>
     <div class="setup-row">
       <div>
-        <span class="field-label">Equipos</span>
+        <span class="field-label">${lang === 'en' ? 'Teams' : 'Equipos'}</span>
         <div class="team-select-grid">
           <select class="team-pick" id="ai-home-team-select">${homeOptions}</select>
           <select class="team-pick" id="ai-away-team-select">${awayOptions}</select>
         </div>
       </div>
       <div>
-        <span class="field-label">Vos controlás</span>
+        <span class="field-label">${youControl}</span>
         <div class="duration-row" id="ai-side-row">
-          <button data-ai-side="home" class="${aiHumanSide === 'home' ? 'active' : ''}">Equipo local</button>
-          <button data-ai-side="away" class="${aiHumanSide === 'away' ? 'active' : ''}">Equipo visitante</button>
+          <button data-ai-side="home" class="${aiHumanSide === 'home' ? 'active' : ''}">${sideHome}</button>
+          <button data-ai-side="away" class="${aiHumanSide === 'away' ? 'active' : ''}">${sideAway}</button>
         </div>
       </div>
       <div>
-        <span class="field-label">Dificultad</span>
+        <span class="field-label">${t('ai.difficulty')}</span>
         <div class="duration-row" id="ai-difficulty-row">
-          ${[['easy','Fácil'],['normal','Normal'],['hard','Difícil']].map(([v,l]) => `<button data-ai-difficulty="${v}" class="${aiDifficultyChoice === v ? 'active' : ''}">${l}</button>`).join('')}
+          ${[['easy', t('ai.easy')],['normal', t('ai.normal')],['hard', t('ai.hard')]].map(([v,l]) => `<button data-ai-difficulty="${v}" class="${aiDifficultyChoice === v ? 'active' : ''}">${l}</button>`).join('')}
         </div>
       </div>
       <div>
-        <span class="field-label">Duración por tiempo</span>
+        <span class="field-label">${t('setup.duration')}</span>
         <div class="duration-row" id="duration-row">
           ${[2, 5, 10, 20, 30, 45].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
@@ -6694,15 +7150,15 @@ function renderAiSetup() {
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
-          Sin límite de turno <span style="font-size:0.75rem;color:#8a9582;">(modo relajado para principiantes)</span>
+          ${t('setup.notimer')} <span style="font-size:0.75rem;color:#8a9582;">${t('setup.notimer.desc')}</span>
         </label>
       </div>
     </div>
     <div class="menu-grid">
       <button class="menu-btn" id="start-ai-match-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">Comenzar partido →</div>
+        <div class="t" style="color:#fff;">${t('setup.start')}</div>
       </button>
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
   </div>`;
 }
@@ -6752,6 +7208,8 @@ function jerseyDot(teamIdOrTeam, size) {
 
 function renderLeagueSetup() {
   if (leagueSelectedTeams.length !== leagueNumTeams) leagueSelectedTeams = Array(leagueNumTeams).fill(null);
+  const teamLabel = (i) => lang === 'en' ? `Team ${i + 1}` : `Equipo ${i + 1}`;
+  const choosePlaceholder = lang === 'en' ? 'Choose a team' : 'Elige un equipo';
   const teamSelectors = Array.from({ length: leagueNumTeams }).map((_, i) => {
     const options = TEAMS.map(t => {
       const disabled = leagueSelectedTeams.includes(t.id) && leagueSelectedTeams[i] !== t.id;
@@ -6760,9 +7218,9 @@ function renderLeagueSetup() {
     }).join('');
     return `
       <div>
-        <span class="field-label">Equipo ${i + 1}</span>
+        <span class="field-label">${teamLabel(i)}</span>
         <select class="team-pick league-team-select" data-team-slot="${i}" style="width:100%;">
-          <option value="" ${!leagueSelectedTeams[i] ? 'selected' : ''} disabled>Elige un equipo</option>
+          <option value="" ${!leagueSelectedTeams[i] ? 'selected' : ''} disabled>${choosePlaceholder}</option>
           ${options}
         </select>
       </div>`;
@@ -6770,20 +7228,23 @@ function renderLeagueSetup() {
 
   const hasDuplicates = leagueSelectedTeams.filter(Boolean).length !== new Set(leagueSelectedTeams.filter(Boolean)).size;
   const allSelected = leagueSelectedTeams.every(Boolean);
+  const dupMsg = lang === 'en' ? 'You cannot select the same team twice.' : 'No puedes seleccionar el mismo equipo dos veces.';
+  const numTeamsLabel = lang === 'en' ? 'Number of teams' : 'Número de equipos';
+  const teamsUnit = lang === 'en' ? 'teams' : 'equipos';
 
   return `
   <div class="menu-screen" style="max-width:680px;">
-    <h1>🏆 Configurar Liga</h1>
-    <div class="subtitle">Elige los equipos y la duración de cada partido. Se juega ida y vuelta.</div>
+    <h1>🏆 ${lang === 'en' ? 'League setup' : 'Configurar Liga'}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Choose teams and match duration. Home and away format.' : 'Elige los equipos y la duración de cada partido. Se juega ida y vuelta.'}</div>
     <div class="setup-row">
       <div>
-        <span class="field-label">Número de equipos</span>
+        <span class="field-label">${numTeamsLabel}</span>
         <select class="team-pick" id="league-num-teams" style="width:100%;">
-          ${[2,3,4,5,6,7,8].map(n => `<option value="${n}" ${n===leagueNumTeams?'selected':''}>${n} equipos</option>`).join('')}
+          ${[2,3,4,5,6,7,8].map(n => `<option value="${n}" ${n===leagueNumTeams?'selected':''}>${n} ${teamsUnit}</option>`).join('')}
         </select>
       </div>
       <div>
-        <span class="field-label">Duración por tiempo</span>
+        <span class="field-label">${t('setup.duration')}</span>
         <div class="duration-row" id="league-duration-row">
           ${[5, 10, 20, 30, 45].map(m => `<button data-league-duration="${m}" class="${m === leagueDuration ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
@@ -6792,12 +7253,12 @@ function renderLeagueSetup() {
     <div class="team-select-grid" style="grid-template-columns: 1fr 1fr;">
       ${teamSelectors}
     </div>
-    ${hasDuplicates ? `<p style="color:#9a2f24; font-size:0.8rem; text-align:center; margin-top:8px;">No puedes seleccionar el mismo equipo dos veces.</p>` : ''}
+    ${hasDuplicates ? `<p style="color:#9a2f24; font-size:0.8rem; text-align:center; margin-top:8px;">${dupMsg}</p>` : ''}
     <div class="menu-grid" style="margin-top:16px;">
       <button class="menu-btn" id="start-league-btn" style="background:var(--accent); border-color:var(--accent); ${(!allSelected || hasDuplicates) ? 'opacity:0.5; pointer-events:none;' : ''}">
-        <div class="t" style="color:#fff;">🏆 Comenzar liga →</div>
+        <div class="t" style="color:#fff;">🏆 ${lang === 'en' ? 'Start league →' : 'Comenzar liga →'}</div>
       </button>
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
   </div>`;
 }
@@ -6810,17 +7271,29 @@ function renderLeagueView(s) {
   const matchesByRound = {};
   ls.schedule.forEach(m => { (matchesByRound[m.round] = matchesByRound[m.round] || []).push(m); });
 
-  const tabs = [
-    { id: 'standings', label: '📊 Tabla' },
-    { id: 'schedule', label: '📅 Calendario' },
-    { id: 'scorers', label: '⭐ Goleadores' },
-  ];
+  const tabs = lang === 'en'
+    ? [{ id: 'standings', label: '📊 Table' }, { id: 'schedule', label: '📅 Schedule' }, { id: 'scorers', label: '⭐ Scorers' }]
+    : [{ id: 'standings', label: '📊 Tabla' }, { id: 'schedule', label: '📅 Calendario' }, { id: 'scorers', label: '⭐ Goleadores' }];
+
+  const thTeam = lang === 'en' ? 'Team' : 'Equipo';
+  const thPlayer = lang === 'en' ? 'Player' : 'Jugador';
+  const roundLabel = (r) => lang === 'en' ? `Round ${r}${r === ls.currentRound ? ' (current)' : ''}` : `Jornada ${r}${r === ls.currentRound ? ' (actual)' : ''}`;
+  const playBtn = lang === 'en' ? 'Play' : 'Jugar';
+  const noStats = lang === 'en' ? 'No stats yet.' : 'Aún no hay estadísticas.';
+  const scorersTitle = lang === 'en' ? 'Top Scorers' : 'Goleadores';
+  const assistsTitle = lang === 'en' ? 'Top Assists' : 'Asistencias';
+  const goalsLabel = lang === 'en' ? 'Goals' : 'Goles';
+  const assistsLabel = lang === 'en' ? 'Assists' : 'Asist.';
+  const exitLabel = lang === 'en' ? 'Exit league' : 'Salir de la liga';
 
   let body = '';
   if (leagueViewTab === 'standings') {
+    const [pts,pj,v,e,d,gf,gc,dg] = lang === 'en'
+      ? ['Pts','GP','W','D','L','GF','GA','GD']
+      : ['Pts','PJ','V','E','D','GF','GC','DG'];
     body = `
     <table class="league-table">
-      <thead><tr><th>#</th><th style="text-align:left;">Equipo</th><th>Pts</th><th>PJ</th><th>V</th><th>E</th><th>D</th><th>GF</th><th>GC</th><th>DG</th></tr></thead>
+      <thead><tr><th>#</th><th style="text-align:left;">${thTeam}</th><th>${pts}</th><th>${pj}</th><th>${v}</th><th>${e}</th><th>${d}</th><th>${gf}</th><th>${gc}</th><th>${dg}</th></tr></thead>
       <tbody>
         ${sortedTeams.map((t, i) => `
           <tr class="${i < 2 ? 'top' : ''}">
@@ -6835,14 +7308,14 @@ function renderLeagueView(s) {
     const rounds = Object.keys(matchesByRound).map(Number).sort((a, b) => a - b);
     body = rounds.map(round => `
       <div class="league-round">
-        <div class="league-round-title ${round === ls.currentRound ? 'current' : ''}">Jornada ${round}${round === ls.currentRound ? ' (actual)' : ''}</div>
+        <div class="league-round-title ${round === ls.currentRound ? 'current' : ''}">${roundLabel(round)}</div>
         ${matchesByRound[round].map(m => {
           const homeT = TEAMS.find(t => t.id === m.homeTeamId), awayT = TEAMS.find(t => t.id === m.awayTeamId);
           return `
           <div class="league-match-row">
             <div class="league-match-team"><span>${homeT.name}</span>${jerseyDot(homeT, 16)}</div>
             <div class="league-match-score">
-              ${m.played ? `<b>${m.homeScore} - ${m.awayScore}</b>` : (round === ls.currentRound ? `<button class="btn" data-play-match="${m.matchId}" style="padding:5px 12px; font-size:0.75rem;">Jugar</button>` : '<span style="opacity:0.4;">vs</span>')}
+              ${m.played ? `<b>${m.homeScore} - ${m.awayScore}</b>` : (round === ls.currentRound ? `<button class="btn" data-play-match="${m.matchId}" style="padding:5px 12px; font-size:0.75rem;">${playBtn}</button>` : '<span style="opacity:0.4;">vs</span>')}
             </div>
             <div class="league-match-team away">${jerseyDot(awayT, 16)}<span>${awayT.name}</span></div>
           </div>`;
@@ -6851,19 +7324,19 @@ function renderLeagueView(s) {
   } else if (leagueViewTab === 'scorers') {
     const topScorers = ls.playerStats.filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 10);
     const topAssists = ls.playerStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 10);
-    const renderStatTable = (list, key, label) => list.length === 0 ? `<p style="text-align:center; color:#8a9582; padding:14px 0;">Aún no hay estadísticas.</p>` : `
+    const renderStatTable = (list, key, label) => list.length === 0 ? `<p style="text-align:center; color:#8a9582; padding:14px 0;">${noStats}</p>` : `
       <table class="league-table" style="margin-bottom:16px;">
-        <thead><tr><th>#</th><th style="text-align:left;">Jugador</th><th style="text-align:left;">Equipo</th><th>${label}</th></tr></thead>
+        <thead><tr><th>#</th><th style="text-align:left;">${thPlayer}</th><th style="text-align:left;">${thTeam}</th><th>${label}</th></tr></thead>
         <tbody>${list.map((p, i) => `<tr><td>${i+1}</td><td style="text-align:left;">${p.name}</td><td style="text-align:left;"><div style="display:flex; align-items:center; gap:6px;">${jerseyDot(p.teamId, 14)} ${TEAMS.find(t=>t.id===p.teamId)?.name}</div></td><td><b>${p[key]}</b></td></tr>`).join('')}</tbody>
       </table>`;
-    body = `<h3 style="margin:0 0 6px;">Goleadores</h3>${renderStatTable(topScorers, 'goals', 'Goles')}<h3 style="margin:14px 0 6px;">Asistencias</h3>${renderStatTable(topAssists, 'assists', 'Asist.')}`;
+    body = `<h3 style="margin:0 0 6px;">${scorersTitle}</h3>${renderStatTable(topScorers, 'goals', goalsLabel)}<h3 style="margin:14px 0 6px;">${assistsTitle}</h3>${renderStatTable(topAssists, 'assists', assistsLabel)}`;
   }
 
   return `
   <div class="menu-screen league-screen" style="max-width:760px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <h1 style="margin:0; font-size:1.6rem;">🏆 Liga Hexagol</h1>
-      <button class="btn ghost" data-menu="league-exit" style="padding:7px 14px; font-size:0.78rem;">Salir de la liga</button>
+      <h1 style="margin:0; font-size:1.6rem;">🏆 ${lang === 'en' ? 'Hexagol League' : 'Liga Hexagol'}</h1>
+      <button class="btn ghost" data-menu="league-exit" style="padding:7px 14px; font-size:0.78rem;">${exitLabel}</button>
     </div>
     <div class="league-tabs">
       ${tabs.map(t => `<button class="league-tab ${leagueViewTab === t.id ? 'active' : ''}" data-league-tab="${t.id}">${t.label}</button>`).join('')}
@@ -6877,20 +7350,26 @@ function renderLeagueOver(s) {
   const sortedTeams = getSortedLeagueTeams(ls.teams, ls.schedule);
   const champion = sortedTeams[0];
   const championTeam = TEAMS.find(t => t.id === champion.teamId);
+  const champTitle = lang === 'en' ? 'CHAMPIONS!' : '¡CAMPEONES!';
+  const champDesc = lang === 'en'
+    ? `The league is over and <b style="color:${hsl(championTeam.primaryColor)};">${champion.name}</b> has been crowned the best team.`
+    : `La liga ha terminado y <b style="color:${hsl(championTeam.primaryColor)};">${champion.name}</b> se coronó como el mejor equipo.`;
+  const thTeam = lang === 'en' ? 'Team' : 'Equipo';
+  const gdLabel = lang === 'en' ? 'GD' : 'DG';
   return `
   <div class="menu-screen" style="max-width:600px;">
     <div style="font-size:3.5rem; line-height:1;">🏆</div>
-    <h1 style="margin:10px 0 4px;">¡CAMPEONES!</h1>
-    <div class="subtitle">La liga ha terminado y <b style="color:${hsl(championTeam.primaryColor)};">${champion.name}</b> se coronó como el mejor equipo.</div>
+    <h1 style="margin:10px 0 4px;">${champTitle}</h1>
+    <div class="subtitle">${champDesc}</div>
     <table class="league-table" style="margin-top:10px;">
-      <thead><tr><th>#</th><th style="text-align:left;">Equipo</th><th>Pts</th><th>DG</th></tr></thead>
+      <thead><tr><th>#</th><th style="text-align:left;">${thTeam}</th><th>Pts</th><th>${gdLabel}</th></tr></thead>
       <tbody>
         ${sortedTeams.slice(0, 3).map((t, i) => `
           <tr class="${i===0?'top':''}"><td>${i+1}</td><td style="text-align:left;"><div style="display:flex; align-items:center; gap:6px;">${jerseyDot(t.teamId,16)} ${t.name}</div></td><td><b>${t.points}</b></td><td>${t.goalDifference > 0 ? '+' + t.goalDifference : t.goalDifference}</td></tr>`).join('')}
       </tbody>
     </table>
     <div class="menu-grid" style="margin-top:16px;">
-      <button class="menu-btn" data-menu="back"><div class="t">← Volver al menú principal</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${lang === 'en' ? '← Back to main menu' : '← Volver al menú principal'}</div></button>
     </div>
   </div>`;
 }
@@ -6916,16 +7395,16 @@ function renderGameScreen(s) {
 
   const isOnline = s.gameMode === 'online';
   const isMyTurn = !isOnline || s.currentPlayer === onlineMyTeam;
-  const opponentLabel = isOnline && !isMyTurn ? `<div class="spectator-banner">⏳ Turno del rival — esperá tu turno</div>` : '';
-  const onlineIndicator = isOnline ? `<span class="online-badge"><span class="online-dot"></span> Online · ${onlineMyTeam === 'home' ? 'Local' : 'Visitante'}</span>` : '';
+  const opponentLabel = isOnline && !isMyTurn ? lang === 'en' ? `<div class="spectator-banner">⏳ Opponent's turn — wait for yours</div>` : `<div class="spectator-banner">⏳ Turno del rival — esperá tu turno</div>` : '';
+  const onlineIndicator = isOnline ? `<span class="online-badge"><span class="online-dot"></span> Online · ${onlineMyTeam === 'home' ? (lang === 'en' ? 'Home' : 'Local') : (lang === 'en' ? 'Away' : 'Visitante')}</span>` : '';
 
   // Contextual banners for situations that require specific player interaction.
   // These sit above the board message so they're the first thing the eye lands on.
   const offsideBanner = s.gamePhase === 'resolving-offside'
-    ? `<div class="situation-banner offside-banner">🚩 Fuera de juego — mové al jugador marcado en rojo a la línea permitida</div>`
+    ? `<div class="situation-banner offside-banner">🚩 ${lang === 'en' ? 'Offside — move the player marked in red to the allowed line' : 'Fuera de juego — mové al jugador marcado en rojo a la línea permitida'}</div>`
     : '';
   const swapBanner = s.gamePhase === 'goalkeeper-swap'
-    ? `<div class="situation-banner swap-banner">🔄 Podés cambiar al arquero por uno de los jugadores en su área</div>`
+    ? `<div class="situation-banner swap-banner">🔄 ${lang === 'en' ? 'You can swap the goalkeeper with a player in their area' : 'Podés cambiar al arquero por uno de los jugadores en su área'}</div>`
     : '';
 
   return `
@@ -6953,33 +7432,33 @@ function renderGameScreen(s) {
           <span class="mini-team-name">${s.awayTeam.name}</span>
           <span class="mini-score">${s.score.away}</span>
         </div>
-        <div class="mini-meta"><span class="clock" id="match-clock">⏱ ${formatClock(s.gameClock)}</span><span>${s.half}er T.</span><span>Turno ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? 'Silenciar sonido' : 'Activar sonido'}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? 'Salir de pantalla completa' : 'Pantalla completa'}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
+        <div class="mini-meta"><span class="clock" id="match-clock">⏱ ${formatClock(s.gameClock)}</span><span>${s.half === 1 ? (lang === 'en' ? '1st H.' : '1er T.') : (lang === 'en' ? '2nd H.' : '2do T.')}</span><span>${lang === 'en' ? 'Turn' : 'Turno'} ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? (lang === 'en' ? 'Mute' : 'Silenciar sonido') : (lang === 'en' ? 'Unmute' : 'Activar sonido')}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? (lang === 'en' ? 'Exit fullscreen' : 'Salir de pantalla completa') : (lang === 'en' ? 'Fullscreen' : 'Pantalla completa')}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
       </div>
       ${s.gameMode === 'tutorial' ? renderTutorialPanel(s) : s.gameMode === 'training' ? renderSandboxPanel(s) : renderDicePanel(s)}
       <div class="panel-stats-section">
-        <h3>Estadísticas</h3>
+        <h3>${t('game.stats')}</h3>
         <div class="stats-grid" style="margin-top:6px;">
-          <div class="val home">${possHomePct}%</div><div class="label">Posesión</div><div class="val away">${100-possHomePct}%</div>
-          <div class="val home">${s.stats.shotsOnGoal.home}</div><div class="label">Remates</div><div class="val away">${s.stats.shotsOnGoal.away}</div>
-          <div class="val home">${s.stats.offsides.home}</div><div class="label">Offsides</div><div class="val away">${s.stats.offsides.away}</div>
+          <div class="val home">${possHomePct}%</div><div class="label">${t('game.possession')}</div><div class="val away">${100-possHomePct}%</div>
+          <div class="val home">${s.stats.shotsOnGoal.home}</div><div class="label">${t('game.shots')}</div><div class="val away">${s.stats.shotsOnGoal.away}</div>
+          <div class="val home">${s.stats.offsides.home}</div><div class="label">${t('game.offsides')}</div><div class="val away">${s.stats.offsides.away}</div>
         </div>
       </div>
       <div class="panel-log-section" style="display:flex; flex-direction:column; flex:1; min-height:0;">
-        <h3>Jugadas</h3>
+        <h3>${t('game.log')}</h3>
         <ul class="log-list">
           ${s.gameLog.slice().reverse().map(e => `<li class="${e.team || ''} ${e.actionType === 'goal' ? 'goal' : ''}"><span class="turn-tag">T${e.turn}</span>${e.message}</li>`).join('')}
         </ul>
       </div>
       <div class="btn-row" style="gap:6px;">
-        <button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">Reiniciar</button>
-        <button class="btn ghost" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">Menú principal</button>
+        <button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>
+        <button class="btn ghost" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : 'Menú principal'}</button>
       </div>
     </div>
   </div>
   ${isOnline ? `
   <div class="chat-panel ${onlineChatOpen ? 'open' : ''}" id="chat-panel">
     <div class="chat-header">
-      <span>💬 Chat con el rival</span>
+      <span>💬 ${lang === 'en' ? 'Chat with opponent' : 'Chat con el rival'}</span>
       <button class="chat-close-btn" id="chat-close-btn">✕</button>
     </div>
     <div class="chat-messages" id="chat-messages">
@@ -6991,7 +7470,7 @@ function renderGameScreen(s) {
       ${CHAT_QUICK_PHRASES.map(p => `<button class="chat-quick-btn" data-quick-phrase="${escapeHtml(p)}">${p}</button>`).join('')}
     </div>
     <div class="chat-input-row">
-      <input type="text" id="chat-input" class="chat-input" placeholder="Escribí un mensaje..." maxlength="200" autocomplete="off" />
+      <input type="text" id="chat-input" class="chat-input" placeholder="${lang === 'en' ? 'Write a message...' : 'Escribí un mensaje...'}" maxlength="200" autocomplete="off" />
       <button class="chat-send-btn" id="chat-send-btn">➤</button>
     </div>
   </div>` : ''}
@@ -7012,25 +7491,32 @@ function renderTutorialPanel(s) {
   const needsDiceButton = step.action.type === 'click_element' && step.action.payload.elementId === 'dice-roll-button';
   const needsSkipSwapButton = step.action.type === 'click_element' && step.action.payload.elementId === 'skip-swap-button';
   const diceDisplay = s.diceValue !== null ? s.diceValue : '🎲';
+  const rollLabel = lang === 'en' ? 'Roll dice' : 'Lanzar dado';
+  const skipSwapLabel = lang === 'en' ? 'End turn (skip swap)' : 'Finalizar turno (omitir cambio)';
+  const diceLabel = lang === 'en' ? 'Dice:' : 'Dado:';
+  const hintLabel = lang === 'en' ? 'Follow the highlighted hint on the board.' : 'Seguí la indicación resaltada en el tablero.';
+  const doneLabel = lang === 'en' ? 'Got it! →' : '¡Entendido! →';
+  const exitLabel = lang === 'en' ? 'Exit tutorial' : 'Salir del tutorial';
+  const stepLabel = lang === 'en' ? `Step ${s.tutorialStep + 1}/${tutorialScript.length}` : `Paso ${s.tutorialStep + 1}/${tutorialScript.length}`;
 
   let actionHtml = '';
   if (needsDiceButton) {
-    actionHtml = `<div class="dice-row" style="margin:8px 0;"><div class="dice-face">${diceDisplay}</div><button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(s.homeTeam)}">🎲 Lanzar dado</button></div>`;
+    actionHtml = `<div class="dice-row" style="margin:8px 0;"><div class="dice-face">${diceDisplay}</div><button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(s.homeTeam)}">🎲 ${rollLabel}</button></div>`;
   } else if (needsSkipSwapButton) {
-    actionHtml = `<button class="btn ghost" id="skip-swap-btn" style="width:100%; margin-top:8px;">Finalizar turno (omitir cambio)</button>`;
+    actionHtml = `<button class="btn ghost" id="skip-swap-btn" style="width:100%; margin-top:8px;">${skipSwapLabel}</button>`;
   } else if (s.diceValue !== null) {
-    actionHtml = `<div class="dice-row" style="margin:8px 0;"><span style="font-size:0.78rem; color:#5b6f8a;">Dado:</span><div class="dice-face">${diceDisplay}</div></div>`;
+    actionHtml = `<div class="dice-row" style="margin:8px 0;"><span style="font-size:0.78rem; color:#5b6f8a;">${diceLabel}</span><div class="dice-face">${diceDisplay}</div></div>`;
   } else if (!isLast) {
-    actionHtml = `<div style="font-size:0.74rem; color:#5b6f8a; margin-top:6px;">Seguí la indicación resaltada en el tablero.</div>`;
+    actionHtml = `<div style="font-size:0.74rem; color:#5b6f8a; margin-top:6px;">${hintLabel}</div>`;
   }
 
   return `
   <div class="dice-panel" style="background:#eef5ff; border-color:#cfe0fb;">
-    <h3>🎓 Tutorial · Paso ${s.tutorialStep + 1}/${tutorialScript.length}</h3>
+    <h3>🎓 Tutorial · ${stepLabel}</h3>
     <div class="tutorial-progress-bar"><div class="tutorial-progress-fill" style="width:${progress}%;"></div></div>
     ${actionHtml}
-    ${isLast ? `<button class="btn" id="final-ok-button" style="width:100%; margin-top:10px;">¡Entendido! →</button>` : ''}
-    <button class="btn ghost" id="tutorial-exit-btn" style="width:100%; margin-top:8px; font-size:0.74rem; padding:7px;">Salir del tutorial</button>
+    ${isLast ? `<button class="btn" id="final-ok-button" style="width:100%; margin-top:10px;">${doneLabel}</button>` : ''}
+    <button class="btn ghost" id="tutorial-exit-btn" style="width:100%; margin-top:8px; font-size:0.74rem; padding:7px;">${exitLabel}</button>
   </div>`;
 }
 
@@ -7038,32 +7524,41 @@ function renderSandboxPanel(s) {
   const homeOptions = TEAMS.map((t,i) => `<option value="${i}" ${s.homeTeam.id===t.id?'selected':''}>${t.name}</option>`).join('');
   const awayOptions = TEAMS.map((t,i) => `<option value="${i}" ${s.awayTeam.id===t.id?'selected':''}>${t.name}</option>`).join('');
   const teamName = getTeamName(s, s.currentPlayer);
+  const trainingLabel = lang === 'en' ? 'Training' : 'Entrenamiento';
+  const diceLabelSandbox = lang === 'en' ? 'Choose dice value' : 'Elegí el valor del dado';
+  const moveHint = lang === 'en' ? 'Make your move on the board.' : 'Realizá tu jugada en el tablero.';
+  const teamsLabel = lang === 'en' ? 'Teams' : 'Equipos';
+  const resetLabel = lang === 'en' ? '↺ Reset positions' : '↺ Resetear posiciones';
+  const backLabel = lang === 'en' ? '← Back to menu' : '← Volver al menú';
+  const skipSwapSandbox = lang === 'en' ? 'Keep, end turn' : 'No cambiar, finalizar turno';
+  const stopChain = lang === 'en' ? 'End play here' : 'Terminar jugada acá';
+
   return `
   <div class="dice-panel">
-    <h3>🧪 Entrenamiento — ${teamName}</h3>
+    <h3>🧪 ${trainingLabel} — ${teamName}</h3>
     <div class="dice-row" style="margin:6px 0;">
       <div class="dice-face ${s.diceValue === null ? 'empty' : ''}">${s.diceValue !== null ? s.diceValue : '🎲'}</div>
     </div>
     ${s.gamePhase === 'rolling' ? `
     <div style="margin-bottom:10px;">
-      <span class="field-label">Elegí el valor del dado</span>
+      <span class="field-label">${diceLabelSandbox}</span>
       <div class="training-dice-grid">
         ${DICE_VALUES.map(v => `<button class="training-dice-btn" data-training-dice="${v}">${v}</button>`).join('')}
       </div>
     </div>
-    ` : `<p style="font-size:0.76rem; color:#6b7a64; text-align:center; margin:8px 0;">Realizá tu jugada en el tablero.</p>`}
-    ${s.gamePhase === 'goalkeeper-swap' ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">No cambiar, finalizar turno</button>` : ''}
-    ${s.gamePhase === 'chain-pass' ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">Terminar jugada acá</button>` : ''}
+    ` : `<p style="font-size:0.76rem; color:#6b7a64; text-align:center; margin:8px 0;">${moveHint}</p>`}
+    ${s.gamePhase === 'goalkeeper-swap' ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">${skipSwapSandbox}</button>` : ''}
+    ${s.gamePhase === 'chain-pass' ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">${stopChain}</button>` : ''}
     <hr style="border:none; border-top:1px solid rgba(255,255,255,0.12); margin:10px 0;" />
     <div style="margin-bottom:8px;">
-      <span class="field-label">Equipos</span>
+      <span class="field-label">${teamsLabel}</span>
       <div class="team-select-grid" style="margin-top:4px;">
         <select class="team-pick" id="sandbox-home-select">${homeOptions}</select>
         <select class="team-pick" id="sandbox-away-select">${awayOptions}</select>
       </div>
     </div>
-    <button class="btn ghost" id="sandbox-reset-btn" style="width:100%; margin-top:4px;">↺ Resetear posiciones</button>
-    <button class="btn ghost" id="back-to-menu-btn" style="width:100%; margin-top:6px;">← Volver al menú</button>
+    <button class="btn ghost" id="sandbox-reset-btn" style="width:100%; margin-top:4px;">${resetLabel}</button>
+    <button class="btn ghost" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${backLabel}</button>
   </div>`;
 }
 
@@ -7072,26 +7567,27 @@ function renderDicePanel(s) {
     const homeName = s.homeTeam.name, awayName = s.awayTeam.name;
     return `
     <div class="dice-panel">
-      <h3>Sorteo inicial</h3>
-      <div style="font-size:0.78rem; color:#6b7a64; margin:2px 0 6px;">Quien saque más alto empieza con el balón.</div>
+      <h3>${t('pregame.title')}</h3>
+      <div style="font-size:0.78rem; color:#6b7a64; margin:2px 0 6px;">${t('pregame.subtitle')}</div>
       <div class="btn-row pregame-roll-row">
         <button class="btn team-btn pregame-roll-btn" id="roll-pre-home" style="${teamButtonStyle(s.homeTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='home') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${homeName}${s.homeRoll !== null ? ` — ${s.homeRoll}` : ''}</button>
         <button class="btn team-btn pregame-roll-btn" id="roll-pre-away" style="${teamButtonStyle(s.awayTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='away') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${awayName}${s.awayRoll !== null ? ` — ${s.awayRoll}` : ''}</button>
       </div>
-      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ Empezando partido...</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:4px;">🤖 La computadora tira automáticamente.</div>` : '')}
+      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ ${lang === 'en' ? 'Starting match...' : 'Empezando partido...'}</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:4px;">🤖 ${lang === 'en' ? 'The computer rolls automatically.' : 'La computadora tira automáticamente.'}</div>` : '')}
     </div>`;
   }
 
   if (s.gamePhase === 'half-time') {
-    return `<div class="dice-panel"><h3>Medio tiempo</h3>${
+    return `<div class="dice-panel"><h3>${t('halftime.title')}</h3>${
       state.gameMode === 'online' && !onlineIsHost
-        ? `<div class="rematch-waiting">⏳ Esperando 2do tiempo... <span id="halftime-countdown" style="font-weight:800;">${state.timer}s</span></div>`
+        ? `<div class="rematch-waiting">⏳ ${t('halftime.waiting')} <span id="halftime-countdown" style="font-weight:800;">${state.timer}s</span></div>`
         : state.gameMode === 'online' && onlineIsHost
-        ? `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">Comenzar 2do tiempo →</button>
-           <div style="font-size:0.72rem; color:#6b7a64; text-align:center; margin-top:6px;">Auto-inicio en <b id="halftime-countdown">${state.timer}s</b></div>`
-        : `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">Comenzar 2do tiempo →</button>`
+        ? `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">${t('halftime.start2nd')}</button>
+           <div style="font-size:0.72rem; color:#6b7a64; text-align:center; margin-top:6px;">${t('halftime.autoinicio')} <b id="halftime-countdown">${state.timer}s</b></div>`
+        : `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">${t('halftime.start2nd')}</button>`
     }</div>`;
   }
+
   if (s.gamePhase === 'game-over') {
     if (s.gameMode === 'online') {
       const requesterName = onlineIncomingRematchFrom ? getTeamName(s, onlineIncomingRematchFrom) : '';
@@ -7100,36 +7596,39 @@ function renderDicePanel(s) {
       const theirScore = s.score[theirTeam];
       const myTeamName = getTeamName(s, onlineMyTeam || 'home');
       const theirTeamName = getTeamName(s, theirTeam);
-      const resultText = myScore > theirScore ? '🏆 ¡Ganaste!' : myScore < theirScore ? '😔 Perdiste' : '🤝 Empate';
+      const resultText = myScore > theirScore ? t('gameover.win') : myScore < theirScore ? t('gameover.loss') : t('gameover.draw');
       const resultColor = myScore > theirScore ? '#1d6b2b' : myScore < theirScore ? '#dc2626' : '#6b7a64';
+      const wLabel = lang === 'en' ? 'W' : 'V';
+      const lLabel = lang === 'en' ? 'L' : 'D';
+      const eLabel = lang === 'en' ? 'D' : 'E';
       const eloInfo = userProfile && onlineOpponentUid
-        ? `<div style="font-size:0.75rem; color:#6b7a64; text-align:center; margin: 4px 0 6px;">⚡ ${userProfile.elo} ELO · ${userProfile.wins}V ${userProfile.losses}D ${userProfile.draws}E</div>`
+        ? `<div style="font-size:0.75rem; color:#6b7a64; text-align:center; margin: 4px 0 6px;">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${wLabel} ${userProfile.losses}${lLabel} ${userProfile.draws}${eLabel}</div>`
         : '';
       return `<div class="dice-panel">
         <div style="font-size:1.1rem; font-weight:800; color:${resultColor}; text-align:center; margin-bottom:4px;">${resultText}</div>
         <div style="font-size:0.85rem; text-align:center; color:#384032; margin-bottom:6px;">${myTeamName} ${myScore} — ${theirScore} ${theirTeamName}</div>
         ${eloInfo}
-        <button class="btn ghost" id="share-result-btn" style="width:100%; margin-bottom:6px;">📤 Compartir resultado</button>
+        <button class="btn ghost" id="share-result-btn" style="width:100%; margin-bottom:6px;">${t('gameover.share')}</button>
         <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
            onclick="trackEvent('cafecito_click', {source:'game_over'})"
            style="display:block;text-align:center;font-size:0.75rem;color:#6b7a64;margin-bottom:8px;text-decoration:none;">
-          ☕ ❤️ Donaciones — si te gustó el juego
+          ❤️ ${t('menu.donate')}
         </a>
         ${onlineIncomingRematchFrom ? `
           <div class="rematch-prompt">
-            <p>${requesterName} te pidió la revancha.</p>
+            <p>${requesterName} ${t('rematch.request')}</p>
             <div class="rematch-prompt-actions">
-              <button class="btn team-btn" id="accept-rematch-btn" style="flex:1; background:var(--accent); border-color:var(--accent);">✓ Aceptar</button>
-              <button class="btn ghost" id="decline-rematch-btn" style="flex:1;">✕ No, gracias</button>
+              <button class="btn team-btn" id="accept-rematch-btn" style="flex:1; background:var(--accent); border-color:var(--accent);">${t('rematch.accept')}</button>
+              <button class="btn ghost" id="decline-rematch-btn" style="flex:1;">${t('rematch.decline')}</button>
             </div>
           </div>
         ` : onlineRematchRequestedByMe
-          ? `<div class="rematch-waiting">⏳ Esperando que el rival acepte la revancha...</div>`
-          : `<button class="btn team-btn" id="request-rematch-btn" style="width:100%; margin-top:6px; background:var(--accent); border-color:var(--accent);">🔁 Pedir revancha</button>`}
-        <button class="btn ghost" id="back-to-menu-btn" style="width:100%; margin-top:6px;">Volver al menú</button>
+          ? `<div class="rematch-waiting">⏳ ${t('gameover.waiting')}</div>`
+          : `<button class="btn team-btn" id="request-rematch-btn" style="width:100%; margin-top:6px; background:var(--accent); border-color:var(--accent);">${t('gameover.rematch')}</button>`}
+        <button class="btn ghost" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${t('gameover.back')}</button>
       </div>`;
     }
-    return `<div class="dice-panel"><h3>Partido finalizado</h3><button class="btn" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${s.gameMode === 'league' ? '🏆 Volver a la liga' : 'Volver al menú'}</button></div>`;
+    return `<div class="dice-panel"><h3>${t('gameover.finished')}</h3><button class="btn" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${s.gameMode === 'league' ? t('gameover.league') : t('gameover.back')}</button></div>`;
   }
 
   const isBotTurn = s.gameMode === 'vs-ai' && s.currentPlayer === s.aiTeam;
@@ -7142,9 +7641,13 @@ function renderDicePanel(s) {
   const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(s.gamePhase) && s.turnDuration !== 9999;
   const timerPct = isTimerActive ? Math.max(0, Math.min(100, (s.timer / s.turnDuration) * 100)) : 100;
   const timerLow = isTimerActive && s.timer <= Math.ceil(s.turnDuration * 0.3);
+  const turnLabel = lang === 'en' ? `Dice — ${teamName}'s turn` : `Dado — turno de ${teamName}`;
+  const thinkingLabel = lang === 'en' ? 'Thinking...' : 'Pensando...';
+  const opponentLabel = lang === 'en' ? 'Opponent rolling...' : 'Rival tirando...';
+  const zeroNote = lang === 'en' ? "You rolled 0! Turn is skipped automatically…" : '¡Sacaste 0! Se pierde el turno automáticamente…';
   return `
   <div class="dice-panel">
-    <h3>Dado — turno de ${teamName}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
+    <h3>${turnLabel}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
     ${isTimerActive ? `
     <div class="turn-timer-row">
       <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" id="turn-timer-fill" style="width:${timerPct}%;"></div></div>
@@ -7152,13 +7655,13 @@ function renderDicePanel(s) {
     </div>` : ''}
     <div class="dice-row" style="margin:6px 0;">
       <div class="dice-face ${isZero ? 'zero' : ''} ${s.diceValue === null ? 'empty' : ''}">${diceDisplay}</div>
-      ${s.gamePhase === 'rolling' && !blockControls ? `<button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(currentTeam)}">🎲 Lanzar dado</button>` : ''}
-      ${isBotTurn ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> Pensando...</div>` : ''}
-      ${isOpponentOnlineTurn && s.gamePhase === 'rolling' ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> Rival tirando...</div>` : ''}
+      ${s.gamePhase === 'rolling' && !blockControls ? `<button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(currentTeam)}">🎲 ${t('game.roll')}</button>` : ''}
+      ${isBotTurn ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> ${thinkingLabel}</div>` : ''}
+      ${isOpponentOnlineTurn && s.gamePhase === 'rolling' ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> ${opponentLabel}</div>` : ''}
     </div>
-    ${isZero ? `<div class="zero-note">¡Sacaste 0! Se pierde el turno automáticamente…</div>` : ''}
-    ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">No cambiar, finalizar turno</button>` : ''}
-    ${s.gamePhase === 'chain-pass' && !blockControls ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">Terminar jugada acá</button>` : ''}
+    ${isZero ? `<div class="zero-note">${zeroNote}</div>` : ''}
+    ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">${t('msg.swap.skip')}</button>` : ''}
+    ${s.gamePhase === 'chain-pass' && !blockControls ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">${t('msg.chain.stop')}</button>` : ''}
   </div>`;
 }
 
@@ -7400,7 +7903,7 @@ function wireEvents() {
     saveCustomKitBtn.onclick = () => {
       if (onlineCustomEditorSide) {
         const picker = onlineTeamPicker[onlineCustomEditorSide];
-        if (!picker.customName || !picker.customName.trim()) picker.customName = onlineCustomEditorSide === 'home' ? 'Mi Equipo' : 'Equipo Visitante';
+        if (!picker.customName || !picker.customName.trim()) picker.customName = lang === 'en' ? (onlineCustomEditorSide === 'home' ? 'My Team' : 'Away Team') : (onlineCustomEditorSide === 'home' ? 'Mi Equipo' : 'Equipo Visitante');
       }
       onlineCustomEditorSide = null;
       currentMenuView = onlineKitEditorReturnView || 'online-setup';
@@ -7413,7 +7916,7 @@ function wireEvents() {
     saveKitToProfileBtn.onclick = async () => {
       if (!onlineCustomEditorSide) return;
       const picker = onlineTeamPicker[onlineCustomEditorSide];
-      if (!picker.customName || !picker.customName.trim()) picker.customName = 'Mi Equipo';
+      if (!picker.customName || !picker.customName.trim()) picker.customName = lang === 'en' ? 'My Team' : 'Mi Equipo';
       const teamToSave = {
         name: picker.customName,
         kit: picker.customKit,
@@ -7498,7 +8001,7 @@ function wireEvents() {
     codeDisplay.title = 'Clic para copiar';
     codeDisplay.onclick = () => {
       navigator.clipboard.writeText(onlineRoomId).then(() => {
-        codeDisplay.textContent = '¡Copiado!';
+        codeDisplay.textContent = lang === 'en' ? 'Copied!' : '¡Copiado!';
         setTimeout(() => { codeDisplay.textContent = onlineRoomId; }, 1500);
       }).catch(() => {});
     };
@@ -7525,8 +8028,8 @@ function wireEvents() {
         ...fresh, homeTeam: finalHomeTeam, awayTeam: finalAwayTeam,
         gamePhase: 'pre-game-roll', halfDurationMinutes: setupDuration, gameClock: setupDuration * 60,
         turnDuration: turnDur, timer: turnDur,
-        message: 'Tiren los dados para decidir quién empieza.',
-        toastToShow: clashResolved ? { title: 'Conflicto de camisetas', description: `${awayTeam.name} usará un color alternativo.` } : null,
+        message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+        toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
     };
   }
@@ -7553,8 +8056,8 @@ function wireEvents() {
         aiTeam, aiDifficulty: aiDifficultyChoice,
         gamePhase: 'pre-game-roll', halfDurationMinutes: setupDuration, gameClock: setupDuration * 60,
         turnDuration: turnDur, timer: turnDur,
-        message: 'Tiren los dados para decidir quién empieza.',
-        toastToShow: clashResolved ? { title: 'Conflicto de camisetas', description: `${awayTeam.name} usará un color alternativo.` } : null,
+        message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+        toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
     };
   }
@@ -7661,7 +8164,7 @@ function wireEvents() {
         lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
         isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
       };
-      return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
+      return logAction(news, t('msg.kickoff', { half: t('msg.second'), team: kickoffTeamName }), 'game-event');
     });
   };
 
@@ -7693,7 +8196,7 @@ function wireEvents() {
     const theirScore = state.score[theirTeam];
     const myTeamName = getTeamName(state, onlineMyTeam || 'home');
     const theirTeamName = getTeamName(state, theirTeam);
-    const result = myScore > theirScore ? '¡Gané' : myScore < theirScore ? 'Perdí' : 'Empaté';
+    const result = myScore > theirScore ? t('share.win') : myScore < theirScore ? t('share.loss') : t('share.draw');
     const eloText = userProfile ? ` (ELO: ${userProfile.elo})` : '';
     const shareText = `${result} ${myScore}-${theirScore} jugando Hexagol con ${myTeamName} vs ${theirTeamName}${eloText} ⚽🎲\n👉 hexagol.com.ar`;
     if (navigator.share) {
@@ -7727,7 +8230,7 @@ function wireEvents() {
 
   const resetBtn = document.getElementById('reset-btn');
   if (resetBtn) resetBtn.onclick = () => {
-    if (confirm('¿Reiniciar el partido actual?')) {
+    if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
       if (state.gameMode === 'online') leaveOnlineRoom();
       currentMenuView = 'main'; setState(getInitialState());
     }
@@ -7768,7 +8271,7 @@ function wireEvents() {
 
   const exitToMenuBtn = document.getElementById('exit-to-menu-btn');
   if (exitToMenuBtn) exitToMenuBtn.onclick = () => {
-    if (confirm('¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
+    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
       if (state.gameMode === 'online') leaveOnlineRoom();
       currentMenuView = 'main';
       setState(getInitialState());
@@ -7918,7 +8421,7 @@ function doPreGameRoll(team) {
   const fairRoll = Math.floor(Math.random() * 6) + 1;
   setState(s => {
     const teamName = getTeamName(s, team);
-    const logged = logAction(s, `${teamName} sacó un ${fairRoll}.`, 'roll', team);
+    const logged = logAction(s, lang === 'en' ? `${teamName} rolled ${fairRoll}.` : `${teamName} sacó un ${fairRoll}.`, 'roll', team);
     const withRoll = { ...logged, [`${team}Roll`]: fairRoll };
     if (withRoll.homeRoll !== null && withRoll.awayRoll !== null) {
       // Both results are in: show them side by side for a moment before resolving the winner,
@@ -7926,8 +8429,8 @@ function doPreGameRoll(team) {
       const winnerName = withRoll.homeRoll === withRoll.awayRoll ? null
         : getTeamName(withRoll, withRoll.homeRoll > withRoll.awayRoll ? 'home' : 'away');
       const pauseMsg = winnerName
-        ? `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ¡Gana ${winnerName}!`
-        : `Empate ${withRoll.homeRoll} a ${withRoll.awayRoll}. Vuelven a tirar...`;
+        ? (lang === 'en' ? `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ${winnerName} wins!` : `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ¡Gana ${winnerName}!`)
+        : (lang === 'en' ? `Draw ${withRoll.homeRoll} — ${withRoll.awayRoll}. Rolling again...` : `Empate ${withRoll.homeRoll} a ${withRoll.awayRoll}. Vuelven a tirar...`);
       const withPauseMsg = { ...withRoll, message: pauseMsg, isResolvingKickoff: true };
       setTimeout(() => {
         setState(s2 => {
@@ -7950,7 +8453,7 @@ function resolveKickoffWinner(s) {
   if (startingTeam) {
     const winnerName = getTeamName(s, startingTeam);
     const rollVal = startingTeam === 'home' ? s.homeRoll : s.awayRoll;
-    const msg = `¡${winnerName} saca un ${rollVal} y gana el saque! Lanza el dado para empezar.`;
+    const msg = lang === 'en' ? `${winnerName} rolls ${rollVal} and wins the kickoff! Roll the dice to start.` : `¡${winnerName} saca un ${rollVal} y gana el saque! Lanza el dado para empezar.`;
     const newPlayers = movePlayersForKickoff(getInitialPlayers(), startingTeam);
     startClock();
     startTurnTimer();
@@ -7963,7 +8466,7 @@ function resolveKickoffWinner(s) {
     };
     return logAction(finalState, msg, 'game-event', startingTeam);
   }
-  const tieMsg = '¡Empate! Vuelvan a tirar los dados.';
+  const tieMsg = lang === 'en' ? 'Draw! Roll again.' : '¡Empate! Vuelvan a tirar los dados.';
   return logAction({ ...s, homeRoll: null, awayRoll: null }, tieMsg, 'roll');
 }
 
@@ -7973,7 +8476,7 @@ function doDiceRoll() {
   setState(s => {
     const updated = { ...s, diceValue: roll };
     if (roll === 0) {
-      const zeroState = { ...logAction(updated, '¡Sacaste un 0! Pierdes el turno.', 'roll'), gamePhase: 'turn-over' };
+      const zeroState = { ...logAction(updated, t('msg.zero'), 'roll'), gamePhase: 'turn-over' };
       // In online mode, only the player who actually rolled drives this timeout.
       // The other client just receives 'turn-over' via Firebase and stays passive —
       // it must NOT also schedule its own advance, or both clients race to call
@@ -7998,7 +8501,7 @@ function doDiceRoll() {
       return zeroState;
     }
     const teamName = getTeamName(s, s.currentPlayer);
-    const withLog = logAction(updated, `Sacaste un ${roll}. Elige un jugador de ${teamName} para mover.`, 'roll');
+    const withLog = logAction(updated, t('msg.rolled', { value: roll, team: teamName }), 'roll');
     return {
       ...withLog, gamePhase: 'selecting-piece',
       turnStartState: { players: s.players, ballPosition: s.ballPosition, lastPlayerToTouchBallId: s.lastPlayerToTouchBallId },
@@ -8008,9 +8511,9 @@ function doDiceRoll() {
 
 /* ---------------- Clock ---------------- */
 function advanceTurnByTimeout(s) {
-  const logState = logAction(s, '¡Tiempo agotado!', 'game-event', s.currentPlayer);
+  const logState = logAction(s, lang === 'en' ? "Time's up!" : '¡Tiempo agotado!', 'game-event', s.currentPlayer);
   if (s.gamePhase === 'chain-pass' && s.turnStartState) {
-    const logState2 = logAction(logState, 'La jugada de pase en cadena se anula por falta de tiempo.', 'game-event', s.currentPlayer);
+    const logState2 = logAction(logState, lang === 'en' ? 'Chain pass cancelled due to timeout.' : 'La jugada de pase en cadena se anula por falta de tiempo.', 'game-event', s.currentPlayer);
     const reverted = { ...logState2, players: s.turnStartState.players, ballPosition: s.turnStartState.ballPosition, lastPlayerToTouchBallId: s.turnStartState.lastPlayerToTouchBallId, lastAction: null };
     return advanceToNextTurn(reverted);
   }
@@ -8213,8 +8716,8 @@ function wireAuthEvents() {
     const email = document.getElementById('auth-email')?.value?.trim();
     const password = document.getElementById('auth-password')?.value;
     const username = document.getElementById('auth-username')?.value?.trim();
-    if (!email || !password) { authFormError = 'Completá todos los campos.'; render(); return; }
-    if (authFormMode === 'register' && !username) { authFormError = 'Elegí un nombre de usuario.'; render(); return; }
+    if (!email || !password) { authFormError = lang === 'en' ? 'Please fill in all fields.' : 'Completá todos los campos.'; render(); return; }
+    if (authFormMode === 'register' && !username) { authFormError = lang === 'en' ? 'Choose a username.' : 'Elegí un nombre de usuario.'; render(); return; }
     authFormLoading = true;
     authFormError = '';
     render();
@@ -8242,6 +8745,12 @@ function wireAuthEvents() {
 render();
 document.addEventListener('fullscreenchange', () => { render(); });
 checkForReconnectableSession();
+
+// Global lang toggle — handles clicks on any lang button regardless of when rendered
+document.addEventListener('click', e => {
+  const btn = e.target.closest('#lang-toggle-btn, #menu-lang-btn');
+  if (btn) setLang(lang === 'es' ? 'en' : 'es');
+});
 
 // Register PWA service worker
 if ('serviceWorker' in navigator) {
