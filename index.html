@@ -170,37 +170,6 @@
     /* Expanded panel for game-over and half-time — needs to show more content */
     .panel.panel-expanded { max-height: 60vh; overflow-y: auto; }
 
-    /* Floating dice panel for mobile gameplay */
-    .floating-dice-panel {
-      display: flex;
-      position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      z-index: 500;
-      background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(8px);
-      border-top: 1px solid #e1e8db;
-      border-radius: 16px 16px 0 0;
-      padding: 10px 16px 14px;
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.12);
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
-    .floating-dice-panel .dice-face {
-      width: 36px; height: 36px; font-size: 1rem; border-radius: 8px;
-    }
-    .floating-dice-panel .btn {
-      padding: 10px 20px; font-size: 0.85rem; border-radius: 999px;
-    }
-    .floating-dice-panel .turn-timer-label {
-      font-size: 0.75rem; font-weight: 700; color: #384032;
-    }
-    /* Hide original panel dice section during active gameplay on mobile */
-    .panel.panel-in-game { display: none !important; }
-
     /* Hide stats, log, and dice panel title */
     .panel-stats-section, .panel-log-section { display: none !important; }
     .dice-panel h3 { display: none !important; }
@@ -235,12 +204,7 @@
     /* Pre-game roll: horizontal, both buttons side by side */
     .pregame-roll-row { flex-direction: row !important; gap: 4px; }
     .pregame-roll-btn { flex: 1; font-size: 0.62rem !important; padding: 4px 4px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    /* Show floating dice panel on mobile */
-    .mobile-floating-dice { display: block; }
   }
-
-  /* Floating dice panel hidden on desktop by default */
-  .mobile-floating-dice { display: none; }
 
   .board-wrap {
     background: #eef3ea;
@@ -4159,7 +4123,6 @@ function updateClockDisplaySurgically() {
   const clockEl = document.getElementById('match-clock');
   const timerFillEl = document.getElementById('turn-timer-fill');
   const timerLabelEl = document.getElementById('turn-timer-label');
-  const timerLabelFEl = document.getElementById('turn-timer-label-f');
 
   if (!clockEl && !timerFillEl && !timerLabelEl) {
     // During half-time and pre-game-roll, no clock/timer elements exist in the DOM
@@ -4193,10 +4156,6 @@ function updateClockDisplaySurgically() {
     timerFillEl.classList.toggle('low', timerLow);
     timerLabelEl.textContent = '⏳ ' + state.timer + 's';
     timerLabelEl.classList.toggle('low', timerLow);
-    if (timerLabelFEl) {
-      timerLabelFEl.textContent = '⏳ ' + state.timer + 's';
-      timerLabelFEl.classList.toggle('low', timerLow);
-    }
   } else if (!isCountdownActive && (timerFillEl || timerLabelEl)) {
     // The timer row's very presence in the DOM depends on isTimerActive — if
     // that just flipped, a surgical text update can't add/remove the row
@@ -6428,10 +6387,6 @@ function renderLanding() {
     <button id="lang-toggle-btn" style="margin-top:16px;background:none;border:1px solid #c8d4c0;border-radius:999px;padding:5px 14px;font-size:0.8rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
       🌐 ${t('landing.lang')}
     </button>
-    ${pwaInstallPrompt ? `
-    <button id="pwa-install-btn" style="margin-top:10px;background:var(--accent);border:none;border-radius:999px;padding:8px 20px;font-size:0.82rem;color:#fff;cursor:pointer;font-family:inherit;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.15);">
-      📲 ${lang === 'en' ? 'Install app' : 'Instalar app'}
-    </button>` : ''}
     <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
       ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
       <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
@@ -7463,43 +7418,6 @@ function renderGameScreen(s) {
     ? `<div class="situation-banner swap-banner">🔄 ${lang === 'en' ? 'You can swap the goalkeeper with a player in their area' : 'Podés cambiar al arquero por uno de los jugadores en su área'}</div>`
     : '';
 
-  const activeGamePhases = ['rolling','selecting-piece','moving-piece','chain-pass','turn-over','goalkeeper-swap','pre-game-roll','half-time','game-over'];
-  const isActiveGame = activeGamePhases.includes(s.gamePhase);
-  const isBotTurn = s.gameMode === 'vs-ai' && s.currentPlayer === s.aiTeam;
-  const isOpponentOnlineTurn = s.gameMode === 'online' && s.currentPlayer !== onlineMyTeam;
-  const blockControls = isBotTurn || isOpponentOnlineTurn;
-  const currentTeam = s.currentPlayer === 'home' ? s.homeTeam : s.awayTeam;
-  const isTimerActive = ['rolling','selecting-piece','moving-piece','chain-pass'].includes(s.gamePhase) && s.turnDuration !== 9999;
-  const timerLow = isTimerActive && s.timer <= Math.ceil(s.turnDuration * 0.3);
-
-  // Floating panel content for mobile
-  const floatingContent = () => {
-    if (s.gamePhase === 'game-over' || s.gamePhase === 'half-time') return '';
-    if (s.gamePhase === 'pre-game-roll') return `
-      <div class="floating-dice-panel">
-        <div class="btn-row pregame-roll-row" style="width:100%; justify-content:center; gap:8px;">
-          <button class="btn team-btn pregame-roll-btn" id="roll-pre-home-f" style="${teamButtonStyle(s.homeTeam)}" ${(s.gameMode==='vs-ai'&&s.aiTeam==='home')||s.isResolvingKickoff?'disabled':''}>🎲 ${s.homeTeam.name}${s.homeRoll!==null?` — ${s.homeRoll}`:''}</button>
-          <button class="btn team-btn pregame-roll-btn" id="roll-pre-away-f" style="${teamButtonStyle(s.awayTeam)}" ${(s.gameMode==='vs-ai'&&s.aiTeam==='away')||s.isResolvingKickoff?'disabled':''}>🎲 ${s.awayTeam.name}${s.awayRoll!==null?` — ${s.awayRoll}`:''}</button>
-        </div>
-      </div>`;
-    const diceDisplay = s.diceValue !== null ? s.diceValue : '🎲';
-    const timerHtml = isTimerActive ? `<span class="turn-timer-label ${timerLow?'low':''}" id="turn-timer-label-f">⏳ ${s.timer}s</span>` : '';
-    const rollBtn = s.gamePhase === 'rolling' && !blockControls
-      ? `<button class="btn team-btn" id="roll-dice-btn-f" style="${teamButtonStyle(currentTeam)}">🎲 ${lang==='en'?'Roll':'Lanzar'}</button>` : '';
-    const chainBtn = s.gamePhase === 'chain-pass' && !blockControls
-      ? `<button class="btn ghost" id="cancel-chain-btn-f" style="font-size:0.78rem;">${lang==='en'?'End play':'Terminar jugada'}</button>` : '';
-    const swapBtn = s.gamePhase === 'goalkeeper-swap' && !blockControls
-      ? `<button class="btn ghost" id="skip-swap-btn-f" style="font-size:0.78rem;">${lang==='en'?'Keep, end turn':'No cambiar'}</button>` : '';
-    const waitHtml = (isBotTurn || isOpponentOnlineTurn)
-      ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span></div>` : '';
-    return `
-      <div class="floating-dice-panel">
-        <div class="dice-face ${s.diceValue===null?'empty':''} ${s.gamePhase==='turn-over'?'zero':''}">${diceDisplay}</div>
-        ${timerHtml}
-        ${rollBtn}${chainBtn}${swapBtn}${waitHtml}
-      </div>`;
-  };
-
   return `
   <div class="game-layout">
     <div class="board-wrap">
@@ -7513,8 +7431,7 @@ function renderGameScreen(s) {
     <button class="chat-fab" id="chat-fab-btn" title="Chat">
       💬${onlineChatUnread > 0 ? `<span class="chat-fab-badge">${onlineChatUnread > 9 ? '9+' : onlineChatUnread}</span>` : ''}
     </button>` : ''}
-    <div class="mobile-floating-dice">${floatingContent()}</div>
-    <div class="panel ${['game-over','half-time'].includes(s.gamePhase) ? 'panel-expanded' : isActiveGame ? 'panel-in-game' : ''}">
+    <div class="panel ${['game-over','half-time'].includes(s.gamePhase) ? 'panel-expanded' : ''}">
       <div class="mini-scoreboard">
         <div class="mini-team home">
           <span class="kit-dot" style="background:${homeKit}; border-color:${homeBorder};"></span>
@@ -7776,9 +7693,6 @@ function render() {
     if (currentMenuView === 'landing') {
       app.innerHTML = renderLanding();
       // Wire landing buttons directly here, not via wireEvents
-      const pwaInstallBtn = document.getElementById('pwa-install-btn');
-      if (pwaInstallBtn) pwaInstallBtn.onclick = () => showPwaInstallPrompt();
-
       const googleBtn = document.getElementById('landing-google-btn');
       if (googleBtn) googleBtn.onclick = () => loginWithGoogle();
       const emailBtn = document.getElementById('landing-email-btn');
@@ -8225,18 +8139,6 @@ function wireEvents() {
   };
 
   // Dice roll
-  // Floating panel buttons (mobile)
-  const rollBtnF = document.getElementById('roll-dice-btn-f');
-  if (rollBtnF) rollBtnF.onclick = () => doDiceRoll();
-  const cancelChainBtnF = document.getElementById('cancel-chain-btn-f');
-  if (cancelChainBtnF) cancelChainBtnF.onclick = () => setState(s => advanceToNextTurn({ ...s, lastAction: null }));
-  const skipSwapBtnF = document.getElementById('skip-swap-btn-f');
-  if (skipSwapBtnF) skipSwapBtnF.onclick = () => setState(s => advanceToNextTurn({ ...s, swapCandidates: [], lastAction: null }));
-  const rollPreHomeBtnF = document.getElementById('roll-pre-home-f');
-  if (rollPreHomeBtnF) rollPreHomeBtnF.onclick = () => doPreGameRoll('home');
-  const rollPreAwayBtnF = document.getElementById('roll-pre-away-f');
-  if (rollPreAwayBtnF) rollPreAwayBtnF.onclick = () => doPreGameRoll('away');
-
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
     if (state.gameMode === 'tutorial') { handleTutorialAction({ type: 'click_element', payload: { elementId: 'dice-roll-button' } }); return; }
@@ -8859,24 +8761,6 @@ function wireAuthEvents() {
   ['auth-email', 'auth-password', 'auth-username'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.onkeydown = (e) => { if (e.key === 'Enter') submitBtn?.click(); };
-  });
-}
-
-// PWA install prompt
-let pwaInstallPrompt = null;
-window.addEventListener('beforeinstallprompt', e => {
-  e.preventDefault();
-  pwaInstallPrompt = e;
-  if (currentMenuView === 'landing') render();
-});
-
-function showPwaInstallPrompt() {
-  if (!pwaInstallPrompt) return;
-  pwaInstallPrompt.prompt();
-  pwaInstallPrompt.userChoice.then(result => {
-    if (result.outcome === 'accepted') trackEvent('pwa_installed');
-    pwaInstallPrompt = null;
-    render();
   });
 }
 
