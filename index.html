@@ -8315,7 +8315,18 @@ function wireEvents() {
         const id = parseInt(el.getAttribute('data-player-id'), 10);
         if (state.gameMode === 'tutorial') {
           const player = state.players.find(p => p.id === id);
-          if (player) handleTutorialAction({ type: 'click_player', payload: { playerNumber: player.playerNumber, team: player.team } });
+          if (player) {
+            // If the current tutorial step expects a click_square on this player's position,
+            // treat clicking the player as clicking the square beneath them
+            const currentStep = tutorialScript[state.tutorialStep];
+            if (currentStep && currentStep.action.type === 'click_square' &&
+                currentStep.action.payload.position.x === player.position.x &&
+                currentStep.action.payload.position.y === player.position.y) {
+              handleTutorialAction({ type: 'click_square', payload: { position: player.position } });
+            } else {
+              handleTutorialAction({ type: 'click_player', payload: { playerNumber: player.playerNumber, team: player.team } });
+            }
+          }
           return;
         }
         // Training mode uses normal rules — fall through to handlePlayerSelection below.
