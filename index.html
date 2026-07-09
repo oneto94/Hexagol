@@ -206,10 +206,15 @@
     .pregame-roll-btn { flex: 1; font-size: 0.62rem !important; padding: 4px 4px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   }
 
+  /* Undo button: full button below dice on desktop, inline with timer on mobile */
+  .undo-mobile { display: none; }
+  .undo-desktop { display: block; }
+  @media (max-width: 600px) {
+    .undo-mobile { display: inline-flex; align-items: center; margin-left: 6px; }
+    .undo-desktop { display: none; }
+  }
+
   .board-wrap {
-    background: #eef3ea;
-    border-radius: 18px;
-    padding: 8px;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
@@ -1450,6 +1455,7 @@ async function reconnectToOnlineRoom() {
 
   attachOnlineStateListener();
   attachOnlineRematchListener(startOnlineRematch);
+  attachOnlineUndoListener();
   attachOnlinePresence();
   attachOnlineChat();
   saveOnlineSession();
@@ -1787,6 +1793,7 @@ async function onlineCreateRoom(homeTeam, duration) {
     // we already have locally and applyRemoteState is a no-op in practice.
     attachOnlineStateListener();
     attachOnlineRematchListener(startOnlineRematch);
+    attachOnlineUndoListener();
     attachOnlinePresence();
     attachOnlineChat();
     saveOnlineSession();
@@ -1824,6 +1831,7 @@ async function onlineJoinRoom(code, awayTeam) {
 
   attachOnlineStateListener();
   attachOnlineRematchListener(startOnlineRematch);
+  attachOnlineUndoListener();
   attachOnlinePresence();
   attachOnlineChat();
   saveOnlineSession();
@@ -1950,6 +1958,9 @@ function detachOnlinePresence() {
 let onlineRematchUnsub = null;
 let onlineRematchRequestedByMe = false;
 let onlineIncomingRematchFrom = null;
+let onlineUndoUnsub = null;
+let onlineUndoRequestedByMe = false;
+let onlineIncomingUndoFrom = null;
 
 function attachOnlineRematchListener(onRematchReady) {
   if (!onlineRoomRef) return;
@@ -1993,6 +2004,87 @@ function clearOnlineRematchNode() {
   onlineIncomingRematchFrom = null;
 }
 
+// ── Online Undo (proponer deshacer jugada) ────────────────────────────────────
+
+function attachOnlineUndoListener() {
+  if (!onlineRoomRef) return;
+  if (onlineUndoUnsub) { onlineUndoUnsub(); onlineUndoUnsub = null; }
+  onlineUndoUnsub = onlineRoomRef.onSnapshot(snap => {
+    if (!snap.exists) return;
+    const data = snap.data();
+    const undoReq = data && data.undoRequest;
+    if (!undoReq) {
+      // undoRequest was cleared — could be declined or accepted+cleared
+      if (onlineUndoRequestedByMe) {
+        onlineUndoRequestedByMe = false;
+        render();
+      }
+      onlineIncomingUndoFrom = null;
+      return;
+    }
+    if (undoReq.requestedBy && undoReq.requestedBy !== onlineMyTeam) {
+      onlineIncomingUndoFrom = undoReq.requestedBy;
+      render();
+    }
+    if (undoReq.accepted) onUndoAccepted();
+  });
+}
+
+function requestOnlineUndo() {
+  if (!onlineRoomRef) return;
+  onlineUndoRequestedByMe = true;
+  onlineRoomRef.update({ undoRequest: { requestedBy: onlineMyTeam, accepted: false, at: firebase.firestore.FieldValue.serverTimestamp() } });
+  render();
+}
+
+function acceptOnlineUndo() {
+  if (!onlineRoomRef) return;
+  onlineIncomingUndoFrom = null;
+  onlineRoomRef.update({ 'undoRequest.accepted': true });
+}
+
+function declineOnlineUndo() {
+  if (!onlineRoomRef) return;
+  onlineIncomingUndoFrom = null;
+  onlineUndoRequestedByMe = false;
+  onlineRoomRef.update({ undoRequest: null });
+  render();
+}
+
+function onUndoAccepted() {
+  onlineRoomRef.update({ undoRequest: null }).catch(() => {});
+  onlineUndoRequestedByMe = false;
+  onlineIncomingUndoFrom = null;
+  setState(s => {
+    if (!s.prevTurnSnapshot) return s;
+    const snap = s.prevTurnSnapshot;
+    const logMsg = lang === 'en' ? 'Undo accepted. Turn reverted.' : 'Deshacer aceptado. Se revirtió el turno.';
+    const reverted = {
+      ...s,
+      players: snap.players,
+      ballPosition: snap.ballPosition,
+      lastPlayerToTouchBallId: snap.lastPlayerToTouchBallId,
+      currentPlayer: snap.currentPlayer,
+      turnCount: snap.turnCount,
+      gamePhase: 'selecting-piece',
+      diceValue: snap.diceValue,
+      selectedPlayerId: null,
+      validMoves: [], validKickTargets: [], validDragTargets: [],
+      validLoftedPassTargets: [], validLoftedDragTargets: [],
+      validChainPassTargets: [], chainPassReceivers: [],
+      lastAction: null,
+      prevTurnSnapshot: null,
+    };
+    return logAction(reverted, logMsg, 'game-event');
+  });
+}
+
+function clearOnlineUndoNode() {
+  if (onlineRoomRef) onlineRoomRef.update({ undoRequest: null }).catch(() => {});
+  onlineUndoRequestedByMe = false;
+  onlineIncomingUndoFrom = null;
+}
+
 function showRematchPrompt(requestingTeam) {
   onlineIncomingRematchFrom = requestingTeam;
   render();
@@ -2010,6 +2102,7 @@ function startOnlineRematch() {
     message: lang === 'en' ? 'Rematch. Roll the dice to decide who starts.' : 'Revancha. Tiren los dados para decidir quién empieza.',
   };
   clearOnlineRematchNode();
+  clearOnlineUndoNode();
   onlineReceivedFirstState = false; // treat the host's first write as authoritative again
   if (onlineIsHost) setState(() => rematchState);
 }
@@ -4008,6 +4101,7 @@ function getInitialState() {
     matchStats: { goals: {}, assists: {} },
     assistProviderId: null,
     turnStartState: null,
+    prevTurnSnapshot: null,
     lastAction: null,
     actionChoice: null,
     isKickoffTurn: false,
@@ -4298,6 +4392,7 @@ function advanceToNextTurn(s, opts) {
     ...freshActionState(), offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
     swapCandidates: [], swapTimer: GOALKEEPER_SWAP_DURATION, timer: s.turnDuration,
     turnCount: s.turnCount + 1, toastToShow: null, turnStartState: null, isKickoffTurn: false, assistProviderId: null,
+    prevTurnSnapshot: s.prevTurnSnapshot, // preserved until next dice roll
   };
   return logAction(news, baseMsg, 'turn-start', nextPlayer);
 }
@@ -5555,6 +5650,31 @@ function finishLeagueMatch(s) {
 }
 
 /* ---------------- Player selection (ported from action-reducers.ts) ---------------- */
+
+function handleLocalUndo() {
+  setState(s => {
+    if (!s.prevTurnSnapshot) return s;
+    const snap = s.prevTurnSnapshot;
+    const logMsg = lang === 'en' ? 'Turn undone.' : 'Jugada deshecha.';
+    const reverted = {
+      ...s,
+      players: snap.players,
+      ballPosition: snap.ballPosition,
+      lastPlayerToTouchBallId: snap.lastPlayerToTouchBallId,
+      currentPlayer: snap.currentPlayer,
+      turnCount: snap.turnCount,
+      gamePhase: 'selecting-piece',
+      diceValue: snap.diceValue,
+      selectedPlayerId: null,
+      validMoves: [], validKickTargets: [], validDragTargets: [],
+      validLoftedPassTargets: [], validLoftedDragTargets: [],
+      validChainPassTargets: [], chainPassReceivers: [],
+      lastAction: null,
+      prevTurnSnapshot: null,
+    };
+    return logAction(reverted, logMsg, 'game-event');
+  });
+}
 
 function handleDeselectPlayer(s, showToast) {
   const teamName = getTeamName(s, s.currentPlayer);
@@ -7684,6 +7804,33 @@ function renderDicePanel(s) {
   const thinkingLabel = lang === 'en' ? 'Thinking...' : 'Pensando...';
   const opponentLabel = lang === 'en' ? 'Opponent rolling...' : 'Rival tirando...';
   const zeroNote = lang === 'en' ? "You rolled 0! Turn is skipped automatically…" : '¡Sacaste 0! Se pierde el turno automáticamente…';
+
+  // Undo button HTML — computed before return to avoid nested template literal issues
+  let undoBtnDesktop = '';
+  let undoBtnMobile = '';
+  const undoPhases = ['rolling','selecting-piece','moving-piece','chain-pass','goalkeeper-swap'];
+  if (s.prevTurnSnapshot && undoPhases.includes(s.gamePhase)) {
+    if (s.gameMode === 'online') {
+      if (onlineIncomingUndoFrom) {
+        const undoQ = lang === 'en' ? 'Undo?' : '¿Deshacer?';
+        const btnsD = '<button class="btn" id="accept-undo-btn-d" style="padding:3px 9px;font-size:0.72rem;margin:0 2px;">✓</button><button class="btn ghost" id="decline-undo-btn-d" style="padding:3px 9px;font-size:0.72rem;">✕</button>';
+        const btnsM = '<button class="btn" id="accept-undo-btn-m" style="padding:2px 7px;font-size:0.68rem;margin:0 2px;">✓</button><button class="btn ghost" id="decline-undo-btn-m" style="padding:2px 7px;font-size:0.68rem;">✕</button>';
+        undoBtnDesktop = undoQ + ' ' + btnsD;
+        undoBtnMobile = '↩ ' + btnsM;
+      } else if (onlineUndoRequestedByMe) {
+        undoBtnDesktop = lang === 'en' ? '⏳ Waiting...' : '⏳ Esperando...';
+        undoBtnMobile = '⏳';
+      } else if (onlineMyTeam !== s.currentPlayer && s.diceValue === null) {
+        const undoLabel = lang === 'en' ? '↩ Propose undo' : '↩ Proponer deshacer';
+        undoBtnDesktop = '<button class="btn ghost" id="request-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
+        undoBtnMobile = '<button class="btn ghost" id="request-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
+      }
+    } else if (!blockControls) {
+      const undoLabel = lang === 'en' ? '↩ Undo last turn' : '↩ Deshacer última jugada';
+      undoBtnDesktop = '<button class="btn ghost" id="local-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
+      undoBtnMobile = '<button class="btn ghost" id="local-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
+    }
+  }
   return `
   <div class="dice-panel">
     <h3>${turnLabel}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
@@ -7691,6 +7838,7 @@ function renderDicePanel(s) {
     <div class="turn-timer-row">
       <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" id="turn-timer-fill" style="width:${timerPct}%;"></div></div>
       <span class="turn-timer-label ${timerLow ? 'low' : ''}" id="turn-timer-label">⏳ ${s.timer}s</span>
+      ${undoBtnMobile ? `<span class="undo-mobile" style="margin-left:6px;">${undoBtnMobile}</span>` : ''}
     </div>` : ''}
     <div class="dice-row" style="margin:6px 0;">
       <div class="dice-face ${isZero ? 'zero' : ''} ${s.diceValue === null ? 'empty' : ''}">${diceDisplay}</div>
@@ -7701,6 +7849,7 @@ function renderDicePanel(s) {
     ${isZero ? `<div class="zero-note">${zeroNote}</div>` : ''}
     ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">${t('msg.swap.skip')}</button>` : ''}
     ${s.gamePhase === 'chain-pass' && !blockControls ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">${t('msg.chain.stop')}</button>` : ''}
+    ${undoBtnDesktop ? `<div class="undo-desktop" style="margin-top:6px;">${undoBtnDesktop}</div>` : ''}
   </div>`;
 }
 
@@ -8167,6 +8316,24 @@ function wireEvents() {
   };
 
   // Dice roll
+  ['local-undo-btn-d','local-undo-btn-m'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => handleLocalUndo();
+  });
+  ['request-undo-btn-d','request-undo-btn-m'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => requestOnlineUndo();
+  });
+  ['accept-undo-btn-d','accept-undo-btn-m'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => acceptOnlineUndo();
+  });
+  ['decline-undo-btn-d','decline-undo-btn-m'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => declineOnlineUndo();
+  });
+  // undo accept/decline wired above with -d/-m suffix IDs
+
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
     if (state.gameMode === 'tutorial') { handleTutorialAction({ type: 'click_element', payload: { elementId: 'dice-roll-button' } }); return; }
@@ -8521,6 +8688,8 @@ function resolveKickoffWinner(s) {
 }
 
 function doDiceRoll() {
+  // If there's a pending undo request from the opponent, rolling the dice cancels it
+  if (onlineIncomingUndoFrom) declineOnlineUndo();
   sounds.diceRoll();
   const roll = DICE_VALUES[Math.floor(Math.random() * DICE_VALUES.length)];
   setState(s => {
@@ -8555,6 +8724,14 @@ function doDiceRoll() {
     return {
       ...withLog, gamePhase: 'selecting-piece',
       turnStartState: { players: s.players, ballPosition: s.ballPosition, lastPlayerToTouchBallId: s.lastPlayerToTouchBallId },
+      prevTurnSnapshot: {
+        players: s.players.map(p => ({ ...p, position: { ...p.position } })),
+        ballPosition: s.ballPosition ? { ...s.ballPosition } : null,
+        lastPlayerToTouchBallId: s.lastPlayerToTouchBallId,
+        currentPlayer: s.currentPlayer,
+        turnCount: s.turnCount,
+        diceValue: roll,
+      },
     };
   });
 }
