@@ -209,9 +209,13 @@
   /* Undo button: full button below dice on desktop, inline with timer on mobile */
   .undo-mobile { display: none; }
   .undo-desktop { display: block; }
+  .panel-mobile-menu-btns { display: none; }
+  .mobile-action-row { display: none; }
   @media (max-width: 600px) {
-    .undo-mobile { display: inline-flex; align-items: center; margin-left: 6px; }
+    .undo-mobile { display: inline-flex; align-items: center; margin-left: 4px; }
     .undo-desktop { display: none; }
+    .panel-mobile-menu-btns { display: inline-flex !important; align-items: center; }
+    .mobile-action-row { display: flex; align-items: center; margin-top: 4px; margin-bottom: 2px; }
   }
 
   .board-wrap {
@@ -6380,17 +6384,19 @@ function renderBoardSVG(s) {
     const { position, actions } = s.actionChoice;
     const baseX = cx(position.x), baseY = cy(position.y);
     const n = actions.length;
-    const spacing = 17;
+    const isMobile = window.innerWidth <= 600;
+    const bubbleR = isMobile ? 14 : 9.5;
+    const spacing = isMobile ? 32 : 17;
     const startX = baseX - ((n - 1) * spacing) / 2;
-    // Flip the bubble row below the tile if too close to the top edge, above otherwise.
-    const bubbleY = position.y <= 2 ? baseY + 20 : baseY - 20;
+    const bubbleY = position.y <= 2 ? baseY + (isMobile ? 30 : 20) : baseY - (isMobile ? 30 : 20);
     svg += `<g class="action-choice-popover">`;
     svg += `<line x1="${baseX}" y1="${bubbleY}" x2="${baseX}" y2="${baseY}" stroke="#1c2b22" stroke-width="1" stroke-dasharray="1.5,1.5" opacity="0.5" />`;
     actions.forEach((a, i) => {
       const bx = startX + i * spacing;
+      const scale = isMobile ? 1.4 : 1;
       svg += `<g class="action-bubble" data-exec-action="${a}" data-exec-x="${position.x}" data-exec-y="${position.y}" transform="translate(${bx},${bubbleY})">`;
-      svg += `<circle r="9.5" fill="${actionColor(a)}" stroke="#fff" stroke-width="1.5" />`;
-      svg += actionIconGlyph(a);
+      svg += `<circle r="${bubbleR}" fill="${actionColor(a)}" stroke="#fff" stroke-width="1.5" />`;
+      svg += `<g transform="scale(${scale})">${actionIconGlyph(a)}</g>`;
       svg += `</g>`;
     });
     svg += `</g>`;
@@ -7842,6 +7848,11 @@ function renderDicePanel(s) {
       undoBtnMobile = '<button class="btn ghost" id="local-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
     }
   }
+  const mobilMenuBtns = `<span class="panel-mobile-menu-btns" style="margin-left:auto;display:none;gap:4px;">
+      ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Restart' : 'Reiniciar'}">🔄</button>` : ''}
+      <button class="btn ghost" id="exit-to-menu-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Main menu' : 'Menú principal'}">🏠</button>
+    </span>`;
+
   return `
   <div class="dice-panel">
     <h3>${turnLabel}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
@@ -7849,8 +7860,12 @@ function renderDicePanel(s) {
     <div class="turn-timer-row">
       <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" id="turn-timer-fill" style="width:${timerPct}%;"></div></div>
       <span class="turn-timer-label ${timerLow ? 'low' : ''}" id="turn-timer-label">⏳ ${s.timer}s</span>
-      ${undoBtnMobile ? `<span class="undo-mobile" style="margin-left:6px;">${undoBtnMobile}</span>` : ''}
-    </div>` : ''}
+      ${undoBtnMobile ? `<span class="undo-mobile" style="margin-left:4px;">${undoBtnMobile}</span>` : ''}
+      ${mobilMenuBtns}
+    </div>` : `<div class="mobile-action-row">
+      ${undoBtnMobile ? `<span style="margin-right:4px;">${undoBtnMobile}</span>` : ''}
+      ${mobilMenuBtns}
+    </div>`}
     <div class="dice-row" style="margin:6px 0;">
       <div class="dice-face ${isZero ? 'zero' : ''} ${s.diceValue === null ? 'empty' : ''}">${diceDisplay}</div>
       ${s.gamePhase === 'rolling' && !blockControls ? `<button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(currentTeam)}">🎲 ${t('game.roll')}</button>` : ''}
@@ -8349,6 +8364,29 @@ function wireEvents() {
     if (btn) btn.onclick = () => declineOnlineUndo();
   });
   // undo accept/decline wired above with -d/-m suffix IDs
+
+  const resetBtnMobile = document.getElementById('reset-btn-mobile');
+  if (resetBtnMobile) resetBtnMobile.onclick = () => {
+    if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
+      setState(s => {
+        const fresh = getInitialState();
+        return { ...fresh, homeTeam: s.homeTeam, awayTeam: s.awayTeam,
+          halfDurationMinutes: s.halfDurationMinutes, gameClock: s.halfDurationMinutes * 60,
+          turnDuration: s.turnDuration, timer: s.turnDuration,
+          gameMode: s.gameMode, aiTeam: s.aiTeam, aiDifficulty: s.aiDifficulty,
+          gamePhase: 'pre-game-roll',
+          message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+        };
+      });
+    }
+  };
+  const exitMenuBtnMobile = document.getElementById('exit-to-menu-btn-mobile');
+  if (exitMenuBtnMobile) exitMenuBtnMobile.onclick = () => {
+    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
+      if (state.gameMode === 'online') leaveOnlineRoom();
+      currentMenuView = 'main'; setState(getInitialState());
+    }
+  };
 
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
