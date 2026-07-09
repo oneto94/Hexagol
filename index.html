@@ -6585,7 +6585,7 @@ function renderMainMenu() {
       <div class="user-chip-avatar">${avatarContent}</div>
       <div>
         <div class="user-chip-name">${userProfile.username}</div>
-        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}V ${userProfile.losses}D</div>
+        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : 'D'}</div>
       </div>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
@@ -6599,7 +6599,56 @@ function renderMainMenu() {
     <h1>${t('menu.title')}</h1>
     <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="online-setup" style="border-color: var(--accent); background: #f0f4ff;">
+      <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:#f0f4ff;">
+        <div class="t">🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</div>
+        <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : 'Online, local, vs IA, liga y más.'}</div>
+      </button>
+      <button class="menu-btn" data-menu="tutorial">
+        <div class="t">${t('menu.tutorial')}</div>
+        <div class="d">${t('menu.tutorial.desc')}</div>
+      </button>
+      <button class="menu-btn" data-menu="rules">
+        <div class="t">${t('menu.rules')}</div>
+        <div class="d">${t('menu.rules.desc')}</div>
+      </button>
+      <button class="menu-btn" data-menu="leaderboard">
+        <div class="t">${t('menu.leaderboard')}</div>
+        <div class="d">${t('menu.leaderboard.desc')}</div>
+      </button>
+    </div>
+    <div style="margin-top:14px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
+         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
+        ❤️ ${lang === 'en' ? 'Donate' : 'Donaciones'}
+      </a>
+      <a href="javascript:void(0)" onclick="showCommunityModal()"
+         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
+        💬 ${t('menu.community')}
+      </a>
+      <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
+         onclick="trackEvent('feedback_click')"
+         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        📝 Feedback
+      </a>
+      <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
+        🌐 ${t('landing.lang')}
+      </button>
+    </div>
+    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
+      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
+    </div>
+  </div>`;
+}
+
+function renderPlayMenu() {
+  return `
+  <div class="menu-screen">
+    <h1>🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Choose a game mode.' : 'Elegí un modo de juego.'}</div>
+    <div class="menu-grid">
+      <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:#f0f4ff;">
         <div class="t">${t('menu.online')}</div>
         <div class="d">${t('menu.online.desc')}</div>
       </button>
@@ -6611,55 +6660,17 @@ function renderMainMenu() {
         <div class="t">${t('menu.ai')}</div>
         <div class="d">${t('menu.ai.desc')}</div>
       </button>
-      <button class="menu-btn" data-menu="tutorial">
-        <div class="t">${t('menu.tutorial')}</div>
-        <div class="d">${t('menu.tutorial.desc')}</div>
-      </button>
       <button class="menu-btn" data-menu="league-entry">
         <div class="t">${t('menu.league')}</div>
         <div class="d">${t('menu.league.desc')}</div>
-      </button>
-      <button class="menu-btn" data-menu="rules">
-        <div class="t">${t('menu.rules')}</div>
-        <div class="d">${t('menu.rules.desc')}</div>
-      </button>
-      <button class="menu-btn" data-menu="leaderboard">
-        <div class="t">${t('menu.leaderboard')}</div>
-        <div class="d">${t('menu.leaderboard.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="sandbox">
         <div class="t">${t('menu.training')}</div>
         <div class="d">${t('menu.training.desc')}</div>
       </button>
-    </div>
-    <div style="margin-top:16px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-      <a href="javascript:void(0)" id="donate-btn"
-         onclick="showDonateModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        ❤️ ${lang === 'en' ? 'Donate' : 'Donaciones'}
-      </a>
-      <a href="javascript:void(0)" onclick="showCommunityModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        💬 ${t('menu.community')}
-      </a>
-      <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
-         onclick="trackEvent('feedback_click')"
-         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        📝 ${lang === 'en' ? 'Feedback' : 'Feedback'}
-      </a>
-      <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform" target="_blank" rel="noopener"
-         onclick="trackEvent('bug_report_click')"
-         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        ${t('menu.bug')}
-      </a>
-      <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
-        🌐 ${t('landing.lang')}
+      <button class="menu-btn" data-menu="back">
+        <div class="t">${t('setup.back')}</div>
       </button>
-    </div>
-    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
-      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
-      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
-      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -7609,7 +7620,7 @@ function renderGameScreen(s) {
         </ul>
       </div>
       <div class="btn-row" style="gap:6px;">
-        <button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>
+        ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>` : ''}
         <button class="btn ghost" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : 'Menú principal'}</button>
       </div>
     </div>
@@ -7885,6 +7896,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'play') app.innerHTML = renderPlayMenu();
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
     else if (currentMenuView === 'ai-setup') app.innerHTML = renderAiSetup();
     else if (currentMenuView === 'league-entry') app.innerHTML = renderLeagueSetup();
@@ -7980,7 +7992,11 @@ function wireEvents() {
         loadLeaderboard();
         return;
       }
-      if (target === 'back') currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
+      if (target === 'back') {
+        const playSubViews = ['setup','ai-setup','online-setup','tutorial','league-entry','sandbox'];
+        if (playSubViews.includes(currentMenuView)) currentMenuView = 'play';
+        else currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
+      }
       else currentMenuView = target;
       render();
     };
@@ -8437,8 +8453,23 @@ function wireEvents() {
   const resetBtn = document.getElementById('reset-btn');
   if (resetBtn) resetBtn.onclick = () => {
     if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
-      if (state.gameMode === 'online') leaveOnlineRoom();
-      currentMenuView = 'main'; setState(getInitialState());
+      setState(s => {
+        const fresh = getInitialState();
+        return {
+          ...fresh,
+          homeTeam: s.homeTeam,
+          awayTeam: s.awayTeam,
+          halfDurationMinutes: s.halfDurationMinutes,
+          gameClock: s.halfDurationMinutes * 60,
+          turnDuration: s.turnDuration,
+          timer: s.turnDuration,
+          gameMode: s.gameMode,
+          aiTeam: s.aiTeam,
+          aiDifficulty: s.aiDifficulty,
+          gamePhase: 'pre-game-roll',
+          message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+        };
+      });
     }
   };
 
