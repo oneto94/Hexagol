@@ -206,19 +206,10 @@
     .pregame-roll-btn { flex: 1; font-size: 0.62rem !important; padding: 4px 4px !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   }
 
-  /* Undo button: full button below dice on desktop, inline with timer on mobile */
-  .undo-mobile { display: none; }
-  .undo-desktop { display: block; }
-  .panel-mobile-menu-btns { display: none; }
-  .mobile-action-row { display: none; }
-  @media (max-width: 600px) {
-    .undo-mobile { display: inline-flex; align-items: center; margin-left: 4px; }
-    .undo-desktop { display: none; }
-    .panel-mobile-menu-btns { display: inline-flex !important; align-items: center; }
-    .mobile-action-row { display: flex; align-items: center; margin-top: 4px; margin-bottom: 2px; }
-  }
-
   .board-wrap {
+    background: #eef3ea;
+    border-radius: 18px;
+    padding: 8px;
     box-shadow: var(--shadow);
     display: flex;
     flex-direction: column;
@@ -1255,17 +1246,15 @@ function generateRoomCode() {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGoals = null) {
+function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration) {
   const fresh = getInitialState();
-  const useGoals = targetGoals !== null;
   return {
     ...fresh,
     homeTeam, awayTeam,
     gameMode: 'online',
     gamePhase: 'pre-game-roll',
-    halfDurationMinutes: useGoals ? 0 : duration,
-    gameClock: useGoals ? 0 : duration * 60,
-    targetGoals: targetGoals || null,
+    halfDurationMinutes: duration,
+    gameClock: duration * 60,
     turnDuration: turnDur,
     timer: turnDur,
     message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
@@ -1314,12 +1303,10 @@ function applyRemoteState(remote) {
   // the same half number but timer is residual from the half-time countdown
   const remoteHalfTimeEnded = !isFirstState && state.gamePhase === 'half-time' && remote.gamePhase === 'rolling';
 
-  const remoteOvertimeStarted = !isFirstState && remote.overtimeMode === 'extra-time' && state.overtimeMode !== 'extra-time';
-
   state = {
     ...remote,
     ...preservedRoll,
-    gameClock: (isFirstState || remoteIsNewHalf || remoteHalfTimeEnded || remoteOvertimeStarted) ? remote.gameClock : state.gameClock,
+    gameClock: (isFirstState || remoteIsNewHalf || remoteHalfTimeEnded) ? remote.gameClock : state.gameClock,
     timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf || remoteIsKickoff || remoteScoreChanged || remoteHalfTimeEnded
       ? (remote.turnDuration || state.turnDuration)
       : state.timer,
@@ -1337,11 +1324,6 @@ function applyRemoteState(remote) {
     preGameRollStartedAt = Date.now();
   } else if (state.gamePhase !== 'pre-game-roll') {
     preGameRollStartedAt = null;
-  }
-  if (prev.gamePhase !== 'overtime-choice' && state.gamePhase === 'overtime-choice') {
-    overtimeChoiceStartedAt = Date.now();
-  } else if (state.gamePhase !== 'overtime-choice') {
-    overtimeChoiceStartedAt = null;
   }
 
   // When host roll arrives at guest: reset countdown so guest rolls quickly
@@ -1468,7 +1450,6 @@ async function reconnectToOnlineRoom() {
 
   attachOnlineStateListener();
   attachOnlineRematchListener(startOnlineRematch);
-  attachOnlineUndoListener();
   attachOnlinePresence();
   attachOnlineChat();
   saveOnlineSession();
@@ -1748,21 +1729,19 @@ async function updateEloAfterMatch(myResult, opponentUid) {
   });
 }
 
-async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
+async function onlineCreateRoom(homeTeam, duration) {
   const code = generateRoomCode();
   onlineRoomId = code;
   onlineMyTeam = 'home';
   onlineIsHost = true;
   onlineRoomRef = db.collection('rooms').doc(code);
-  const useGoals = targetGoals !== null;
-  const turnDur = useGoals ? TURN_DURATION : (duration <= 5 ? (duration <= 2 ? 10 : 20) : TURN_DURATION);
+  const turnDur = duration <= 5 ? (duration <= 2 ? 10 : 20) : TURN_DURATION;
 
   await onlineRoomRef.set({
     status: 'waiting',
     homeTeam: sanitizeForFirestore(homeTeam),
     homeUid: (currentUser && !currentUser.isAnonymous) ? currentUser.uid : null,
     duration,
-    targetGoals: targetGoals || null,
     gameState: null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   }).catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
@@ -1795,7 +1774,7 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
       ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
       : guestTeam;
 
-    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals);
+    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration);
     // Fix 1: start with 30s timer for the pre-game roll phase, using wall-clock reference
     preGameRollStartedAt = Date.now();
     state = { ...initialState, timer: 30 };
@@ -1808,7 +1787,6 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
     // we already have locally and applyRemoteState is a no-op in practice.
     attachOnlineStateListener();
     attachOnlineRematchListener(startOnlineRematch);
-    attachOnlineUndoListener();
     attachOnlinePresence();
     attachOnlineChat();
     saveOnlineSession();
@@ -1846,7 +1824,6 @@ async function onlineJoinRoom(code, awayTeam) {
 
   attachOnlineStateListener();
   attachOnlineRematchListener(startOnlineRematch);
-  attachOnlineUndoListener();
   attachOnlinePresence();
   attachOnlineChat();
   saveOnlineSession();
@@ -1857,7 +1834,7 @@ async function onlineJoinRoom(code, awayTeam) {
   startTurnTimer();
 }
 
-async function onlineQuickMatch(homeTeam, duration, targetGoals = null) {
+async function onlineQuickMatch(homeTeam, duration) {
   onlineStatus = 'searching';
   currentMenuView = 'online-searching';
   render();
@@ -1881,7 +1858,7 @@ async function onlineQuickMatch(homeTeam, duration, targetGoals = null) {
   if (found) {
     await onlineJoinRoom(found, homeTeam);
   } else {
-    await onlineCreateRoom(homeTeam, duration, targetGoals);
+    await onlineCreateRoom(homeTeam, duration);
   }
 }
 
@@ -1973,9 +1950,6 @@ function detachOnlinePresence() {
 let onlineRematchUnsub = null;
 let onlineRematchRequestedByMe = false;
 let onlineIncomingRematchFrom = null;
-let onlineUndoUnsub = null;
-let onlineUndoRequestedByMe = false;
-let onlineIncomingUndoFrom = null;
 
 function attachOnlineRematchListener(onRematchReady) {
   if (!onlineRoomRef) return;
@@ -2019,87 +1993,6 @@ function clearOnlineRematchNode() {
   onlineIncomingRematchFrom = null;
 }
 
-// ── Online Undo (proponer deshacer jugada) ────────────────────────────────────
-
-function attachOnlineUndoListener() {
-  if (!onlineRoomRef) return;
-  if (onlineUndoUnsub) { onlineUndoUnsub(); onlineUndoUnsub = null; }
-  onlineUndoUnsub = onlineRoomRef.onSnapshot(snap => {
-    if (!snap.exists) return;
-    const data = snap.data();
-    const undoReq = data && data.undoRequest;
-    if (!undoReq) {
-      // undoRequest was cleared — could be declined or accepted+cleared
-      if (onlineUndoRequestedByMe) {
-        onlineUndoRequestedByMe = false;
-        render();
-      }
-      onlineIncomingUndoFrom = null;
-      return;
-    }
-    if (undoReq.requestedBy && undoReq.requestedBy !== onlineMyTeam) {
-      onlineIncomingUndoFrom = undoReq.requestedBy;
-      render();
-    }
-    if (undoReq.accepted) onUndoAccepted();
-  });
-}
-
-function requestOnlineUndo() {
-  if (!onlineRoomRef) return;
-  onlineUndoRequestedByMe = true;
-  onlineRoomRef.update({ undoRequest: { requestedBy: onlineMyTeam, accepted: false, at: firebase.firestore.FieldValue.serverTimestamp() } });
-  render();
-}
-
-function acceptOnlineUndo() {
-  if (!onlineRoomRef) return;
-  onlineIncomingUndoFrom = null;
-  onlineRoomRef.update({ 'undoRequest.accepted': true });
-}
-
-function declineOnlineUndo() {
-  if (!onlineRoomRef) return;
-  onlineIncomingUndoFrom = null;
-  onlineUndoRequestedByMe = false;
-  onlineRoomRef.update({ undoRequest: null });
-  render();
-}
-
-function onUndoAccepted() {
-  onlineRoomRef.update({ undoRequest: null }).catch(() => {});
-  onlineUndoRequestedByMe = false;
-  onlineIncomingUndoFrom = null;
-  setState(s => {
-    if (!s.prevTurnSnapshot) return s;
-    const snap = s.prevTurnSnapshot;
-    const logMsg = lang === 'en' ? 'Undo accepted. Turn reverted.' : 'Deshacer aceptado. Se revirtió el turno.';
-    const reverted = {
-      ...s,
-      players: snap.players,
-      ballPosition: snap.ballPosition,
-      lastPlayerToTouchBallId: snap.lastPlayerToTouchBallId,
-      currentPlayer: snap.currentPlayer,
-      turnCount: snap.turnCount,
-      gamePhase: 'selecting-piece',
-      diceValue: snap.diceValue,
-      selectedPlayerId: null,
-      validMoves: [], validKickTargets: [], validDragTargets: [],
-      validLoftedPassTargets: [], validLoftedDragTargets: [],
-      validChainPassTargets: [], chainPassReceivers: [],
-      lastAction: null,
-      prevTurnSnapshot: null,
-    };
-    return logAction(reverted, logMsg, 'game-event');
-  });
-}
-
-function clearOnlineUndoNode() {
-  if (onlineRoomRef) onlineRoomRef.update({ undoRequest: null }).catch(() => {});
-  onlineUndoRequestedByMe = false;
-  onlineIncomingUndoFrom = null;
-}
-
 function showRematchPrompt(requestingTeam) {
   onlineIncomingRematchFrom = requestingTeam;
   render();
@@ -2117,7 +2010,6 @@ function startOnlineRematch() {
     message: lang === 'en' ? 'Rematch. Roll the dice to decide who starts.' : 'Revancha. Tiren los dados para decidir quién empieza.',
   };
   clearOnlineRematchNode();
-  clearOnlineUndoNode();
   onlineReceivedFirstState = false; // treat the host's first write as authoritative again
   if (onlineIsHost) setState(() => rematchState);
 }
@@ -4100,8 +3992,6 @@ function getInitialState() {
     swapTimer: GOALKEEPER_SWAP_DURATION,
     halfDurationMinutes: 5,
     gameClock: 5 * 60,
-    targetGoals: null, // null = time-based, number = first to N goals
-    overtimeMode: null, // null | 'extra-time' | 'golden-goal'
     isClockRunning: false,
     homeRoll: null, awayRoll: null,
     homeTeam: TEAMS[0], awayTeam: TEAMS[1],
@@ -4118,7 +4008,6 @@ function getInitialState() {
     matchStats: { goals: {}, assists: {} },
     assistProviderId: null,
     turnStartState: null,
-    prevTurnSnapshot: null,
     lastAction: null,
     actionChoice: null,
     isKickoffTurn: false,
@@ -4250,13 +4139,6 @@ function updateClockDisplaySurgically() {
   const timerFillEl = document.getElementById('turn-timer-fill');
   const timerLabelEl = document.getElementById('turn-timer-label');
 
-  // Update overtime-choice countdown surgically
-  const overtimeCountdownEl = document.getElementById('overtime-countdown');
-  if (overtimeCountdownEl) {
-    overtimeCountdownEl.textContent = state.timer;
-    return;
-  }
-
   if (!clockEl && !timerFillEl && !timerLabelEl) {
     // During half-time and pre-game-roll, no clock/timer elements exist in the DOM
     // but we still need to update the countdown span surgically — don't full render
@@ -4275,15 +4157,7 @@ function updateClockDisplaySurgically() {
     countdownEl.textContent = state.timer + 's';
   }
 
-  if (clockEl) {
-    if (state.targetGoals) {
-      clockEl.textContent = lang === 'en' ? `🥅 First to ${state.targetGoals}` : `🥅 Al ${state.targetGoals}`;
-    } else if (state.overtimeMode === 'golden-goal') {
-      clockEl.textContent = lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro';
-    } else {
-      clockEl.textContent = '⏱ ' + formatClock(state.gameClock);
-    }
-  }
+  if (clockEl) clockEl.textContent = '⏱ ' + formatClock(state.gameClock);
 
   const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(state.gamePhase)
     && state.gameMode !== 'tutorial';
@@ -4424,7 +4298,6 @@ function advanceToNextTurn(s, opts) {
     ...freshActionState(), offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
     swapCandidates: [], swapTimer: GOALKEEPER_SWAP_DURATION, timer: s.turnDuration,
     turnCount: s.turnCount + 1, toastToShow: null, turnStartState: null, isKickoffTurn: false, assistProviderId: null,
-    prevTurnSnapshot: s.prevTurnSnapshot, // preserved until next dice roll
   };
   return logAction(news, baseMsg, 'turn-start', nextPlayer);
 }
@@ -4441,32 +4314,6 @@ function handleGoal(s) {
   const concederName = getTeamName(s, scoringTeam === 'home' ? 'away' : 'home');
   const scorerName = getTeamName(s, scoringTeam);
   const newScore = { ...s.score, [scoringTeam]: s.score[scoringTeam] + 1 };
-
-  // Check if match ends: targetGoals mode or golden-goal overtime
-  const matchEnds = (s.targetGoals && newScore[scoringTeam] >= s.targetGoals) ||
-                    (s.overtimeMode === 'golden-goal');
-
-  if (matchEnds) {
-    const winMsg = lang === 'en' ? `GOAL! ${scorerName} wins the match!` : `¡GOL! ¡${scorerName} gana el partido!`;
-    // First show the goal normally (with toast and board reset), then end match after a delay
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
-    const goalState = logAction({
-      ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
-      currentPlayer: scoringTeam === 'home' ? 'away' : 'home', diceValue: null,
-      ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
-      turnStartState: null, lastAction: null, matchStats: newMatchStats, assistProviderId: null,
-      gamePhase: 'rolling',
-      toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : `¡${scorerName} gana!` },
-    }, winMsg, 'goal', scoringTeam);
-    // Delay game-over so the goal toast and board reset are visible
-    setTimeout(() => {
-      setState(s2 => s2.gamePhase === 'rolling' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
-        ? { ...s2, gamePhase: 'game-over', isClockRunning: false }
-        : s2);
-    }, 1800);
-    return goalState;
-  }
-
   const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
   const msg = lang === 'en' ? `GOAL by ${scorerName}! ${concederName} kicks off.` : `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
   const news = {
@@ -4483,33 +4330,9 @@ function handleOwnGoal(s) {
   const team = s.currentPlayer;
   const scoringTeam = team === 'home' ? 'away' : 'home';
   const concederName = getTeamName(s, team);
-  const scorerName = getTeamName(s, scoringTeam);
   const newScore = { ...s.score, [scoringTeam]: s.score[scoringTeam] + 1 };
-
-  const matchEnds = (s.targetGoals && newScore[scoringTeam] >= s.targetGoals) ||
-                    (s.overtimeMode === 'golden-goal');
-
   const newPlayers = movePlayersForKickoff(getInitialPlayers(), team);
   const msg = lang === 'en' ? `OWN GOAL by ${concederName}!` : `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
-
-  if (matchEnds) {
-    const winMsg = lang === 'en' ? `OWN GOAL! ${scorerName} wins the match!` : `¡AUTOGOL! ¡${scorerName} gana el partido!`;
-    const goalState = logAction({
-      ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
-      currentPlayer: team, diceValue: null, ...freshActionState(),
-      lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
-      turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
-      gamePhase: 'rolling',
-      toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : `¡${scorerName} gana!` },
-    }, winMsg, 'goal', scoringTeam);
-    setTimeout(() => {
-      setState(s2 => s2.gamePhase === 'rolling' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
-        ? { ...s2, gamePhase: 'game-over', isClockRunning: false }
-        : s2);
-    }, 1800);
-    return goalState;
-  }
-
   const news = {
     ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
     currentPlayer: team, gamePhase: 'rolling', diceValue: null, ...freshActionState(),
@@ -4521,33 +4344,16 @@ function handleOwnGoal(s) {
 }
 
 function handleEndHalfOrMatch(s) {
-  // Golden goal mode — match never ends on time, only on a goal
-  if (s.overtimeMode === 'golden-goal') {
-    return s; // keep playing, handleGoal will end it
-  }
-
   if (s.half === 1) {
-    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false, prevTurnSnapshot: null };
+    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false };
+    // Fix 2: in online mode, start a 30s countdown for auto second half start
     if (s.gameMode === 'online') halfTimeStartedAt = Date.now();
     return s.gameMode === 'online' ? { ...halfTimeState, timer: 30 } : halfTimeState;
   }
-
-  // End of 2nd half (or extra time)
-  const isDraw = s.score.home === s.score.away;
-  const isExtraTime = s.overtimeMode === 'extra-time';
-
-  // If draw at end of regular time (not already in extra time) — offer overtime choice
-  if (isDraw && !isExtraTime && !s.targetGoals) {
-    const msg = lang === 'en' ? "It's a draw! Choose how to continue." : '¡Empate! Elegí cómo continuar.';
-    if (s.gameMode === 'online') overtimeChoiceStartedAt = Date.now();
-    return { ...logAction(s, msg, 'game-event'), gamePhase: 'overtime-choice', isClockRunning: false };
-  }
-
-  // Regular end
   const homeName = getTeamName(s, 'home'), awayName = getTeamName(s, 'away');
   let msg = lang === 'en' ? "Match over! " : '¡Fin del partido! ';
-  if (s.score.home > s.score.away) msg += lang === 'en' ? `${homeName} wins.` : `${homeName} ha ganado.`;
-  else if (s.score.away > s.score.home) msg += lang === 'en' ? `${awayName} wins.` : `${awayName} ha ganado.`;
+  if (s.score.home > s.score.away) msg += `${homeName} ha ganado.`;
+  else if (s.score.away > s.score.home) msg += `${awayName} ha ganado.`;
   else msg += lang === 'en' ? 'The result is a draw.' : 'El resultado es un empate.';
   return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
 }
@@ -5750,31 +5556,6 @@ function finishLeagueMatch(s) {
 
 /* ---------------- Player selection (ported from action-reducers.ts) ---------------- */
 
-function handleLocalUndo() {
-  setState(s => {
-    if (!s.prevTurnSnapshot) return s;
-    const snap = s.prevTurnSnapshot;
-    const logMsg = lang === 'en' ? 'Turn undone.' : 'Jugada deshecha.';
-    const reverted = {
-      ...s,
-      players: snap.players,
-      ballPosition: snap.ballPosition,
-      lastPlayerToTouchBallId: snap.lastPlayerToTouchBallId,
-      currentPlayer: snap.currentPlayer,
-      turnCount: snap.turnCount,
-      gamePhase: 'selecting-piece',
-      diceValue: snap.diceValue,
-      selectedPlayerId: null,
-      validMoves: [], validKickTargets: [], validDragTargets: [],
-      validLoftedPassTargets: [], validLoftedDragTargets: [],
-      validChainPassTargets: [], chainPassReceivers: [],
-      lastAction: null,
-      prevTurnSnapshot: null,
-    };
-    return logAction(reverted, logMsg, 'game-event');
-  });
-}
-
 function handleDeselectPlayer(s, showToast) {
   const teamName = getTeamName(s, s.currentPlayer);
   const patch = freshActionState({
@@ -6479,19 +6260,17 @@ function renderBoardSVG(s) {
     const { position, actions } = s.actionChoice;
     const baseX = cx(position.x), baseY = cy(position.y);
     const n = actions.length;
-    const isMobile = window.innerWidth <= 600;
-    const bubbleR = isMobile ? 14 : 9.5;
-    const spacing = isMobile ? 32 : 17;
+    const spacing = 17;
     const startX = baseX - ((n - 1) * spacing) / 2;
-    const bubbleY = position.y <= 2 ? baseY + (isMobile ? 30 : 20) : baseY - (isMobile ? 30 : 20);
+    // Flip the bubble row below the tile if too close to the top edge, above otherwise.
+    const bubbleY = position.y <= 2 ? baseY + 20 : baseY - 20;
     svg += `<g class="action-choice-popover">`;
     svg += `<line x1="${baseX}" y1="${bubbleY}" x2="${baseX}" y2="${baseY}" stroke="#1c2b22" stroke-width="1" stroke-dasharray="1.5,1.5" opacity="0.5" />`;
     actions.forEach((a, i) => {
       const bx = startX + i * spacing;
-      const scale = isMobile ? 1.4 : 1;
       svg += `<g class="action-bubble" data-exec-action="${a}" data-exec-x="${position.x}" data-exec-y="${position.y}" transform="translate(${bx},${bubbleY})">`;
-      svg += `<circle r="${bubbleR}" fill="${actionColor(a)}" stroke="#fff" stroke-width="1.5" />`;
-      svg += `<g transform="scale(${scale})">${actionIconGlyph(a)}</g>`;
+      svg += `<circle r="9.5" fill="${actionColor(a)}" stroke="#fff" stroke-width="1.5" />`;
+      svg += actionIconGlyph(a);
       svg += `</g>`;
     });
     svg += `</g>`;
@@ -6686,7 +6465,7 @@ function renderMainMenu() {
       <div class="user-chip-avatar">${avatarContent}</div>
       <div>
         <div class="user-chip-name">${userProfile.username}</div>
-        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : 'D'}</div>
+        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}V ${userProfile.losses}D</div>
       </div>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
@@ -6700,56 +6479,7 @@ function renderMainMenu() {
     <h1>${t('menu.title')}</h1>
     <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:#f0f4ff;">
-        <div class="t">🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</div>
-        <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : 'Online, local, vs IA, liga y más.'}</div>
-      </button>
-      <button class="menu-btn" data-menu="tutorial">
-        <div class="t">${t('menu.tutorial')}</div>
-        <div class="d">${t('menu.tutorial.desc')}</div>
-      </button>
-      <button class="menu-btn" data-menu="rules">
-        <div class="t">${t('menu.rules')}</div>
-        <div class="d">${t('menu.rules.desc')}</div>
-      </button>
-      <button class="menu-btn" data-menu="leaderboard">
-        <div class="t">${t('menu.leaderboard')}</div>
-        <div class="d">${t('menu.leaderboard.desc')}</div>
-      </button>
-    </div>
-    <div style="margin-top:14px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-      <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        ❤️ ${lang === 'en' ? 'Donate' : 'Donaciones'}
-      </a>
-      <a href="javascript:void(0)" onclick="showCommunityModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        💬 ${t('menu.community')}
-      </a>
-      <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
-         onclick="trackEvent('feedback_click')"
-         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        📝 Feedback
-      </a>
-      <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
-        🌐 ${t('landing.lang')}
-      </button>
-    </div>
-    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
-      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
-      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
-      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
-    </div>
-  </div>`;
-}
-
-function renderPlayMenu() {
-  return `
-  <div class="menu-screen">
-    <h1>🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Choose a game mode.' : 'Elegí un modo de juego.'}</div>
-    <div class="menu-grid">
-      <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" data-menu="online-setup" style="border-color: var(--accent); background: #f0f4ff;">
         <div class="t">${t('menu.online')}</div>
         <div class="d">${t('menu.online.desc')}</div>
       </button>
@@ -6761,17 +6491,55 @@ function renderPlayMenu() {
         <div class="t">${t('menu.ai')}</div>
         <div class="d">${t('menu.ai.desc')}</div>
       </button>
+      <button class="menu-btn" data-menu="tutorial">
+        <div class="t">${t('menu.tutorial')}</div>
+        <div class="d">${t('menu.tutorial.desc')}</div>
+      </button>
       <button class="menu-btn" data-menu="league-entry">
         <div class="t">${t('menu.league')}</div>
         <div class="d">${t('menu.league.desc')}</div>
+      </button>
+      <button class="menu-btn" data-menu="rules">
+        <div class="t">${t('menu.rules')}</div>
+        <div class="d">${t('menu.rules.desc')}</div>
+      </button>
+      <button class="menu-btn" data-menu="leaderboard">
+        <div class="t">${t('menu.leaderboard')}</div>
+        <div class="d">${t('menu.leaderboard.desc')}</div>
       </button>
       <button class="menu-btn" data-menu="sandbox">
         <div class="t">${t('menu.training')}</div>
         <div class="d">${t('menu.training.desc')}</div>
       </button>
-      <button class="menu-btn" data-menu="back">
-        <div class="t">${t('setup.back')}</div>
+    </div>
+    <div style="margin-top:16px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+      <a href="javascript:void(0)" id="donate-btn"
+         onclick="showDonateModal()"
+         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
+        ❤️ ${lang === 'en' ? 'Donate' : 'Donaciones'}
+      </a>
+      <a href="javascript:void(0)" onclick="showCommunityModal()"
+         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
+        💬 ${t('menu.community')}
+      </a>
+      <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
+         onclick="trackEvent('feedback_click')"
+         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        📝 ${lang === 'en' ? 'Feedback' : 'Feedback'}
+      </a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform" target="_blank" rel="noopener"
+         onclick="trackEvent('bug_report_click')"
+         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        ${t('menu.bug')}
+      </a>
+      <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
+        🌐 ${t('landing.lang')}
       </button>
+    </div>
+    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
+      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -6910,12 +6678,6 @@ function renderOnlineSetup() {
         <span class="field-label">${t('setup.duration')}</span>
         <div class="duration-row" id="online-duration-row">
           ${[2, 5, 10, 20, 30, 45].map(m => `<button data-online-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
-        </div>
-      </div>
-      <div>
-        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : 'O: primero en marcar N goles'}</span>
-        <div class="duration-row" id="online-goals-row">
-          ${[1, 3, 5].map(g => `<button data-online-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
       </div>
     </div>
@@ -7368,12 +7130,6 @@ function renderSetup() {
           ${[2, 5, 10, 20, 30, 45].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
       </div>
-      <div>
-        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : 'O: primero en marcar N goles'}</span>
-        <div class="duration-row" id="goals-row">
-          ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
-        </div>
-      </div>
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
@@ -7430,12 +7186,6 @@ function renderAiSetup() {
           ${[2, 5, 10, 20, 30, 45].map(m => `<button data-duration="${m}" class="${m === 5 ? 'active' : ''}">${m} min</button>`).join('')}
         </div>
       </div>
-      <div>
-        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : 'O: primero en marcar N goles'}</span>
-        <div class="duration-row" id="goals-row">
-          ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
-        </div>
-      </div>
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
@@ -7453,7 +7203,6 @@ function renderAiSetup() {
 }
 
 let setupDuration = 5;
-let setupTargetGoals = null;
 let leagueNumTeams = 4;
 let leagueSelectedTeams = Array(4).fill(null);
 let leagueDuration = 20;
@@ -7722,7 +7471,7 @@ function renderGameScreen(s) {
           <span class="mini-team-name">${s.awayTeam.name}</span>
           <span class="mini-score">${s.score.away}</span>
         </div>
-        <div class="mini-meta"><span class="clock" id="match-clock">${s.targetGoals ? `🥅 ${lang === 'en' ? `First to ${s.targetGoals}` : `Al ${s.targetGoals}`}` : s.overtimeMode === 'golden-goal' ? (lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro') : '⏱ ' + formatClock(s.gameClock)}</span><span>${s.overtimeMode === 'extra-time' ? (lang === 'en' ? 'ET' : 'TE') : s.overtimeMode === 'golden-goal' ? (lang === 'en' ? 'GG' : 'GO') : s.half === 1 ? (lang === 'en' ? '1st H.' : '1er T.') : (lang === 'en' ? '2nd H.' : '2do T.')}</span><span>${lang === 'en' ? 'Turn' : 'Turno'} ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? (lang === 'en' ? 'Mute' : 'Silenciar sonido') : (lang === 'en' ? 'Unmute' : 'Activar sonido')}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? (lang === 'en' ? 'Exit fullscreen' : 'Salir de pantalla completa') : (lang === 'en' ? 'Fullscreen' : 'Pantalla completa')}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
+        <div class="mini-meta"><span class="clock" id="match-clock">⏱ ${formatClock(s.gameClock)}</span><span>${s.half === 1 ? (lang === 'en' ? '1st H.' : '1er T.') : (lang === 'en' ? '2nd H.' : '2do T.')}</span><span>${lang === 'en' ? 'Turn' : 'Turno'} ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? (lang === 'en' ? 'Mute' : 'Silenciar sonido') : (lang === 'en' ? 'Unmute' : 'Activar sonido')}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? (lang === 'en' ? 'Exit fullscreen' : 'Salir de pantalla completa') : (lang === 'en' ? 'Fullscreen' : 'Pantalla completa')}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
       </div>
       ${s.gameMode === 'tutorial' ? renderTutorialPanel(s) : s.gameMode === 'training' ? renderSandboxPanel(s) : renderDicePanel(s)}
       <div class="panel-stats-section">
@@ -7740,7 +7489,7 @@ function renderGameScreen(s) {
         </ul>
       </div>
       <div class="btn-row" style="gap:6px;">
-        ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>` : ''}
+        <button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>
         <button class="btn ghost" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : 'Menú principal'}</button>
       </div>
     </div>
@@ -7867,37 +7616,6 @@ function renderDicePanel(s) {
     </div>`;
   }
 
-  if (s.gamePhase === 'overtime-choice') {
-    const isOnlineGuest = s.gameMode === 'online' && !onlineIsHost;
-    const isOnline = s.gameMode === 'online';
-    const title = lang === 'en' ? "It's a draw!" : '¡Empate!';
-    const extraTimeLabel = lang === 'en' ? `⏱ Extra time (${s.halfDurationMinutes} min)` : `⏱ Prórroga (${s.halfDurationMinutes} min)`;
-    const goldenGoalLabel = lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro';
-    const drawLabel = lang === 'en' ? 'End as draw' : 'Terminar en empate';
-    const countdownHtml = isOnline ? `<div style="font-size:0.75rem;color:#9aa593;text-align:center;margin-bottom:8px;">⏳ <span id="overtime-countdown">${s.timer}</span>s</div>` : '';
-    const waitingLabel = lang === 'en' ? 'Waiting for host to decide...' : 'Esperando que el anfitrión decida...';
-    const continueLabel = lang === 'en' ? 'How do you want to continue?' : '¿Cómo querés continuar?';
-    return `<div class="dice-panel">
-      <h3>${title}</h3>
-      ${countdownHtml}
-      ${isOnlineGuest
-        ? `<div style="font-size:0.82rem;color:#6b7a64;text-align:center;padding:10px 0;">${waitingLabel}</div>`
-        : `
-        <div class="undo-desktop">
-          <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:10px;text-align:center;">${continueLabel}</div>
-          <button class="btn" id="overtime-extra-btn-d" style="width:100%;margin-bottom:6px;">${extraTimeLabel}</button>
-          <button class="btn" id="overtime-golden-btn-d" style="width:100%;margin-bottom:6px;background:#d4a017;border-color:#d4a017;">${goldenGoalLabel}</button>
-          <button class="btn ghost" id="overtime-draw-btn-d" style="width:100%;">${drawLabel}</button>
-        </div>
-        <div class="mobile-action-row">
-          <span style="font-size:0.75rem;color:#6b7a64;margin-right:auto;">${continueLabel}</span>
-          <button class="btn ghost" id="overtime-extra-btn-m" style="padding:2px 7px;font-size:0.72rem;" title="${extraTimeLabel}">⏱</button>
-          <button class="btn ghost" id="overtime-golden-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${goldenGoalLabel}">⚽</button>
-          <button class="btn ghost" id="overtime-draw-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${drawLabel}">🤝</button>
-        </div>`}
-    </div>`;
-  }
-
   if (s.gamePhase === 'half-time') {
     return `<div class="dice-panel"><h3>${t('halftime.title')}</h3>${
       state.gameMode === 'online' && !onlineIsHost
@@ -7966,38 +7684,6 @@ function renderDicePanel(s) {
   const thinkingLabel = lang === 'en' ? 'Thinking...' : 'Pensando...';
   const opponentLabel = lang === 'en' ? 'Opponent rolling...' : 'Rival tirando...';
   const zeroNote = lang === 'en' ? "You rolled 0! Turn is skipped automatically…" : '¡Sacaste 0! Se pierde el turno automáticamente…';
-
-  // Undo button HTML — computed before return to avoid nested template literal issues
-  let undoBtnDesktop = '';
-  let undoBtnMobile = '';
-  const undoPhases = ['rolling','selecting-piece','moving-piece','chain-pass','goalkeeper-swap'];
-  if (s.prevTurnSnapshot && undoPhases.includes(s.gamePhase)) {
-    if (s.gameMode === 'online') {
-      if (onlineIncomingUndoFrom) {
-        const undoQ = lang === 'en' ? 'Undo?' : '¿Deshacer?';
-        const btnsD = '<button class="btn" id="accept-undo-btn-d" style="padding:3px 9px;font-size:0.72rem;margin:0 2px;">✓</button><button class="btn ghost" id="decline-undo-btn-d" style="padding:3px 9px;font-size:0.72rem;">✕</button>';
-        const btnsM = '<button class="btn" id="accept-undo-btn-m" style="padding:2px 7px;font-size:0.68rem;margin:0 2px;">✓</button><button class="btn ghost" id="decline-undo-btn-m" style="padding:2px 7px;font-size:0.68rem;">✕</button>';
-        undoBtnDesktop = undoQ + ' ' + btnsD;
-        undoBtnMobile = '↩ ' + btnsM;
-      } else if (onlineUndoRequestedByMe) {
-        undoBtnDesktop = lang === 'en' ? '⏳ Waiting...' : '⏳ Esperando...';
-        undoBtnMobile = '⏳';
-      } else if (onlineMyTeam !== s.currentPlayer && s.diceValue === null) {
-        const undoLabel = lang === 'en' ? '↩ Propose undo' : '↩ Proponer deshacer';
-        undoBtnDesktop = '<button class="btn ghost" id="request-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
-        undoBtnMobile = '<button class="btn ghost" id="request-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
-      }
-    } else if (!blockControls) {
-      const undoLabel = lang === 'en' ? '↩ Undo last turn' : '↩ Deshacer última jugada';
-      undoBtnDesktop = '<button class="btn ghost" id="local-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
-      undoBtnMobile = '<button class="btn ghost" id="local-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
-    }
-  }
-  const mobilMenuBtns = `<span class="panel-mobile-menu-btns" style="margin-left:auto;display:none;gap:4px;">
-      ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Restart' : 'Reiniciar'}">🔄</button>` : ''}
-      <button class="btn ghost" id="exit-to-menu-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Main menu' : 'Menú principal'}">🏠</button>
-    </span>`;
-
   return `
   <div class="dice-panel">
     <h3>${turnLabel}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
@@ -8005,12 +7691,7 @@ function renderDicePanel(s) {
     <div class="turn-timer-row">
       <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" id="turn-timer-fill" style="width:${timerPct}%;"></div></div>
       <span class="turn-timer-label ${timerLow ? 'low' : ''}" id="turn-timer-label">⏳ ${s.timer}s</span>
-      ${undoBtnMobile ? `<span class="undo-mobile" style="margin-left:4px;">${undoBtnMobile}</span>` : ''}
-      ${mobilMenuBtns}
-    </div>` : `<div class="mobile-action-row">
-      ${undoBtnMobile ? `<span style="margin-right:4px;">${undoBtnMobile}</span>` : ''}
-      ${mobilMenuBtns}
-    </div>`}
+    </div>` : ''}
     <div class="dice-row" style="margin:6px 0;">
       <div class="dice-face ${isZero ? 'zero' : ''} ${s.diceValue === null ? 'empty' : ''}">${diceDisplay}</div>
       ${s.gamePhase === 'rolling' && !blockControls ? `<button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(currentTeam)}">🎲 ${t('game.roll')}</button>` : ''}
@@ -8020,7 +7701,6 @@ function renderDicePanel(s) {
     ${isZero ? `<div class="zero-note">${zeroNote}</div>` : ''}
     ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">${t('msg.swap.skip')}</button>` : ''}
     ${s.gamePhase === 'chain-pass' && !blockControls ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">${t('msg.chain.stop')}</button>` : ''}
-    ${undoBtnDesktop ? `<div class="undo-desktop" style="margin-top:6px;">${undoBtnDesktop}</div>` : ''}
   </div>`;
 }
 
@@ -8056,7 +7736,6 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
-    else if (currentMenuView === 'play') app.innerHTML = renderPlayMenu();
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
     else if (currentMenuView === 'ai-setup') app.innerHTML = renderAiSetup();
     else if (currentMenuView === 'league-entry') app.innerHTML = renderLeagueSetup();
@@ -8152,33 +7831,17 @@ function wireEvents() {
         loadLeaderboard();
         return;
       }
-      if (target === 'back') {
-        const playSubViews = ['setup','ai-setup','online-setup','tutorial','league-entry','sandbox'];
-        if (playSubViews.includes(currentMenuView)) currentMenuView = 'play';
-        else currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
-      }
+      if (target === 'back') currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
       else currentMenuView = target;
       render();
     };
   });
 
   // Online duration selector
-  document.querySelectorAll('[data-online-goals]').forEach(btn => {
-    btn.onclick = () => {
-      setupTargetGoals = parseInt(btn.getAttribute('data-online-goals'), 10);
-      setupDuration = 0;
-      document.querySelectorAll('[data-online-goals]').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('[data-online-duration]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    };
-  });
-
   document.querySelectorAll('[data-online-duration]').forEach(btn => {
     btn.onclick = () => {
       setupDuration = parseInt(btn.getAttribute('data-online-duration'), 10);
-      setupTargetGoals = null;
       document.querySelectorAll('[data-online-duration]').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('[data-online-goals]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
   });
@@ -8191,7 +7854,7 @@ function wireEvents() {
         const sel = document.getElementById('online-home-select');
         if (sel) onlineTeamPicker.home.presetIdx = parseInt(sel.value, 10);
       }
-      onlineCreateRoom(resolvePickedTeam('home'), setupDuration, setupTargetGoals);
+      onlineCreateRoom(resolvePickedTeam('home'), setupDuration);
     };
   }
 
@@ -8203,7 +7866,7 @@ function wireEvents() {
         const sel = document.getElementById('online-home-select');
         if (sel) onlineTeamPicker.home.presetIdx = parseInt(sel.value, 10);
       }
-      onlineQuickMatch(resolvePickedTeam('home'), setupDuration, setupTargetGoals);
+      onlineQuickMatch(resolvePickedTeam('home'), setupDuration);
     };
   }
 
@@ -8400,14 +8063,10 @@ function wireEvents() {
       const fresh = getInitialState();
       const noTurnTimer = document.getElementById('no-turn-timer-check')?.checked;
       const turnDur = noTurnTimer ? 9999 : setupDuration <= 2 ? 10 : setupDuration <= 5 ? 20 : TURN_DURATION;
-      const useGoals = setupTargetGoals !== null;
-      const finalTurnDur = useGoals ? TURN_DURATION : turnDur;
       setState({
         ...fresh, homeTeam: finalHomeTeam, awayTeam: finalAwayTeam,
-        gamePhase: 'pre-game-roll', halfDurationMinutes: useGoals ? 0 : setupDuration,
-        gameClock: useGoals ? 0 : setupDuration * 60,
-        targetGoals: setupTargetGoals,
-        turnDuration: finalTurnDur, timer: finalTurnDur,
+        gamePhase: 'pre-game-roll', halfDurationMinutes: setupDuration, gameClock: setupDuration * 60,
+        turnDuration: turnDur, timer: turnDur,
         message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
         toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
@@ -8430,36 +8089,21 @@ function wireEvents() {
       const { finalHomeTeam, finalAwayTeam, clashResolved } = resolveKitClash(homeTeam, awayTeam);
       const fresh = getInitialState();
       const turnDur = document.getElementById('no-turn-timer-check')?.checked ? 9999 : setupDuration <= 2 ? 10 : setupDuration <= 5 ? 20 : TURN_DURATION;
-      const useGoalsAi = setupTargetGoals !== null;
-      const finalTurnDurAi = useGoalsAi ? TURN_DURATION : turnDur;
       const aiTeam = aiHumanSide === 'home' ? 'away' : 'home';
       setState({
         ...fresh, homeTeam: finalHomeTeam, awayTeam: finalAwayTeam, gameMode: 'vs-ai',
         aiTeam, aiDifficulty: aiDifficultyChoice,
-        gamePhase: 'pre-game-roll', halfDurationMinutes: useGoalsAi ? 0 : setupDuration, gameClock: useGoalsAi ? 0 : setupDuration * 60,
-        targetGoals: setupTargetGoals, turnDuration: finalTurnDurAi, timer: finalTurnDurAi,
+        gamePhase: 'pre-game-roll', halfDurationMinutes: setupDuration, gameClock: setupDuration * 60,
         turnDuration: turnDur, timer: turnDur,
         message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
         toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
     };
   }
-  document.querySelectorAll('[data-goals]').forEach(btn => {
-    btn.onclick = () => {
-      setupTargetGoals = parseInt(btn.getAttribute('data-goals'), 10);
-      setupDuration = 0; // disable time-based
-      document.querySelectorAll('[data-goals]').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('[data-duration]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-    };
-  });
-
   document.querySelectorAll('[data-duration]').forEach(btn => {
     btn.onclick = () => {
       setupDuration = parseInt(btn.getAttribute('data-duration'), 10);
-      setupTargetGoals = null; // clear goals mode
       document.querySelectorAll('[data-duration]').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('[data-goals]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
   });
@@ -8523,90 +8167,6 @@ function wireEvents() {
   };
 
   // Dice roll
-  ['local-undo-btn-d','local-undo-btn-m'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => handleLocalUndo();
-  });
-  ['request-undo-btn-d','request-undo-btn-m'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => requestOnlineUndo();
-  });
-  ['accept-undo-btn-d','accept-undo-btn-m'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => acceptOnlineUndo();
-  });
-  ['decline-undo-btn-d','decline-undo-btn-m'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => declineOnlineUndo();
-  });
-  // undo accept/decline wired above with -d/-m suffix IDs
-
-  const resetBtnMobile = document.getElementById('reset-btn-mobile');
-  if (resetBtnMobile) resetBtnMobile.onclick = () => {
-    if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
-      setState(s => {
-        const fresh = getInitialState();
-        return { ...fresh, homeTeam: s.homeTeam, awayTeam: s.awayTeam,
-          halfDurationMinutes: s.halfDurationMinutes, gameClock: s.halfDurationMinutes * 60,
-          targetGoals: s.targetGoals, overtimeMode: null,
-          turnDuration: s.turnDuration, timer: s.turnDuration,
-          gameMode: s.gameMode, aiTeam: s.aiTeam, aiDifficulty: s.aiDifficulty,
-          gamePhase: 'pre-game-roll',
-          message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
-        };
-      });
-    }
-  };
-  const exitMenuBtnMobile = document.getElementById('exit-to-menu-btn-mobile');
-  if (exitMenuBtnMobile) exitMenuBtnMobile.onclick = () => {
-    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
-      if (state.gameMode === 'online') leaveOnlineRoom();
-      currentMenuView = 'main'; setState(getInitialState());
-    }
-  };
-
-  ['overtime-extra-btn-d','overtime-extra-btn-m','overtime-extra-btn'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => {
-      if (state.gameMode === 'online' && !onlineIsHost) return;
-      setState(s => {
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(), s.score.home > s.score.away ? 'away' : 'home');
-        const kickoffTeam = s.score.home <= s.score.away ? 'home' : 'away';
-        const kickoffName = getTeamName(s, kickoffTeam);
-        const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : `¡Prórroga! Saca ${kickoffName}.`;
-        return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
-          gamePhase: 'pre-game-roll', half: 2, gameClock: s.halfDurationMinutes * 60,
-          overtimeMode: 'extra-time', isClockRunning: false, diceValue: null, homeRoll: null, awayRoll: null,
-          prevTurnSnapshot: null,
-        }, msg, 'game-event');
-      });
-    };
-  });
-  ['overtime-golden-btn-d','overtime-golden-btn-m','overtime-golden-btn'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => {
-      if (state.gameMode === 'online' && !onlineIsHost) return;
-      setState(s => {
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(), 'home');
-        const msg = lang === 'en' ? 'Golden goal! First to score wins.' : '¡Gol de oro! El primero en marcar gana.';
-        return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
-          gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
-          diceValue: null, homeRoll: null, awayRoll: null, prevTurnSnapshot: null,
-        }, msg, 'game-event');
-      });
-    };
-  });
-  ['overtime-draw-btn-d','overtime-draw-btn-m','overtime-draw-btn'].forEach(id => {
-    const btn = document.getElementById(id);
-    if (btn) btn.onclick = () => {
-      if (state.gameMode === 'online' && !onlineIsHost) return;
-      setState(s => {
-        const msg = lang === 'en' ? 'Match ends in a draw.' : 'El partido termina en empate.';
-        return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
-      });
-    };
-  });
-
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
     if (state.gameMode === 'tutorial') { handleTutorialAction({ type: 'click_element', payload: { elementId: 'dice-roll-button' } }); return; }
@@ -8710,25 +8270,8 @@ function wireEvents() {
   const resetBtn = document.getElementById('reset-btn');
   if (resetBtn) resetBtn.onclick = () => {
     if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
-      setState(s => {
-        const fresh = getInitialState();
-        return {
-          ...fresh,
-          homeTeam: s.homeTeam,
-          awayTeam: s.awayTeam,
-          halfDurationMinutes: s.halfDurationMinutes,
-          gameClock: s.halfDurationMinutes * 60,
-          targetGoals: s.targetGoals,
-          overtimeMode: null,
-          turnDuration: s.turnDuration,
-          timer: s.turnDuration,
-          gameMode: s.gameMode,
-          aiTeam: s.aiTeam,
-          aiDifficulty: s.aiDifficulty,
-          gamePhase: 'pre-game-roll',
-          message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
-        };
-      });
+      if (state.gameMode === 'online') leaveOnlineRoom();
+      currentMenuView = 'main'; setState(getInitialState());
     }
   };
 
@@ -8978,8 +8521,6 @@ function resolveKickoffWinner(s) {
 }
 
 function doDiceRoll() {
-  // If there's a pending undo request from the opponent, rolling the dice cancels it
-  if (onlineIncomingUndoFrom) declineOnlineUndo();
   sounds.diceRoll();
   const roll = DICE_VALUES[Math.floor(Math.random() * DICE_VALUES.length)];
   setState(s => {
@@ -9014,14 +8555,6 @@ function doDiceRoll() {
     return {
       ...withLog, gamePhase: 'selecting-piece',
       turnStartState: { players: s.players, ballPosition: s.ballPosition, lastPlayerToTouchBallId: s.lastPlayerToTouchBallId },
-      prevTurnSnapshot: {
-        players: s.players.map(p => ({ ...p, position: { ...p.position } })),
-        ballPosition: s.ballPosition ? { ...s.ballPosition } : null,
-        lastPlayerToTouchBallId: s.lastPlayerToTouchBallId,
-        currentPlayer: s.currentPlayer,
-        turnCount: s.turnCount,
-        diceValue: roll,
-      },
     };
   });
 }
@@ -9051,7 +8584,6 @@ function startClock() {
     if (!state.isClockRunning) return;
     if (state.gamePhase === 'main-menu' || state.gamePhase === 'game-over' || state.gamePhase === 'half-time') return;
     if (state.gameMode === 'online' && document.visibilityState === 'hidden') return;
-    if (state.targetGoals) return; // goals mode — no clock
     if (state.gameClock > 0) {
       setLocalOnlyState(s => ({ ...s, gameClock: s.gameClock - 1 }));
       return;
@@ -9153,24 +8685,6 @@ function startTurnTimer() {
       return;
     }
 
-    // Overtime-choice timeout (online only, host decides in 30s or match ends in draw)
-    const isOvertimeChoice = state.gamePhase === 'overtime-choice' && state.gameMode === 'online';
-    if (isOvertimeChoice) {
-      if (overtimeChoiceStartedAt === null) overtimeChoiceStartedAt = Date.now();
-      const elapsed = Math.floor((Date.now() - overtimeChoiceStartedAt) / 1000);
-      const remaining = Math.max(0, 30 - elapsed);
-      if (state.timer !== remaining) setLocalOnlyState(s => ({ ...s, timer: remaining }));
-      if (remaining === 0 && onlineIsHost) {
-        overtimeChoiceStartedAt = null;
-        setState(s => {
-          if (s.gamePhase !== 'overtime-choice') return s;
-          const msg = lang === 'en' ? 'Time ran out. Match ends in a draw.' : 'Se acabó el tiempo. El partido termina en empate.';
-          return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
-        });
-      }
-      return;
-    }
-
     const isTimerActive = isNormalTurn;
     if (!isTimerActive) return;
 
@@ -9214,7 +8728,6 @@ function autoRollPreGame() {
 // desync between host and guest who receive the half-time state at different times.
 let halfTimeStartedAt = null;
 let preGameRollStartedAt = null; // wall-clock reference for pre-game-roll timer
-let overtimeChoiceStartedAt = null; // wall-clock reference for overtime-choice timeout
 
 function startSecondHalfOnlineAuto() {
   if (state.gamePhase !== 'half-time' || state.gameMode !== 'online') return;
@@ -9227,7 +8740,7 @@ function startSecondHalfOnlineAuto() {
       ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
       currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-      isClockRunning: true, isKickoffTurn: true, assistProviderId: null, prevTurnSnapshot: null,
+      isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
     };
     return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
   });
