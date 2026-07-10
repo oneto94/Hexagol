@@ -1,5 +1,5 @@
 // Hexagol Service Worker — caches the app shell for offline use
-const CACHE_NAME = 'hexagol-v1';
+const CACHE_NAME = 'hexagol-v2';
 const ASSETS = [
   '/',
   '/index.html',
