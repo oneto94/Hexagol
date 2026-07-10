@@ -28,6 +28,8 @@ self.addEventListener('activate', event => {
 
 // Fetch: network first, fall back to cache
 self.addEventListener('fetch', event => {
+  // Only handle GET requests — POST (Firebase, etc.) can't be cached
+  if (event.request.method !== 'GET') return;
   // Only cache same-origin requests (not Firebase/CDN)
   if (!event.request.url.startsWith(self.location.origin)) return;
   event.respondWith(
