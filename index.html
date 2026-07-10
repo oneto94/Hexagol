@@ -156,18 +156,17 @@
   }
 
   /* ── Mobile game layout (≤600px) ──────────────────────────────────────────
-     Board takes ~80% of screen height. Panel is a minimal strip below.      */
+     Board fills remaining space. Panel has guaranteed minimum height.       */
   @media (max-width: 600px) {
-    .game-layout { grid-template-columns: 1fr; grid-template-rows: 1fr auto; gap: 3px; }
+    .game-layout { grid-template-columns: 1fr; grid-template-rows: minmax(0,1fr) auto; gap: 3px; height: 100vh; height: 100dvh; overflow: hidden; }
 
-    /* Board: zero padding, maximum space */
-    .board-wrap { padding: 2px; border-radius: 8px; gap: 2px; }
-    .board-message { font-size: 0.65rem; padding: 2px 6px; margin-bottom: 2px; min-height: 0; border-radius: 6px; }
-    .situation-banner { font-size: 0.62rem; padding: 3px 6px; margin-bottom: 2px; }
+    /* Board: fills remaining space after panel, clips overflow */
+    .board-wrap { padding: 2px; border-radius: 8px; gap: 2px; min-height: 0; overflow: hidden; }
+    .board-frame { min-height: 0; overflow: hidden; }
+    svg#board { height: 100%; width: auto; max-width: 100%; display: block; }
 
-    /* Panel: hard cap at 20vh */
-    .panel { max-height: 20vh; min-height: 0; border-radius: 8px; padding: 3px 6px; gap: 2px; overflow: hidden; }
-    /* Expanded panel for game-over and half-time — needs to show more content */
+    /* Panel: guaranteed minimum so content always visible, scrollable if more */
+    .panel { min-height: 150px; max-height: 30vh; overflow-y: auto; border-radius: 8px; padding: 3px 6px; gap: 2px; }
     .panel.panel-expanded { max-height: 60vh; overflow-y: auto; }
 
     /* Hide stats, log, and dice panel title */
@@ -184,6 +183,9 @@
     .sound-toggle-btn { display: none; }
     .fullscreen-btn { font-size: 0.65rem; padding: 0 1px; }
 
+    .board-message { font-size: 0.65rem; padding: 2px 6px; margin-bottom: 2px; min-height: 0; border-radius: 6px; }
+    .situation-banner { font-size: 0.62rem; padding: 3px 6px; margin-bottom: 2px; }
+
     /* Timer: hide the bar, keep only the number */
     .turn-timer-row { margin-top: 1px; gap: 4px; }
     .turn-timer-bar { display: none; }
@@ -194,8 +196,8 @@
     .dice-row { gap: 4px; }
     .dice-face { width: 26px; height: 26px; font-size: 0.76rem; border-radius: 6px; }
 
-    /* Buttons: icon-size, minimal padding */
-    .btn { padding: 4px 8px; font-size: 0.66rem; border-radius: 999px; }
+    /* Hide desktop-only elements on mobile */
+    .hide-on-mobile { display: none !important; }
     .btn-row { gap: 3px; margin-top: 2px; }
 
     /* Chat FAB: smaller, closer to corner */
@@ -7740,8 +7742,8 @@ function renderGameScreen(s) {
         </ul>
       </div>
       <div class="btn-row" style="gap:6px;">
-        ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>` : ''}
-        <button class="btn ghost" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : 'Menú principal'}</button>
+        ${s.gameMode !== 'online' ? `<button class="btn ghost hide-on-mobile" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>` : ''}
+        <button class="btn ghost hide-on-mobile" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : 'Menú principal'}</button>
       </div>
     </div>
   </div>
@@ -7889,11 +7891,11 @@ function renderDicePanel(s) {
           <button class="btn" id="overtime-golden-btn-d" style="width:100%;margin-bottom:6px;background:#d4a017;border-color:#d4a017;">${goldenGoalLabel}</button>
           <button class="btn ghost" id="overtime-draw-btn-d" style="width:100%;">${drawLabel}</button>
         </div>
-        <div class="mobile-action-row">
+        <div class="mobile-action-row" style="padding-right:44px;">
           <span style="font-size:0.75rem;color:#6b7a64;margin-right:auto;">${continueLabel}</span>
-          <button class="btn ghost" id="overtime-extra-btn-m" style="padding:2px 7px;font-size:0.72rem;" title="${extraTimeLabel}">⏱</button>
+          <button class="btn ghost" id="overtime-draw-btn-m" style="padding:2px 7px;font-size:0.72rem;" title="${drawLabel}">🤝</button>
           <button class="btn ghost" id="overtime-golden-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${goldenGoalLabel}">⚽</button>
-          <button class="btn ghost" id="overtime-draw-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${drawLabel}">🤝</button>
+          <button class="btn ghost" id="overtime-extra-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${extraTimeLabel}">⏱</button>
         </div>`}
     </div>`;
   }
