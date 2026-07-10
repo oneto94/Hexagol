@@ -1338,6 +1338,11 @@ function applyRemoteState(remote) {
   } else if (state.gamePhase !== 'pre-game-roll') {
     preGameRollStartedAt = null;
   }
+  if (prev.gamePhase !== 'overtime-choice' && state.gamePhase === 'overtime-choice') {
+    overtimeChoiceStartedAt = Date.now();
+  } else if (state.gamePhase !== 'overtime-choice') {
+    overtimeChoiceStartedAt = null;
+  }
 
   // When host roll arrives at guest: reset countdown so guest rolls quickly
   // instead of waiting up to 30s for the timer to expire naturally
@@ -4245,6 +4250,13 @@ function updateClockDisplaySurgically() {
   const timerFillEl = document.getElementById('turn-timer-fill');
   const timerLabelEl = document.getElementById('turn-timer-label');
 
+  // Update overtime-choice countdown surgically
+  const overtimeCountdownEl = document.getElementById('overtime-countdown');
+  if (overtimeCountdownEl) {
+    overtimeCountdownEl.textContent = state.timer;
+    return;
+  }
+
   if (!clockEl && !timerFillEl && !timerLabelEl) {
     // During half-time and pre-game-roll, no clock/timer elements exist in the DOM
     // but we still need to update the countdown span surgically — don't full render
@@ -4515,7 +4527,7 @@ function handleEndHalfOrMatch(s) {
   }
 
   if (s.half === 1) {
-    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false };
+    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false, prevTurnSnapshot: null };
     if (s.gameMode === 'online') halfTimeStartedAt = Date.now();
     return s.gameMode === 'online' ? { ...halfTimeState, timer: 30 } : halfTimeState;
   }
@@ -4527,6 +4539,7 @@ function handleEndHalfOrMatch(s) {
   // If draw at end of regular time (not already in extra time) — offer overtime choice
   if (isDraw && !isExtraTime && !s.targetGoals) {
     const msg = lang === 'en' ? "It's a draw! Choose how to continue." : '¡Empate! Elegí cómo continuar.';
+    if (s.gameMode === 'online') overtimeChoiceStartedAt = Date.now();
     return { ...logAction(s, msg, 'game-event'), gamePhase: 'overtime-choice', isClockRunning: false };
   }
 
@@ -7856,19 +7869,32 @@ function renderDicePanel(s) {
 
   if (s.gamePhase === 'overtime-choice') {
     const isOnlineGuest = s.gameMode === 'online' && !onlineIsHost;
+    const isOnline = s.gameMode === 'online';
     const title = lang === 'en' ? "It's a draw!" : '¡Empate!';
     const extraTimeLabel = lang === 'en' ? `⏱ Extra time (${s.halfDurationMinutes} min)` : `⏱ Prórroga (${s.halfDurationMinutes} min)`;
     const goldenGoalLabel = lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro';
     const drawLabel = lang === 'en' ? 'End as draw' : 'Terminar en empate';
+    const countdownHtml = isOnline ? `<div style="font-size:0.75rem;color:#9aa593;text-align:center;margin-bottom:8px;">⏳ <span id="overtime-countdown">${s.timer}</span>s</div>` : '';
     const waitingLabel = lang === 'en' ? 'Waiting for host to decide...' : 'Esperando que el anfitrión decida...';
+    const continueLabel = lang === 'en' ? 'How do you want to continue?' : '¿Cómo querés continuar?';
     return `<div class="dice-panel">
       <h3>${title}</h3>
+      ${countdownHtml}
       ${isOnlineGuest
         ? `<div style="font-size:0.82rem;color:#6b7a64;text-align:center;padding:10px 0;">${waitingLabel}</div>`
-        : `<div style="font-size:0.8rem;color:#6b7a64;margin-bottom:10px;text-align:center;">${lang === 'en' ? 'How do you want to continue?' : '¿Cómo querés continuar?'}</div>
-      <button class="btn" id="overtime-extra-btn" style="width:100%;margin-bottom:6px;">${extraTimeLabel}</button>
-      <button class="btn" id="overtime-golden-btn" style="width:100%;margin-bottom:6px;background:#d4a017;border-color:#d4a017;">${goldenGoalLabel}</button>
-      <button class="btn ghost" id="overtime-draw-btn" style="width:100%;">${drawLabel}</button>`}
+        : `
+        <div class="undo-desktop">
+          <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:10px;text-align:center;">${continueLabel}</div>
+          <button class="btn" id="overtime-extra-btn-d" style="width:100%;margin-bottom:6px;">${extraTimeLabel}</button>
+          <button class="btn" id="overtime-golden-btn-d" style="width:100%;margin-bottom:6px;background:#d4a017;border-color:#d4a017;">${goldenGoalLabel}</button>
+          <button class="btn ghost" id="overtime-draw-btn-d" style="width:100%;">${drawLabel}</button>
+        </div>
+        <div class="mobile-action-row">
+          <span style="font-size:0.75rem;color:#6b7a64;margin-right:auto;">${continueLabel}</span>
+          <button class="btn ghost" id="overtime-extra-btn-m" style="padding:2px 7px;font-size:0.72rem;" title="${extraTimeLabel}">⏱</button>
+          <button class="btn ghost" id="overtime-golden-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${goldenGoalLabel}">⚽</button>
+          <button class="btn ghost" id="overtime-draw-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${drawLabel}">🤝</button>
+        </div>`}
     </div>`;
   }
 
@@ -8539,40 +8565,47 @@ function wireEvents() {
     }
   };
 
-  const overtimeExtraBtn = document.getElementById('overtime-extra-btn');
-  if (overtimeExtraBtn) overtimeExtraBtn.onclick = () => {
-    if (state.gameMode === 'online' && !onlineIsHost) return; // only host decides
-    setState(s => {
-      const newPlayers = movePlayersForKickoff(getInitialPlayers(), s.score.home > s.score.away ? 'away' : 'home');
-      const kickoffTeam = s.score.home <= s.score.away ? 'home' : 'away';
-      const kickoffName = getTeamName(s, kickoffTeam);
-      const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : `¡Prórroga! Saca ${kickoffName}.`;
-      return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
-        gamePhase: 'pre-game-roll', half: 2, gameClock: s.halfDurationMinutes * 60,
-        overtimeMode: 'extra-time', isClockRunning: false, diceValue: null, homeRoll: null, awayRoll: null,
-      }, msg, 'game-event');
-    });
-  };
-  const overtimeGoldenBtn = document.getElementById('overtime-golden-btn');
-  if (overtimeGoldenBtn) overtimeGoldenBtn.onclick = () => {
-    if (state.gameMode === 'online' && !onlineIsHost) return; // only host decides
-    setState(s => {
-      const newPlayers = movePlayersForKickoff(getInitialPlayers(), 'home');
-      const msg = lang === 'en' ? 'Golden goal! First to score wins.' : '¡Gol de oro! El primero en marcar gana.';
-      return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
-        gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
-        diceValue: null, homeRoll: null, awayRoll: null,
-      }, msg, 'game-event');
-    });
-  };
-  const overtimeDrawBtn = document.getElementById('overtime-draw-btn');
-  if (overtimeDrawBtn) overtimeDrawBtn.onclick = () => {
-    if (state.gameMode === 'online' && !onlineIsHost) return; // only host decides
-    setState(s => {
-      const msg = lang === 'en' ? 'Match ends in a draw.' : 'El partido termina en empate.';
-      return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
-    });
-  };
+  ['overtime-extra-btn-d','overtime-extra-btn-m','overtime-extra-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => {
+      if (state.gameMode === 'online' && !onlineIsHost) return;
+      setState(s => {
+        const newPlayers = movePlayersForKickoff(getInitialPlayers(), s.score.home > s.score.away ? 'away' : 'home');
+        const kickoffTeam = s.score.home <= s.score.away ? 'home' : 'away';
+        const kickoffName = getTeamName(s, kickoffTeam);
+        const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : `¡Prórroga! Saca ${kickoffName}.`;
+        return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+          gamePhase: 'pre-game-roll', half: 2, gameClock: s.halfDurationMinutes * 60,
+          overtimeMode: 'extra-time', isClockRunning: false, diceValue: null, homeRoll: null, awayRoll: null,
+          prevTurnSnapshot: null,
+        }, msg, 'game-event');
+      });
+    };
+  });
+  ['overtime-golden-btn-d','overtime-golden-btn-m','overtime-golden-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => {
+      if (state.gameMode === 'online' && !onlineIsHost) return;
+      setState(s => {
+        const newPlayers = movePlayersForKickoff(getInitialPlayers(), 'home');
+        const msg = lang === 'en' ? 'Golden goal! First to score wins.' : '¡Gol de oro! El primero en marcar gana.';
+        return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+          gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
+          diceValue: null, homeRoll: null, awayRoll: null, prevTurnSnapshot: null,
+        }, msg, 'game-event');
+      });
+    };
+  });
+  ['overtime-draw-btn-d','overtime-draw-btn-m','overtime-draw-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.onclick = () => {
+      if (state.gameMode === 'online' && !onlineIsHost) return;
+      setState(s => {
+        const msg = lang === 'en' ? 'Match ends in a draw.' : 'El partido termina en empate.';
+        return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
+      });
+    };
+  });
 
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
@@ -9120,6 +9153,24 @@ function startTurnTimer() {
       return;
     }
 
+    // Overtime-choice timeout (online only, host decides in 30s or match ends in draw)
+    const isOvertimeChoice = state.gamePhase === 'overtime-choice' && state.gameMode === 'online';
+    if (isOvertimeChoice) {
+      if (overtimeChoiceStartedAt === null) overtimeChoiceStartedAt = Date.now();
+      const elapsed = Math.floor((Date.now() - overtimeChoiceStartedAt) / 1000);
+      const remaining = Math.max(0, 30 - elapsed);
+      if (state.timer !== remaining) setLocalOnlyState(s => ({ ...s, timer: remaining }));
+      if (remaining === 0 && onlineIsHost) {
+        overtimeChoiceStartedAt = null;
+        setState(s => {
+          if (s.gamePhase !== 'overtime-choice') return s;
+          const msg = lang === 'en' ? 'Time ran out. Match ends in a draw.' : 'Se acabó el tiempo. El partido termina en empate.';
+          return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
+        });
+      }
+      return;
+    }
+
     const isTimerActive = isNormalTurn;
     if (!isTimerActive) return;
 
@@ -9163,6 +9214,7 @@ function autoRollPreGame() {
 // desync between host and guest who receive the half-time state at different times.
 let halfTimeStartedAt = null;
 let preGameRollStartedAt = null; // wall-clock reference for pre-game-roll timer
+let overtimeChoiceStartedAt = null; // wall-clock reference for overtime-choice timeout
 
 function startSecondHalfOnlineAuto() {
   if (state.gamePhase !== 'half-time' || state.gameMode !== 'online') return;
@@ -9175,7 +9227,7 @@ function startSecondHalfOnlineAuto() {
       ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
       currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-      isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
+      isClockRunning: true, isKickoffTurn: true, assistProviderId: null, prevTurnSnapshot: null,
     };
     return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
   });
