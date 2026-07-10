@@ -1361,6 +1361,21 @@ function applyRemoteState(remote) {
   }
   window.state = state;
   playSoundsForTransition(prev, state);
+
+  // ── Checksum verification ──────────────────────────────────────────────────
+  // If the remote state has a hash and it doesn't match what we compute
+  // locally, our state has diverged. Force a full re-sync from the remote.
+  if (!isFirstState && remote._hash !== undefined) {
+    const localHash = hashState(state);
+    if (localHash !== remote._hash) {
+      console.warn('[Hexagol Sync] ⚠️ State divergence detected! Remote hash:', remote._hash, 'Local hash:', localHash, 'turn:', state.turnCount);
+      // Force full re-sync: apply remote state unconditionally
+      state = { ...remote, gameClock: state.gameClock, timer: state.timer };
+      window.state = state;
+      console.log('[Hexagol Sync] ✅ Re-synced from remote state.');
+    }
+  }
+
   currentMenuView = 'main';
   // Preserve whatever the user is mid-typing in the chat input — render()
   // replaces the whole DOM so the <input> gets destroyed and recreated,
@@ -1378,12 +1393,37 @@ function applyRemoteState(remote) {
   }
 }
 
+// ── Checksum ─────────────────────────────────────────────────────────────────
+// Simple but fast hash of the game state critical fields.
+// Used to detect divergence between host and guest.
+function hashState(s) {
+  if (!s) return 0;
+  let h = 0;
+  // Score
+  h = h * 31 + (s.score?.home || 0);
+  h = h * 31 + (s.score?.away || 0);
+  // Turn and phase
+  h = h * 31 + (s.turnCount || 0);
+  h = h * 31 + (s.half || 0);
+  h = h * 31 + (s.gamePhase ? s.gamePhase.charCodeAt(0) : 0);
+  // Ball position
+  h = h * 31 + (s.ballPosition?.x || 0) * 100 + (s.ballPosition?.y || 0);
+  // All player positions
+  if (s.players) {
+    s.players.forEach(p => {
+      h = h * 31 + (p.position?.x || 0) * 1000 + (p.position?.y || 0);
+    });
+  }
+  return Math.abs(h % 999983); // keep it small and positive
+}
+
 function pushOnlineState(s) {
   if (!onlineRoomRef || onlineStatus !== 'connected') return;
   const payload = sanitizeForFirestore(s);
+  payload._hash = hashState(s);
   const pushedAt = Date.now();
   onlineRoomRef.update({ gameState: payload })
-    .then(() => console.log('[Hexagol Sync] Push ok. RTT:', Date.now() - pushedAt, 'ms | turn:', s.turnCount, 'phase:', s.gamePhase))
+    .then(() => console.log('[Hexagol Sync] Push ok. RTT:', Date.now() - pushedAt, 'ms | turn:', s.turnCount, 'phase:', s.gamePhase, 'hash:', payload._hash))
     .catch(err => console.error('[Hexagol Sync] Push failed:', err));
 }
 
@@ -2085,6 +2125,7 @@ function onUndoAccepted() {
       turnCount: snap.turnCount,
       gamePhase: 'selecting-piece',
       diceValue: snap.diceValue,
+      timer: s.turnDuration,
       selectedPlayerId: null,
       validMoves: [], validKickTargets: [], validDragTargets: [],
       validLoftedPassTargets: [], validLoftedDragTargets: [],
@@ -9030,6 +9071,8 @@ function doDiceRoll() {
 
 /* ---------------- Clock ---------------- */
 function advanceTurnByTimeout(s) {
+  // If there's a pending undo request, auto-decline it when turn times out
+  if (onlineIncomingUndoFrom) declineOnlineUndo();
   const logState = logAction(s, lang === 'en' ? "Time's up!" : '¡Tiempo agotado!', 'game-event', s.currentPlayer);
   if (s.gamePhase === 'chain-pass' && s.turnStartState) {
     const logState2 = logAction(logState, lang === 'en' ? 'Chain pass cancelled due to timeout.' : 'La jugada de pase en cadena se anula por falta de tiempo.', 'game-event', s.currentPlayer);
@@ -9283,6 +9326,21 @@ function wireAuthEvents() {
     if (el) el.onkeydown = (e) => { if (e.key === 'Enter') submitBtn?.click(); };
   });
 }
+
+// ── Debug / Test helpers ──────────────────────────────────────────────────────
+// Call from browser console to simulate state divergence:
+//   window.hexagolCorrupt()  — corrupts local state to trigger checksum mismatch
+//   window.hexagolHash()     — logs current state hash
+window.hexagolCorrupt = () => {
+  setLocalOnlyState(s => {
+    const corrupted = { ...s, turnCount: s.turnCount + 99 };
+    console.log('[Hexagol Debug] 💥 State corrupted. hash:', hashState(corrupted), '(differs from remote on next sync)');
+    return corrupted;
+  });
+};
+window.hexagolHash = () => {
+  console.log('[Hexagol Debug] hash:', hashState(state), '| turn:', state.turnCount, '| phase:', state.gamePhase);
+};
 
 render();
 document.addEventListener('fullscreenchange', () => { render(); });
