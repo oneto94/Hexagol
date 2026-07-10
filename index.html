@@ -1778,9 +1778,17 @@ function calculateEloChange(myElo, opponentElo, result, gamesPlayed) {
 
 async function updateEloAfterMatch(myResult, opponentUid) {
   if (!currentUser || currentUser.isAnonymous || !userProfile) return;
+
+  const s = state;
+  const myTeam = onlineMyTeam;
+  const myScore = myTeam === 'home' ? s.score.home : s.score.away;
+  const oppScore = myTeam === 'home' ? s.score.away : s.score.home;
+  const myTeamData = myTeam === 'home' ? s.homeTeam : s.awayTeam;
+  const oppTeamData = myTeam === 'home' ? s.awayTeam : s.homeTeam;
+
   if (!opponentUid) {
-    // Opponent is a guest (no UID) — still update our own stats, use default ELO for calculation
     const myChange = calculateEloChange(userProfile.elo, DEFAULT_ELO, myResult, userProfile.gamesPlayed);
+    const prevElo = userProfile.elo;
     userProfile.elo = Math.max(100, userProfile.elo + myChange);
     userProfile.gamesPlayed++;
     if (myResult === 'win') userProfile.wins++;
@@ -1793,23 +1801,34 @@ async function updateEloAfterMatch(myResult, opponentUid) {
       losses: userProfile.losses,
       draws: userProfile.draws,
     });
+    // Save match to history
+    await db.collection('users').doc(currentUser.uid).collection('matches').add({
+      result: myResult,
+      myScore, oppScore,
+      myTeam: myTeamData?.name || '',
+      oppTeam: oppTeamData?.name || '',
+      eloChange: userProfile.elo - prevElo,
+      eloAfter: userProfile.elo,
+      opponentUid: null,
+      opponentName: lang === 'en' ? 'Guest' : 'Invitado',
+      playedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    }).catch(() => {});
     return;
   }
 
-  // Read opponent's current ELO to calculate the change
   const opponentSnap = await db.collection('users').doc(opponentUid).get();
   const opponentElo = opponentSnap.exists ? (opponentSnap.data().elo || DEFAULT_ELO) : DEFAULT_ELO;
   const opponentGames = opponentSnap.exists ? (opponentSnap.data().gamesPlayed || 0) : 0;
+  const opponentName = opponentSnap.exists ? (opponentSnap.data().username || '?') : '?';
 
   const myChange = calculateEloChange(userProfile.elo, opponentElo, myResult, userProfile.gamesPlayed);
+  const prevElo = userProfile.elo;
   userProfile.elo = Math.max(100, userProfile.elo + myChange);
   userProfile.gamesPlayed++;
   if (myResult === 'win') userProfile.wins++;
   else if (myResult === 'loss') userProfile.losses++;
   else userProfile.draws++;
 
-  // Each player only writes their OWN document — Firestore rules allow this.
-  // The opponent does the same on their side when their game-over triggers.
   await db.collection('users').doc(currentUser.uid).update({
     elo: userProfile.elo,
     gamesPlayed: userProfile.gamesPlayed,
@@ -1817,6 +1836,18 @@ async function updateEloAfterMatch(myResult, opponentUid) {
     losses: userProfile.losses,
     draws: userProfile.draws,
   });
+  // Save match to history
+  await db.collection('users').doc(currentUser.uid).collection('matches').add({
+    result: myResult,
+    myScore, oppScore,
+    myTeam: myTeamData?.name || '',
+    oppTeam: oppTeamData?.name || '',
+    eloChange: userProfile.elo - prevElo,
+    eloAfter: userProfile.elo,
+    opponentUid,
+    opponentName,
+    playedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  }).catch(() => {});
 }
 
 async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
@@ -6819,6 +6850,7 @@ function renderMainMenu() {
         <div class="user-chip-name">${userProfile.username}</div>
         <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : 'D'}</div>
       </div>
+      <button data-menu="match-history" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">📋</button>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
     <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
@@ -7341,6 +7373,63 @@ async function loadLeaderboard() {
   }
   leaderboardLoading = false;
   render();
+}
+
+async function renderMatchHistory() {
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : 'Cargando...'}</div></div>`;
+
+  if (!currentUser || currentUser.isAnonymous) {
+    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1>
+      <p style="color:#6b7a64;text-align:center;">${lang === 'en' ? 'You need an account to see your match history.' : 'Necesitás una cuenta para ver tu historial.'}</p>
+      <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
+    document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
+    return;
+  }
+
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('matches')
+      .orderBy('playedAt', 'desc').limit(20).get().catch(() => null);
+
+    const matches = snap ? snap.docs.map(doc => doc.data()) : [];
+
+    const rows = matches.length === 0
+      ? `<p style="text-align:center;color:#8a9582;padding:20px 0;">${lang === 'en' ? 'No matches yet.' : 'Todavía no jugaste ninguna partida.'}</p>`
+      : matches.map(m => {
+          const resultColor = m.result === 'win' ? '#2a6e3f' : m.result === 'loss' ? '#9a2f24' : '#6b7a64';
+          const resultLabel = m.result === 'win' ? (lang === 'en' ? 'W' : 'G') : m.result === 'loss' ? (lang === 'en' ? 'L' : 'D') : (lang === 'en' ? 'D' : 'E');
+          const eloSign = m.eloChange >= 0 ? '+' : '';
+          const date = m.playedAt?.toDate?.() ? m.playedAt.toDate().toLocaleDateString(lang === 'en' ? 'en-US' : 'es-AR', { day: '2-digit', month: '2-digit' }) : '';
+          return `
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #e1e8db;">
+            <div style="font-size:1.1rem;font-weight:900;color:${resultColor};min-width:20px;text-align:center;">${resultLabel}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:0.82rem;font-weight:600;color:#1c2b22;">${m.myTeam} <span style="color:#9aa593;">vs</span> ${m.oppTeam}</div>
+              <div style="font-size:0.72rem;color:#6b7a64;">${m.opponentName || '?'} · ${date}</div>
+            </div>
+            <div style="font-size:1rem;font-weight:700;color:#1c2b22;min-width:36px;text-align:center;">${m.myScore}-${m.oppScore}</div>
+            <div style="font-size:0.75rem;font-weight:600;color:${m.eloChange >= 0 ? '#2a6e3f' : '#9a2f24'};min-width:36px;text-align:right;">${eloSign}${m.eloChange}</div>
+          </div>`;
+        }).join('');
+
+    app.innerHTML = `
+    <div class="menu-screen" style="max-width:560px;">
+      <h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1>
+      <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;text-align:center;">${lang === 'en' ? 'Last 20 matches' : 'Últimas 20 partidas'}</div>
+      <div>${rows}</div>
+      <div class="menu-grid" style="margin-top:16px;">
+        <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button>
+      </div>
+    </div>`;
+    document.getElementById('match-history-back-btn')?.addEventListener('click', () => {
+      currentMenuView = 'main'; render();
+    });
+  } catch (e) {
+    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1>
+      <p style="color:#9a2f24;text-align:center;">${lang === 'en' ? 'Could not load history.' : 'No se pudo cargar el historial.'}</p>
+      <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
+    document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
+  }
 }
 
 function renderLeaderboard() {
@@ -8188,6 +8277,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'match-history') { renderMatchHistory(); }
     else if (currentMenuView === 'play') app.innerHTML = renderPlayMenu();
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
     else if (currentMenuView === 'ai-setup') app.innerHTML = renderAiSetup();
