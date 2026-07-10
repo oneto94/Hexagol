@@ -662,6 +662,25 @@
     font-weight: 700; font-size: 0.78rem; color: #fff; font-family: inherit;
   }
 
+  /* ── Goal animation overlay ─────────────────────────────────────────────── */
+  @keyframes goalOverlayIn {
+    from { opacity: 0; transform: scale(1.05); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes goalOverlayOut {
+    from { opacity: 1; transform: scale(1); }
+    to   { opacity: 0; transform: scale(0.95); }
+  }
+  @keyframes goalTextPop {
+    from { opacity: 0; transform: scale(0.5); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes goalBallBounce {
+    0%   { opacity: 0; transform: translateY(-30px) scale(0.5); }
+    60%  { transform: translateY(8px) scale(1.1); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
   .footer-note { text-align: center; font-size: 0.7rem; color: #93a08a; margin-top: 14px; }
 
   /* ---------- Online mode ---------- */
@@ -1017,6 +1036,7 @@ const i18n = {
     'game.log': 'Jugadas',
     'game.possession': 'Posesión',
     'game.shots': 'Remates',
+    'game.passes': 'Pases',
     'game.offsides': 'Offsides',
     'game.turn': 'Turno de',
     'game.half': 'T.',
@@ -1176,6 +1196,7 @@ const i18n = {
     'game.log': 'Actions',
     'game.possession': 'Possession',
     'game.shots': 'Shots',
+    'game.passes': 'Passes',
     'game.offsides': 'Offsides',
     'game.turn': 'Turn —',
     'game.half': 'H.',
@@ -1377,6 +1398,10 @@ function applyRemoteState(remote) {
     }
   }
 
+  if (prev.gamePhase !== 'game-over' && state.gamePhase === 'game-over' && state.gameMode === 'online') {
+    scheduleRoomDeletion();
+  }
+
   currentMenuView = 'main';
   // Preserve whatever the user is mid-typing in the chat input — render()
   // replaces the whole DOM so the <input> gets destroyed and recreated,
@@ -1423,7 +1448,10 @@ function pushOnlineState(s) {
   const payload = sanitizeForFirestore(s);
   payload._hash = hashState(s);
   const pushedAt = Date.now();
-  onlineRoomRef.update({ gameState: payload })
+  onlineRoomRef.update({
+    gameState: payload,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+  })
     .then(() => console.log('[Hexagol Sync] Push ok. RTT:', Date.now() - pushedAt, 'ms | turn:', s.turnCount, 'phase:', s.gamePhase, 'hash:', payload._hash))
     .catch(err => console.error('[Hexagol Sync] Push failed:', err));
 }
@@ -1869,9 +1897,17 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
 async function onlineJoinRoom(code, awayTeam) {
   const ref = db.collection('rooms').doc(code.toUpperCase());
   const snap = await ref.get();
-  if (!snap.exists) { alert('Sala no encontrada. Revisá el código e intentá de nuevo.'); return; }
+  if (!snap.exists) { alert(lang === 'en' ? 'Room not found. Check the code and try again.' : 'Sala no encontrada. Revisá el código e intentá de nuevo.'); return; }
   const data = snap.data();
-  if (data.status !== 'waiting') { alert('Esa sala ya está en juego o no existe.'); return; }
+  if (data.status !== 'waiting') { alert(lang === 'en' ? 'That room is already in use or does not exist.' : 'Esa sala ya está en juego o no existe.'); return; }
+
+  // Delete stale rooms with no activity for more than 2 hours
+  const updatedAt = data.updatedAt?.toMillis?.() || data.createdAt?.toMillis?.() || 0;
+  if (updatedAt && Date.now() - updatedAt > 7200000) {
+    ref.delete().catch(() => {});
+    alert(lang === 'en' ? 'That room has been inactive for too long. Ask the host to create a new one.' : 'Esa sala lleva demasiado tiempo inactiva. Pedile al anfitrión que cree una nueva.');
+    return;
+  }
 
   onlineRoomId = code.toUpperCase();
   onlineMyTeam = 'away';
@@ -2192,6 +2228,19 @@ function leaveOnlineRoom() {
   onlineOpponentUid = null;
   onlineRematchRequestedByMe = false;
   onlineIncomingRematchFrom = null;
+}
+
+// Schedule deletion of a room 30s after game-over (both host and guest)
+function scheduleRoomDeletion() {
+  if (!onlineRoomRef) return;
+  const roomToDelete = onlineRoomRef;
+  setTimeout(() => {
+    // Only delete if still game-over and no rematch was started
+    if (state.gamePhase === 'game-over') {
+      roomToDelete.delete().catch(() => {});
+      console.log('[Hexagol Online] Sala eliminada tras game-over.');
+    }
+  }, 30000);
 }
 
 /* =========================================================================
@@ -4158,7 +4207,7 @@ function getInitialState() {
     swapCandidates: [],
     toastToShow: null,
     gameLog: [{ turn: 0, message: lang === 'en' ? 'Match is about to begin.' : 'El partido está por comenzar.', actionType: 'game-event' }],
-    stats: { possession: { home: 0, away: 0 }, shotsOnGoal: { home: 0, away: 0 }, offsides: { home: 0, away: 0 } },
+    stats: { possession: { home: 0, away: 0 }, shotsOnGoal: { home: 0, away: 0 }, offsides: { home: 0, away: 0 }, passes: { home: 0, away: 0 } },
     matchStats: { goals: {}, assists: {} },
     assistProviderId: null,
     turnStartState: null,
@@ -4234,8 +4283,16 @@ const sounds = {
   move: () => playTone(180, 140, 0.08, 'triangle', 0.07),
   kick: () => playTone(320, 90, 0.16, 'square', 0.16),
   goal: () => {
-    // Quick ascending three-note "fanfare" instead of one long tone.
-    [523, 659, 784].forEach((f, i) => setTimeout(() => playTone(f, f, 0.22, 'triangle', 0.2), i * 110));
+    // Celebración: fanfare ascendente + acorde final
+    const notes = [523, 659, 784, 1047]; // C5, E5, G5, C6
+    notes.forEach((f, i) => setTimeout(() => playTone(f, f * 1.02, 0.18, 'triangle', 0.22), i * 90));
+    // Acorde final sostenido
+    setTimeout(() => {
+      [784, 988, 1175].forEach(f => playTone(f, f, 0.5, 'triangle', 0.15));
+    }, notes.length * 90 + 30);
+    // Golpe de tambor (noise burst corto)
+    setTimeout(() => playNoiseBurst(0.08, 0.25), 50);
+    setTimeout(() => playNoiseBurst(0.06, 0.2), 200);
   },
   whistleShort: () => playTone(1800, 1750, 0.32, 'sawtooth', 0.13),
   whistleLong: () => {
@@ -4260,6 +4317,10 @@ function setState(patch) {
   // Push to Firebase only when it's our own action, not when applying a remote update
   if (state.gameMode === 'online' && onlineStatus === 'connected' && !onlineApplyingRemote) {
     pushOnlineState(state);
+    // Schedule room deletion 30s after game-over
+    if (prev.gamePhase !== 'game-over' && state.gamePhase === 'game-over') {
+      scheduleRoomDeletion();
+    }
   }
   render();
   maybeTriggerBot();
@@ -4359,7 +4420,7 @@ function playSoundsForTransition(prev, next) {
     : [];
   const lastType = newEntries.length ? newEntries[newEntries.length - 1].actionType : null;
 
-  if (lastType === 'goal') { sounds.goal(); return; }
+  if (lastType === 'goal') { sounds.goal(); showGoalAnimation(next); return; }
   if (lastType === 'kick' || lastType === 'shot-on-goal' || lastType === 'drag' || lastType === 'lofted-drag') { sounds.kick(); return; }
   if (lastType === 'move') { sounds.move(); return; }
 
@@ -4462,6 +4523,18 @@ function advanceToNextTurn(s, opts) {
   }
 
   const nextStats = { ...s.stats, possession: { ...s.stats.possession, [nextPlayer]: s.stats.possession[nextPlayer] + 1 } };
+  // Override: possession counts when the next player has a piece adjacent to the ball
+  const ballPos = s.ballPosition;
+  if (ballPos) {
+    const homeAdj = s.players.some(p => p.team === 'home' && isAdjacent(p.position, ballPos));
+    const awayAdj = s.players.some(p => p.team === 'away' && isAdjacent(p.position, ballPos));
+    if (homeAdj || awayAdj) {
+      nextStats.possession = {
+        home: s.stats.possession.home + (homeAdj ? 1 : 0),
+        away: s.stats.possession.away + (awayAdj ? 1 : 0),
+      };
+    }
+  }
   const baseMsg = lang === 'en' ? `${teamToKickOffName}'s turn. Roll the dice.` : `Turno de ${teamToKickOffName}. Lanza el dado.`;
   const news = {
     ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'rolling', diceValue: null,
@@ -6111,6 +6184,8 @@ function handleActionExecution(s, executedAction, position) {
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
       const logState = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
+      // Count pass stat
+      const withPassStat = { ...logState, stats: { ...logState.stats, passes: { ...logState.stats.passes, [currentPlayer]: (logState.stats.passes?.[currentPlayer] || 0) + 1 } } };
       const chainResult = getValidChainPassTargets(receivingTeammate, newPlayers);
       const nextReceivers = [];
       chainResult.validTargets.forEach(pos => {
@@ -6118,7 +6193,7 @@ function handleActionExecution(s, executedAction, position) {
         if (receiverOnTile && !isActionOffside(receivingTeammate, pos, newPlayers, position)) nextReceivers.push(pos);
       });
       return {
-        ...logState, gamePhase: 'chain-pass', players: newPlayers, ballPosition: position,
+        ...withPassStat, gamePhase: 'chain-pass', players: newPlayers, ballPosition: position,
         lastPlayerToTouchBallId: currentPasser.id, chainPassInitiatorId: receivingTeammate.id,
         assistProviderId: currentPasser.id, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
@@ -6129,11 +6204,23 @@ function handleActionExecution(s, executedAction, position) {
       };
     }
 
+    // Count shot on goal if there's a clear line to opponent goal within 6 squares
     const logState = logAction(s, lang === 'en' ? `Pass to (${position.x}, ${position.y}).` : `Pase a (${position.x}, ${position.y}).`, 'kick');
+    const oppGoalForShot = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const distToGoal = Math.min(...oppGoalForShot.map(g => Math.abs(g.x - position.x) + Math.abs(g.y - position.y)));
+    const hasClearLineToGoal = distToGoal <= 6 && botHasDirectShotFromPos(position, currentPlayer, players);
+    const hasTeammateAdjacent = players.some(p => p.team === currentPlayer && p.id !== selectedPlayerId && isAdjacent(p.position, position));
+    let withShotStat = logState;
+    if (hasClearLineToGoal) {
+      withShotStat = { ...logState, stats: { ...logState.stats, shotsOnGoal: { ...logState.stats.shotsOnGoal, [currentPlayer]: logState.stats.shotsOnGoal[currentPlayer] + 1 } } };
+    }
+    if (hasTeammateAdjacent) {
+      withShotStat = { ...withShotStat, stats: { ...withShotStat.stats, passes: { ...withShotStat.stats.passes, [currentPlayer]: (withShotStat.stats.passes?.[currentPlayer] || 0) + 1 } } };
+    }
     const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
     const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
     const lastTouchId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
-    const nextChange = { ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } };
+    const nextChange = { ...withShotStat, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } };
     return advanceToNextTurn(nextChange);
   }
 
@@ -7774,6 +7861,7 @@ function renderGameScreen(s) {
         <div class="stats-grid" style="margin-top:6px;">
           <div class="val home">${possHomePct}%</div><div class="label">${t('game.possession')}</div><div class="val away">${100-possHomePct}%</div>
           <div class="val home">${s.stats.shotsOnGoal.home}</div><div class="label">${t('game.shots')}</div><div class="val away">${s.stats.shotsOnGoal.away}</div>
+          <div class="val home">${s.stats.passes?.home || 0}</div><div class="label">${t('game.passes')}</div><div class="val away">${s.stats.passes?.away || 0}</div>
           <div class="val home">${s.stats.offsides.home}</div><div class="label">${t('game.offsides')}</div><div class="val away">${s.stats.offsides.away}</div>
         </div>
       </div>
@@ -9326,6 +9414,54 @@ function wireAuthEvents() {
     const el = document.getElementById(id);
     if (el) el.onkeydown = (e) => { if (e.key === 'Enter') submitBtn?.click(); };
   });
+}
+
+// ── Goal Animation ────────────────────────────────────────────────────────────
+function showGoalAnimation(s) {
+  const existing = document.getElementById('goal-overlay');
+  if (existing) existing.remove();
+
+  const lastEntry = s.gameLog?.[s.gameLog.length - 1];
+  const scoringTeam = lastEntry?.team;
+  const team = scoringTeam === 'home' ? s.homeTeam : s.awayTeam;
+  const isOwnGoal = lastEntry?.message?.toLowerCase().includes('autogol') ||
+                    lastEntry?.message?.toLowerCase().includes('own goal');
+
+  const primaryColor = team?.primaryColor ? `hsl(${team.primaryColor})` : 'var(--accent)';
+  const secondaryColor = team?.secondaryColor ? `hsl(${team.secondaryColor})` : '#fff';
+  const teamName = team?.name || '';
+  const goalText = isOwnGoal ? (lang === 'en' ? 'OWN GOAL!' : '¡AUTOGOL!') : (lang === 'en' ? 'GOAL!' : '¡GOL!');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'goal-overlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:8000;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:${primaryColor}cc;
+    animation:goalOverlayIn 0.25s ease-out forwards;
+    pointer-events:none;
+  `;
+  overlay.innerHTML = `
+    <div style="font-size:clamp(3rem,12vw,6rem);font-weight:900;color:${secondaryColor};
+      text-shadow:0 4px 24px rgba(0,0,0,0.4);letter-spacing:0.05em;
+      animation:goalTextPop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards;line-height:1;">
+      ${goalText}
+    </div>
+    <div style="font-size:clamp(1.2rem,5vw,2.2rem);font-weight:700;color:${secondaryColor};
+      opacity:0.9;margin-top:12px;text-shadow:0 2px 12px rgba(0,0,0,0.3);
+      animation:goalTextPop 0.3s 0.1s cubic-bezier(0.34,1.56,0.64,1) both;">
+      ${teamName}
+    </div>
+    <div style="font-size:clamp(2rem,8vw,4rem);margin-top:16px;
+      animation:goalBallBounce 0.6s 0.2s ease-in-out both;">⚽</div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => {
+    if (overlay.parentNode) {
+      overlay.style.animation = 'goalOverlayOut 0.3s ease-in forwards';
+      setTimeout(() => overlay.remove(), 300);
+    }
+  }, 1700);
 }
 
 // ── Debug / Test helpers ──────────────────────────────────────────────────────
