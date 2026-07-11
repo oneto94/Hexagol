@@ -1249,6 +1249,7 @@ let onlineStatus = 'idle';
 let onlineApplyingRemote = false;
 let onlineReceivedFirstState = false;
 let onlineOpponentUid = null; // UID del rival para el cálculo de ELO al terminar // true after the first remote snapshot is applied
+let onlineMatchResultSaved = false; // prevents duplicate ELO/history saves per match
 
 // ── Firestore helpers ────────────────────────────────────────────────────────
 // Firestore preserves arrays, nulls, and empty objects exactly as written —
@@ -1340,6 +1341,8 @@ function applyRemoteState(remote) {
 
   const remoteOvertimeStarted = !isFirstState && remote.overtimeMode === 'extra-time' && state.overtimeMode !== 'extra-time';
 
+  const remoteIsNewOffside = !isFirstState && remote.gamePhase === 'resolving-offside' && state.gamePhase !== 'resolving-offside';
+
   state = {
     ...remote,
     ...preservedRoll,
@@ -1347,6 +1350,8 @@ function applyRemoteState(remote) {
     timer: isFirstState || remoteIsNewTurn || remoteIsNewHalf || remoteIsKickoff || remoteScoreChanged || remoteHalfTimeEnded
       ? (remote.turnDuration || state.turnDuration)
       : state.timer,
+    // Preserve offsideTimer locally — each client runs its own countdown
+    offsideTimer: (isFirstState || remoteIsNewOffside) ? remote.offsideTimer : state.offsideTimer,
   };
   onlineReceivedFirstState = true;
   // Fix 2: record wall-clock time when half-time state first arrives.
@@ -2234,6 +2239,7 @@ function startOnlineRematch() {
   clearOnlineRematchNode();
   clearOnlineUndoNode();
   onlineReceivedFirstState = false; // treat the host's first write as authoritative again
+  onlineMatchResultSaved = false;
   if (onlineIsHost) setState(() => rematchState);
 }
 
@@ -2261,6 +2267,7 @@ function leaveOnlineRoom() {
   onlineApplyingRemote = false;
   onlineReceivedFirstState = false;
   onlineOpponentUid = null;
+  onlineMatchResultSaved = false;
   onlineRematchRequestedByMe = false;
   onlineIncomingRematchFrom = null;
 }
@@ -4397,6 +4404,15 @@ function updateClockDisplaySurgically() {
     return;
   }
 
+  // Update offside timer surgically
+  if (state.gamePhase === 'resolving-offside') {
+    const timerLabel = document.querySelector('.turn-timer-label');
+    const timerFill = document.querySelector('.turn-timer-fill');
+    if (timerLabel) timerLabel.textContent = `⏳ ${state.offsideTimer}s`;
+    if (timerFill) timerFill.style.width = `${Math.round((state.offsideTimer / 15) * 100)}%`;
+    return;
+  }
+
   if (!clockEl && !timerFillEl && !timerLabelEl) {
     // During half-time and pre-game-roll, no clock/timer elements exist in the DOM
     // but we still need to update the countdown span surgically — don't full render
@@ -4469,7 +4485,8 @@ function playSoundsForTransition(prev, next) {
       score_away: next.score.away,
       half_duration: next.halfDurationMinutes,
     });
-    if (next.gameMode === 'online' && onlineMyTeam && onlineOpponentUid) {
+    if (next.gameMode === 'online' && onlineMyTeam && onlineOpponentUid && !onlineMatchResultSaved) {
+      onlineMatchResultSaved = true;
       const myScore = next.score[onlineMyTeam];
       const theirTeam = onlineMyTeam === 'home' ? 'away' : 'home';
       const result = myScore > next.score[theirTeam] ? 'win' : myScore < next.score[theirTeam] ? 'loss' : 'draw';
@@ -8092,8 +8109,20 @@ function renderDicePanel(s) {
     </div>`;
   }
 
+  if (s.gamePhase === 'resolving-offside') {
+    const offsideTeamName = getTeamName(s, s.currentPlayer === 'home' ? 'away' : 'home');
+    const timerLow = s.offsideTimer <= 5;
+    return `<div class="dice-panel">
+      <h3>🚩 ${lang === 'en' ? 'Offside!' : '¡Fuera de juego!'}</h3>
+      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:8px;text-align:center;">${lang === 'en' ? `${offsideTeamName} must move the marked player.` : `${offsideTeamName} debe mover al jugador marcado.`}</div>
+      <div class="turn-timer-row">
+        <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" style="width:${Math.round((s.offsideTimer / 15) * 100)}%;"></div></div>
+        <span class="turn-timer-label ${timerLow ? 'low' : ''}">⏳ ${s.offsideTimer}s</span>
+      </div>
+    </div>`;
+  }
+
   if (s.gamePhase === 'overtime-choice') {
-    const isOnlineGuest = s.gameMode === 'online' && !onlineIsHost;
     const isOnline = s.gameMode === 'online';
     const title = lang === 'en' ? "It's a draw!" : '¡Empate!';
     const extraTimeLabel = lang === 'en' ? `⏱ Extra time (${s.halfDurationMinutes} min)` : `⏱ Prórroga (${s.halfDurationMinutes} min)`;
@@ -9195,7 +9224,7 @@ function resolveKickoffWinner(s) {
       ...s, players: newPlayers, currentPlayer: startingTeam, gamePhase: 'rolling',
       kickoffTeam: startingTeam, turnCount: 1, isClockRunning: true, homeRoll: null, awayRoll: null,
       isKickoffTurn: true, timer: s.turnDuration,
-      stats: { ...s.stats, possession: { ...s.stats.possession, [startingTeam]: 1 } },
+      stats: { ...s.stats, possession: { home: s.stats.possession.home + (startingTeam === 'home' ? 1 : 0), away: s.stats.possession.away + (startingTeam === 'away' ? 1 : 0) } },
     };
     return logAction(finalState, msg, 'game-event', startingTeam);
   }
@@ -9351,6 +9380,40 @@ function startTurnTimer() {
       setState(s => advanceTurnByTimeout(s));
       return;
     }
+
+    // Offside resolution timeout — if player doesn't move in 15s, auto-move to best valid position
+    if (state.gamePhase === 'resolving-offside') {
+      if (!startTurnTimer._lastOffsideTick) startTurnTimer._lastOffsideTick = Date.now();
+      const now = Date.now();
+      if (now - startTurnTimer._lastOffsideTick < 950) return;
+      startTurnTimer._lastOffsideTick = now;
+      if (state.offsideTimer > 0) {
+        setLocalOnlyState(s => ({ ...s, offsideTimer: s.offsideTimer - 1 }));
+        return;
+      }
+      // Time's up — auto-resolve: select the first offside player then move to best position
+      startTurnTimer._lastOffsideTick = null;
+      const offsideId = state.offsidePlayerIds[0];
+      if (!offsideId) return;
+      // First select the player
+      setState(s => handlePlayerSelection(s, offsideId));
+      // Then move to best position after a tick
+      setTimeout(() => {
+        const mv = pickBotOffsideMove(state);
+        if (mv) setState(s => handleSquareSelection(s, mv));
+        else {
+          // No valid move — skip this player and advance
+          setState(s => {
+            const remaining = s.offsidePlayerIds.filter(id => id !== offsideId);
+            if (remaining.length > 0) return { ...s, offsidePlayerIds: remaining, selectedPlayerId: null, validOffsideMoves: [] };
+            const msg = lang === 'en' ? `Offside resolved. ${getTeamName(s, s.currentPlayer)}'s turn.` : `Fuera de juego resuelto. Turno de ${getTeamName(s, s.currentPlayer)}.`;
+            return { ...logAction(s, msg, 'game-event'), gamePhase: 'rolling', selectedPlayerId: null, offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null, timer: s.turnDuration };
+          });
+        }
+      }, 100);
+      return;
+    }
+    if (startTurnTimer._lastOffsideTick) startTurnTimer._lastOffsideTick = null;
 
     // Fix 1: pre-game-roll timeout (online only) — wall-clock based
     const isPreGameRoll = state.gamePhase === 'pre-game-roll' && state.gameMode === 'online';
