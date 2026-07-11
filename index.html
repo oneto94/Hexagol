@@ -1453,7 +1453,14 @@ function pushOnlineState(s) {
     updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
   })
     .then(() => console.log('[Hexagol Sync] Push ok. RTT:', Date.now() - pushedAt, 'ms | turn:', s.turnCount, 'phase:', s.gamePhase, 'hash:', payload._hash))
-    .catch(err => console.error('[Hexagol Sync] Push failed:', err));
+    .catch(err => {
+      if (err.code === 'not-found') {
+        console.warn('[Hexagol Sync] Room no longer exists — clearing ref.');
+        onlineRoomRef = null;
+      } else {
+        console.error('[Hexagol Sync] Push failed:', err);
+      }
+    });
 }
 
 function attachOnlineStateListener() {
@@ -1870,9 +1877,6 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
   }).catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
 
   console.log('[Hexagol Online] Sala creada:', code);
-
-  // Auto-delete after 30 minutes (generous for a long match)
-  setTimeout(() => { if (onlineRoomRef) onlineRoomRef.delete().catch(() => {}); }, 1800000);
 
   onlineStatus = 'waiting';
   currentMenuView = 'online-waiting';
