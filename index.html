@@ -662,6 +662,15 @@
     font-weight: 700; font-size: 0.78rem; color: #fff; font-family: inherit;
   }
 
+  @keyframes tooltipIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  @keyframes tooltipOut {
+    from { opacity: 1; transform: translateX(-50%) translateY(0); }
+    to   { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  }
+
   /* ── Goal animation overlay ─────────────────────────────────────────────── */
   @keyframes goalOverlayIn {
     from { opacity: 0; transform: scale(1.05); }
@@ -952,6 +961,8 @@ const i18n = {
     'menu.ai.desc': 'Jugá solo contra un rival manejado por la máquina.',
     'menu.tutorial': '🎓 Tutorial',
     'menu.tutorial.desc': 'Aprendé las reglas paso a paso con un partido guiado.',
+    'menu.quicktutorial': '🚀 Primera partida',
+    'menu.quicktutorial.desc': 'Aprendé lo básico y jugá tu primera partida.',
     'menu.league': '🏆 Liga / Torneo',
     'menu.league.desc': 'Armá un fixture de ida y vuelta entre varios equipos.',
     'menu.rules': 'Cómo se juega',
@@ -1112,6 +1123,8 @@ const i18n = {
     'menu.ai.desc': 'Play alone against a machine-controlled opponent.',
     'menu.tutorial': '🎓 Tutorial',
     'menu.tutorial.desc': 'Learn the rules step by step with a guided match.',
+    'menu.quicktutorial': '🚀 First match',
+    'menu.quicktutorial.desc': 'Learn the basics and play your first match.',
     'menu.league': '🏆 League / Tournament',
     'menu.league.desc': 'Set up a home-and-away fixture between teams.',
     'menu.rules': 'How to play',
@@ -4267,6 +4280,7 @@ function getInitialState() {
     aiTeam: null,
     aiDifficulty: 'normal',
     isAiThinking: false,
+    isQuickTutorialMatch: false,
   };
 }
 
@@ -4465,6 +4479,7 @@ function updateClockDisplaySurgically() {
 // this particular state transition. Centralized here so it covers human clicks, the bot, and
 // the tutorial uniformly, without scattering sound calls through the pure reducer functions.
 function playSoundsForTransition(prev, next) {
+  checkContextTooltips(prev, next);
   if (prev === next) return;
   const newEntries = next.gameLog && prev.gameLog && next.gameLog.length > prev.gameLog.length
     ? next.gameLog.slice(prev.gameLog.length)
@@ -6888,6 +6903,10 @@ function renderMainMenu() {
         <div class="t">🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</div>
         <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : 'Online, local, vs IA, liga y más.'}</div>
       </button>
+      <button class="menu-btn" data-menu="quick-tutorial" style="border-color:#e8a020;background:#fffbf0;">
+        <div class="t">${t('menu.quicktutorial')}</div>
+        <div class="d">${t('menu.quicktutorial.desc')}</div>
+      </button>
       <button class="menu-btn" data-menu="tutorial">
         <div class="t">${t('menu.tutorial')}</div>
         <div class="d">${t('menu.tutorial.desc')}</div>
@@ -7394,6 +7413,169 @@ async function loadLeaderboard() {
   }
   leaderboardLoading = false;
   render();
+}
+
+// ── Quick Tutorial ────────────────────────────────────────────────────────────
+let quickTutorialStep = 0;
+
+const QUICK_TUTORIAL_STEPS = [
+  {
+    icon: '🎲',
+    title: { es: 'El dado', en: 'The dice' },
+    desc: { es: 'Al inicio de tu turno tirás el dado. El número que sale es cuántas casillas podés usar ese turno.', en: 'At the start of your turn you roll the dice. The number you get is how many squares you can use that turn.' },
+  },
+  {
+    icon: '🏃',
+    title: { es: 'Mover un jugador', en: 'Move a player' },
+    desc: { es: 'Elegís uno de tus jugadores y lo movés esa cantidad o menos de casillas en cualquier dirección.', en: 'You choose one of your players and move them that many squares or fewer in any direction.' },
+  },
+  {
+    icon: '⚽',
+    title: { es: 'Patear la pelota', en: 'Kick the ball' },
+    desc: { es: 'Si tu jugador está al lado de la pelota, podés patearla en vez de mover. Si llega a otro compañero tuyo, ¡seguís jugando!', en: "If your player is next to the ball, you can kick it instead of moving. If it reaches a teammate, you keep playing!" },
+  },
+  {
+    icon: '🥅',
+    title: { es: 'El objetivo', en: 'The goal' },
+    desc: { es: 'Metés la pelota en el arco rival para marcar. Gana quien tenga más goles al final del tiempo.', en: 'You score by getting the ball into the opponent\'s goal. The team with the most goals at the end wins.' },
+  },
+  {
+    icon: '🚀',
+    title: { es: '¡A jugar!', en: "Let's play!" },
+    desc: { es: 'Ahora vas a jugar tu primera partida contra la IA en modo fácil. Aparecerán consejos cuando ocurran situaciones nuevas.', en: "Now you'll play your first match against the AI on easy mode. Tips will appear when new situations occur." },
+  },
+];
+
+function renderQuickTutorial() {
+  const step = QUICK_TUTORIAL_STEPS[quickTutorialStep];
+  const isLast = quickTutorialStep === QUICK_TUTORIAL_STEPS.length - 1;
+  const progress = Math.round(((quickTutorialStep + 1) / QUICK_TUTORIAL_STEPS.length) * 100);
+  const nextLabel = isLast
+    ? (lang === 'en' ? '▶ Start match!' : '▶ ¡Empezar partida!')
+    : (lang === 'en' ? 'Next →' : 'Siguiente →');
+  const skipLabel = lang === 'en' ? 'Skip' : 'Saltar';
+
+  return `
+  <div class="menu-screen" style="max-width:480px;text-align:center;">
+    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:16px;">
+      ${lang === 'en' ? 'First match' : 'Primera partida'} · ${quickTutorialStep + 1}/${QUICK_TUTORIAL_STEPS.length}
+    </div>
+    <div style="background:#f0f4ee;border-radius:16px;height:4px;margin-bottom:24px;">
+      <div style="background:var(--accent);border-radius:16px;height:4px;width:${progress}%;transition:width 0.3s;"></div>
+    </div>
+    <div style="font-size:3.5rem;line-height:1;margin-bottom:16px;">${step.icon}</div>
+    <h2 style="margin:0 0 12px;font-size:1.4rem;">${lang === 'en' ? step.title.en : step.title.es}</h2>
+    <p style="color:#384032;font-size:0.92rem;line-height:1.6;margin:0 0 32px;">${lang === 'en' ? step.desc.en : step.desc.es}</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      ${quickTutorialStep > 0 ? `<button class="btn ghost" id="qt-prev-btn" style="padding:10px 20px;">← ${lang === 'en' ? 'Back' : 'Atrás'}</button>` : `<button class="btn ghost" id="qt-skip-btn" style="padding:10px 20px;">${skipLabel}</button>`}
+      <button class="btn" id="qt-next-btn" style="padding:10px 24px;background:var(--accent);border-color:var(--accent);color:#fff;">${nextLabel}</button>
+    </div>
+  </div>`;
+}
+
+function startQuickTutorialMatch() {
+  // Reset tooltip flags so they show during this match
+  localStorage.removeItem('hx_tip_adjacent');
+  localStorage.removeItem('hx_tip_chain');
+  localStorage.removeItem('hx_tip_offside');
+  localStorage.removeItem('hx_tip_area');
+  localStorage.removeItem('hx_tip_zero');
+  quickTutorialStep = 0;
+  // Start match vs AI easy
+  const homeTeam = TEAMS[0];
+  const awayTeam = TEAMS[1];
+  const fresh = getInitialState();
+  currentMenuView = 'main';
+  setState({
+    ...fresh, homeTeam, awayTeam,
+    gameMode: 'vs-ai', aiTeam: 'away', aiDifficulty: 'easy',
+    gamePhase: 'pre-game-roll',
+    halfDurationMinutes: 5, gameClock: 5 * 60,
+    turnDuration: TURN_DURATION, timer: TURN_DURATION,
+    isQuickTutorialMatch: true,
+    message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+  });
+}
+
+// ── Contextual Tooltips ───────────────────────────────────────────────────────
+const TOOLTIP_DURATION = 4500;
+
+function showContextTooltip(key, title, desc) {
+  if (localStorage.getItem('hx_tip_' + key)) return;
+  localStorage.setItem('hx_tip_' + key, '1');
+  const existing = document.getElementById('ctx-tooltip');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = 'ctx-tooltip';
+  el.style.cssText = `
+    position:fixed;top:80px;left:50%;transform:translateX(-50%);
+    background:#1c2b22;color:#fff;border-radius:12px;padding:12px 18px;
+    max-width:320px;width:90%;z-index:7000;box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    animation:tooltipIn 0.3s ease-out;text-align:center;pointer-events:none;
+  `;
+  el.innerHTML = `<div style="font-weight:700;font-size:0.9rem;margin-bottom:4px;">${title}</div><div style="font-size:0.78rem;opacity:0.85;line-height:1.5;">${desc}</div>`;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    if (el.parentNode) {
+      el.style.animation = 'tooltipOut 0.3s ease-in forwards';
+      setTimeout(() => el.remove(), 300);
+    }
+  }, TOOLTIP_DURATION);
+}
+
+function checkContextTooltips(prev, next) {
+  if (!next.isQuickTutorialMatch) return;
+  const myTeam = 'home';
+  const ball = next.ballPosition;
+  if (!ball) return;
+
+  // Tip: adjacent to ball
+  if (!localStorage.getItem('hx_tip_adjacent') && next.gamePhase === 'selecting-piece') {
+    const hasAdj = next.players.some(p => p.team === myTeam && isAdjacent(p.position, ball));
+    if (hasAdj) {
+      showContextTooltip('adjacent',
+        lang === 'en' ? '⚽ You\'re next to the ball!' : '⚽ ¡Estás al lado de la pelota!',
+        lang === 'en' ? 'Select that player to kick or drag the ball.' : 'Seleccioná ese jugador para patear o arrastrar la pelota.'
+      );
+    }
+  }
+
+  // Tip: chain pass
+  if (!localStorage.getItem('hx_tip_chain') && next.gamePhase === 'chain-pass') {
+    showContextTooltip('chain',
+      lang === 'en' ? '🔗 Chain pass!' : '🔗 ¡Pase en cadena!',
+      lang === 'en' ? 'The ball reached a teammate — keep playing without spending a turn!' : '¡La pelota llegó a un compañero! Seguís jugando sin gastar un turno.'
+    );
+  }
+
+  // Tip: offside
+  if (!localStorage.getItem('hx_tip_offside') && next.gamePhase === 'resolving-offside') {
+    showContextTooltip('offside',
+      lang === 'en' ? '🚩 Offside!' : '🚩 ¡Fuera de juego!',
+      lang === 'en' ? 'Move the marked player behind the offside line.' : 'Mové al jugador marcado detrás de la línea de fuera de juego.'
+    );
+  }
+
+  // Tip: ball in goalkeeper area
+  if (!localStorage.getItem('hx_tip_area') && ball) {
+    const homeGoalY = BOARD_HEIGHT - 1;
+    const awayGoalY = 0;
+    const inArea = (ball.y >= homeGoalY - 3 && ball.y <= homeGoalY) || (ball.y >= awayGoalY && ball.y <= awayGoalY + 3);
+    if (inArea && prev.ballPosition && !((prev.ballPosition.y >= homeGoalY - 3) || (prev.ballPosition.y <= awayGoalY + 3))) {
+      showContextTooltip('area',
+        lang === 'en' ? '🥅 Goalkeeper area' : '🥅 Área del arquero',
+        lang === 'en' ? 'The goalkeeper moves double squares inside their area.' : 'El arquero se mueve el doble de casillas dentro de su área.'
+      );
+    }
+  }
+
+  // Tip: rolled zero
+  if (!localStorage.getItem('hx_tip_zero') && next.diceValue === 0 && prev.diceValue !== 0) {
+    showContextTooltip('zero',
+      lang === 'en' ? '0 — Turn skipped' : '0 — Turno perdido',
+      lang === 'en' ? 'You rolled 0! Your turn is skipped automatically.' : '¡Sacaste 0! Tu turno se pierde automáticamente.'
+    );
+  }
 }
 
 async function renderMatchHistory() {
@@ -8310,6 +8492,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'quick-tutorial') app.innerHTML = renderQuickTutorial();
     else if (currentMenuView === 'match-history') { renderMatchHistory(); }
     else if (currentMenuView === 'play') app.innerHTML = renderPlayMenu();
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
@@ -8394,6 +8577,11 @@ function wireEvents() {
       if (target === 'tutorial') {
         currentMenuView = 'main';
         setState(startTutorial());
+        return;
+      }
+      if (target === 'quick-tutorial') {
+        currentMenuView = 'quick-tutorial';
+        render();
         return;
       }
       if (target === 'sandbox') {
@@ -8861,6 +9049,20 @@ function wireEvents() {
       });
     };
   });
+
+  const qtNextBtn = document.getElementById('qt-next-btn');
+  if (qtNextBtn) qtNextBtn.onclick = () => {
+    if (quickTutorialStep < QUICK_TUTORIAL_STEPS.length - 1) {
+      quickTutorialStep++;
+      render();
+    } else {
+      startQuickTutorialMatch();
+    }
+  };
+  const qtPrevBtn = document.getElementById('qt-prev-btn');
+  if (qtPrevBtn) qtPrevBtn.onclick = () => { quickTutorialStep--; render(); };
+  const qtSkipBtn = document.getElementById('qt-skip-btn');
+  if (qtSkipBtn) qtSkipBtn.onclick = () => { quickTutorialStep = 0; currentMenuView = 'play'; render(); };
 
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
