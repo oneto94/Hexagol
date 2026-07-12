@@ -4702,6 +4702,7 @@ function updateClockDisplaySurgically() {
 // the tutorial uniformly, without scattering sound calls through the pure reducer functions.
 function playSoundsForTransition(prev, next) {
   checkContextTooltips(prev, next);
+  checkAchievements(prev, next);
   if (prev === next) return;
   const newEntries = next.gameLog && prev.gameLog && next.gameLog.length > prev.gameLog.length
     ? next.gameLog.slice(prev.gameLog.length)
@@ -7114,6 +7115,7 @@ function renderMainMenu() {
         <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D'}</div>
       </div>
       <button data-menu="match-history" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">📋</button>
+      <button data-menu="achievements" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">🏅</button>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
     <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
@@ -7640,6 +7642,210 @@ async function loadLeaderboard() {
   }
   leaderboardLoading = false;
   render();
+}
+
+// ── Achievements ──────────────────────────────────────────────────────────────
+const ACHIEVEMENTS = [
+  {
+    id: 'first_goal',
+    icon: '🥅',
+    title: { es: 'Primer gol', en: 'First goal', pt: 'Primeiro gol' },
+    desc: { es: 'Marcá tu primer gol en cualquier modo.', en: 'Score your first goal in any mode.', pt: 'Marque seu primeiro gol em qualquer modo.' },
+    onlineOnly: false,
+  },
+  {
+    id: 'hat_trick',
+    icon: '⚽',
+    title: { es: 'Hat-trick', en: 'Hat-trick', pt: 'Hat-trick' },
+    desc: { es: '3 goles en un mismo partido.', en: '3 goals in a single match.', pt: '3 gols em uma mesma partida.' },
+    onlineOnly: false,
+  },
+  {
+    id: 'chain_master',
+    icon: '🔗',
+    title: { es: 'Maestro del pase', en: 'Pass master', pt: 'Mestre do passe' },
+    desc: { es: 'Completá un pase en cadena de 3 o más jugadores.', en: 'Complete a chain pass with 3 or more players.', pt: 'Complete um passe em cadeia com 3 ou mais jogadores.' },
+    onlineOnly: false,
+  },
+  {
+    id: 'first_win',
+    icon: '🏆',
+    title: { es: 'Primera victoria', en: 'First win', pt: 'Primeira vitória' },
+    desc: { es: 'Ganá tu primer partido online.', en: 'Win your first online match.', pt: 'Ganhe sua primeira partida online.' },
+    onlineOnly: true,
+  },
+  {
+    id: 'win_streak',
+    icon: '🔥',
+    title: { es: 'Racha de 3', en: 'Win streak', pt: 'Sequência de 3' },
+    desc: { es: '3 victorias consecutivas online.', en: '3 consecutive online wins.', pt: '3 vitórias consecutivas online.' },
+    onlineOnly: true,
+  },
+  {
+    id: 'clean_sheet',
+    icon: '🛡️',
+    title: { es: 'Muralla', en: 'Clean sheet', pt: 'Jogo sem sofrer gols' },
+    desc: { es: 'Ganá un partido sin recibir goles.', en: 'Win a match without conceding a goal.', pt: 'Ganhe uma partida sem sofrer nenhum gol.' },
+    onlineOnly: true,
+  },
+  {
+    id: 'long_shot',
+    icon: '🎯',
+    title: { es: 'Francotirador', en: 'Long shot', pt: 'Chute de longe' },
+    desc: { es: 'Marcá un gol desde más de 4 casillas de distancia del arco.', en: 'Score a goal from more than 4 squares away from the goal.', pt: 'Marque um gol de mais de 4 casas de distância do gol.' },
+    onlineOnly: false,
+  },
+  {
+    id: 'top_10',
+    icon: '👑',
+    title: { es: 'Top 10', en: 'Top 10', pt: 'Top 10' },
+    desc: { es: 'Entrá al top 10 del ranking global.', en: 'Reach the top 10 of the global leaderboard.', pt: 'Entre no top 10 do ranking global.' },
+    onlineOnly: true,
+  },
+];
+
+function getAchievementText(a, field) {
+  return a[field][lang] || a[field].es;
+}
+
+function isAchievementUnlocked(id) {
+  return !!localStorage.getItem(`hx_ach_${id}`);
+}
+
+function unlockAchievement(id) {
+  if (isAchievementUnlocked(id)) return;
+  localStorage.setItem(`hx_ach_${id}`, Date.now().toString());
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach) return;
+  showAchievementToast(ach);
+  if (currentUser && !currentUser.isAnonymous) {
+    db.collection('users').doc(currentUser.uid).update({
+      [`achievements.${id}`]: firebase.firestore.FieldValue.serverTimestamp(),
+    }).catch(() => {});
+  }
+}
+
+function showAchievementToast(ach) {
+  const existing = document.getElementById('achievement-toast');
+  if (existing) existing.remove();
+  const el = document.createElement('div');
+  el.id = 'achievement-toast';
+  el.style.cssText = `
+    position:fixed;top:80px;left:50%;transform:translateX(-50%);
+    background:#1c2b22;color:#fff;border-radius:14px;padding:14px 20px;
+    max-width:320px;width:90%;z-index:8500;box-shadow:0 4px 24px rgba(0,0,0,0.35);
+    animation:tooltipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);text-align:center;
+    border:1.5px solid #3a5a3a;pointer-events:none;
+  `;
+  const title = lang === 'en' ? 'Achievement unlocked!' : lang === 'pt' ? 'Conquista desbloqueada!' : '¡Logro desbloqueado!';
+  el.innerHTML = `
+    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;letter-spacing:0.05em;text-transform:uppercase;">${title}</div>
+    <div style="font-size:2rem;line-height:1;margin-bottom:4px;">${ach.icon}</div>
+    <div style="font-weight:700;font-size:0.95rem;">${getAchievementText(ach, 'title')}</div>
+    <div style="font-size:0.75rem;color:#9aa593;margin-top:2px;">${getAchievementText(ach, 'desc')}</div>
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    if (el.parentNode) {
+      el.style.animation = 'tooltipOut 0.3s ease-in forwards';
+      setTimeout(() => el.remove(), 300);
+    }
+  }, 4000);
+}
+
+function checkAchievements(prev, next) {
+  if (!next || !prev) return;
+  const myTeam = next.gameMode === 'online' ? onlineMyTeam : 'home';
+  if (!myTeam) return;
+  const oppTeam = myTeam === 'home' ? 'away' : 'home';
+
+  // 🥅 First goal — any mode
+  const myPrevScore = prev.score?.[myTeam] || 0;
+  const myNextScore = next.score?.[myTeam] || 0;
+  if (myNextScore > myPrevScore) {
+    unlockAchievement('first_goal');
+
+    // 🎯 Long shot — goal from > 4 squares from goal
+    const oppGoal = myTeam === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const ball = prev.ballPosition;
+    if (ball) {
+      const dist = Math.min(...oppGoal.map(g => Math.abs(g.x - ball.x) + Math.abs(g.y - ball.y)));
+      if (dist > 4) unlockAchievement('long_shot');
+    }
+
+    // ⚽ Hat-trick — 3 goals by same player in match
+    if (next.matchStats?.goals) {
+      const maxGoals = Math.max(...Object.values(next.matchStats.goals));
+      if (maxGoals >= 3) unlockAchievement('hat_trick');
+    }
+  }
+
+  // 🔗 Chain master — 2+ passes in one transition (chain of 3+)
+  const myPrevPasses = prev.stats?.passes?.[myTeam] || 0;
+  const myNextPasses = next.stats?.passes?.[myTeam] || 0;
+  if (myNextPasses >= myPrevPasses + 2) unlockAchievement('chain_master');
+
+  // Online-only achievements
+  if (next.gameMode === 'online' && next.gamePhase === 'game-over' && prev.gamePhase !== 'game-over') {
+    const won = next.score[myTeam] > next.score[oppTeam];
+    const conceded = next.score[oppTeam];
+    if (won) {
+      unlockAchievement('first_win');
+      if (conceded === 0) unlockAchievement('clean_sheet');
+      if (userProfile && currentUser && !currentUser.isAnonymous) {
+        const streak = (userProfile.currentStreak || 0) + 1;
+        userProfile.currentStreak = streak;
+        if (streak >= 3) unlockAchievement('win_streak');
+        db.collection('users').doc(currentUser.uid).update({ currentStreak: streak }).catch(() => {});
+      }
+    } else {
+      if (userProfile && currentUser && !currentUser.isAnonymous) {
+        userProfile.currentStreak = 0;
+        db.collection('users').doc(currentUser.uid).update({ currentStreak: 0 }).catch(() => {});
+      }
+    }
+    // Check top 10 after match ends
+    setTimeout(checkTop10Achievement, 3000);
+  }
+}
+
+async function checkTop10Achievement() {
+  if (!currentUser || currentUser.isAnonymous || !userProfile) return;
+  try {
+    const snap = await db.collection('users').orderBy('elo', 'desc').limit(10).get();
+    if (snap.docs.some(d => d.id === currentUser.uid)) unlockAchievement('top_10');
+  } catch (e) {}
+}
+
+function renderAchievementsScreen() {
+  const unlockedCount = ACHIEVEMENTS.filter(a => isAchievementUnlocked(a.id)).length;
+  const title = lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros';
+  const progress = lang === 'en' ? `${unlockedCount}/${ACHIEVEMENTS.length} unlocked` : lang === 'pt' ? `${unlockedCount}/${ACHIEVEMENTS.length} desbloqueadas` : `${unlockedCount}/${ACHIEVEMENTS.length} desbloqueados`;
+
+  const rows = ACHIEVEMENTS.map(ach => {
+    const unlocked = isAchievementUnlocked(ach.id);
+    const ts = localStorage.getItem(`hx_ach_${ach.id}`);
+    const date = ts ? new Date(parseInt(ts)).toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'pt' ? 'pt-BR' : 'es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
+    return `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #e1e8db;opacity:${unlocked ? '1' : '0.4'};">
+      <div style="font-size:2rem;min-width:40px;text-align:center;">${ach.icon}</div>
+      <div style="flex:1;">
+        <div style="font-weight:700;font-size:0.88rem;color:#1c2b22;">${getAchievementText(ach, 'title')}${ach.onlineOnly ? ` <span style="font-size:0.65rem;color:#6b7a64;background:#f0f4ee;border-radius:999px;padding:1px 6px;">online</span>` : ''}</div>
+        <div style="font-size:0.75rem;color:#6b7a64;margin-top:2px;">${getAchievementText(ach, 'desc')}</div>
+        ${unlocked ? `<div style="font-size:0.68rem;color:#2a6e3f;margin-top:2px;">✓ ${date}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="menu-screen" style="max-width:520px;">
+    <h1>🏅 ${title}</h1>
+    <div style="font-size:0.78rem;color:#6b7a64;margin-bottom:16px;text-align:center;">${progress}</div>
+    <div>${rows}</div>
+    <div class="menu-grid" style="margin-top:16px;">
+      <button class="menu-btn" id="achievements-back-btn"><div class="t">${t('setup.back')}</div></button>
+    </div>
+  </div>`;
 }
 
 // ── Quick Tutorial ────────────────────────────────────────────────────────────
@@ -8748,6 +8954,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'achievements') app.innerHTML = renderAchievementsScreen();
     else if (currentMenuView === 'choose-username') app.innerHTML = renderChooseUsername();
     else if (currentMenuView === 'quick-tutorial') app.innerHTML = renderQuickTutorial();
     else if (currentMenuView === 'match-history') { renderMatchHistory(); }
@@ -9306,6 +9513,9 @@ function wireEvents() {
       });
     };
   });
+
+  const achievementsBackBtn = document.getElementById('achievements-back-btn');
+  if (achievementsBackBtn) achievementsBackBtn.onclick = () => { currentMenuView = 'main'; render(); };
 
   const chooseUsernameBtn = document.getElementById('choose-username-btn');
   if (chooseUsernameBtn) chooseUsernameBtn.onclick = async () => {
