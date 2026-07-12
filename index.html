@@ -901,6 +901,8 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
+let pendingUsernameUser = null; // { user, suggestedName } for Google users choosing username
+
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 /* =========================================================
@@ -1716,8 +1718,17 @@ async function loadOrCreateUserProfile(user) {
       };
     }
   } else {
-    // New user — create profile
-    const username = user.displayName || user.email?.split('@')[0] || 'Jugador';
+    // New user — if Google login, ask for username first
+    const isGoogle = user.providerData?.some(p => p.providerId === 'google.com');
+    const suggestedName = user.displayName?.split(' ')[0] || user.email?.split('@')[0] || 'Jugador';
+    if (isGoogle) {
+      pendingUsernameUser = { user, suggestedName };
+      currentMenuView = 'choose-username';
+      render();
+      return;
+    }
+    // Email registration — username already provided
+    const username = user.displayName || suggestedName;
     userProfile = {
       username,
       email: user.email || null,
@@ -7595,6 +7606,25 @@ function checkContextTooltips(prev, next) {
   }
 }
 
+function renderChooseUsername() {
+  const suggested = pendingUsernameUser?.suggestedName || '';
+  return `
+  <div class="menu-screen" style="max-width:420px;text-align:center;">
+    <div style="font-size:2.5rem;margin-bottom:12px;">👤</div>
+    <h2 style="margin:0 0 8px;">${lang === 'en' ? 'Choose your username' : 'Elegí tu nombre de usuario'}</h2>
+    <p style="color:#6b7a64;font-size:0.85rem;margin:0 0 24px;line-height:1.5;">
+      ${lang === 'en' ? 'This is how other players will see you.' : 'Así te van a ver los demás jugadores.'}
+    </p>
+    <input type="text" id="choose-username-input" maxlength="20" placeholder="${lang === 'en' ? 'Username' : 'Nombre de usuario'}"
+      value="${suggested}"
+      style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:1rem;font-family:inherit;margin-bottom:8px;outline:none;">
+    <div id="choose-username-error" style="color:#9a2f24;font-size:0.78rem;min-height:18px;margin-bottom:12px;"></div>
+    <button class="btn" id="choose-username-btn" style="width:100%;background:var(--accent);border-color:var(--accent);color:#fff;padding:12px;">
+      ${lang === 'en' ? 'Start playing' : '¡Empezar a jugar!'}
+    </button>
+  </div>`;
+}
+
 async function renderMatchHistory() {
   const app = document.getElementById('app');
   app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : 'Cargando...'}</div></div>`;
@@ -8519,6 +8549,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'choose-username') app.innerHTML = renderChooseUsername();
     else if (currentMenuView === 'quick-tutorial') app.innerHTML = renderQuickTutorial();
     else if (currentMenuView === 'match-history') { renderMatchHistory(); }
     else if (currentMenuView === 'play') app.innerHTML = renderPlayMenu();
@@ -9077,6 +9108,46 @@ function wireEvents() {
     };
   });
 
+  const chooseUsernameBtn = document.getElementById('choose-username-btn');
+  if (chooseUsernameBtn) chooseUsernameBtn.onclick = async () => {
+    const input = document.getElementById('choose-username-input');
+    const errorEl = document.getElementById('choose-username-error');
+    const username = input?.value?.trim();
+    if (!username || username.length < 2) {
+      if (errorEl) errorEl.textContent = lang === 'en' ? 'Username must be at least 2 characters.' : 'El nombre debe tener al menos 2 caracteres.';
+      return;
+    }
+    if (username.length > 20) {
+      if (errorEl) errorEl.textContent = lang === 'en' ? 'Username must be 20 characters or less.' : 'El nombre debe tener 20 caracteres o menos.';
+      return;
+    }
+    if (!pendingUsernameUser) return;
+    const { user } = pendingUsernameUser;
+    chooseUsernameBtn.disabled = true;
+    chooseUsernameBtn.textContent = lang === 'en' ? 'Saving...' : 'Guardando...';
+    try {
+      userProfile = {
+        username,
+        email: user.email || null,
+        photoURL: user.photoURL || null,
+        elo: DEFAULT_ELO,
+        wins: 0, losses: 0, draws: 0,
+        gamesPlayed: 0,
+        customTeam: null,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
+      };
+      await db.collection('users').doc(user.uid).set(userProfile);
+      pendingUsernameUser = null;
+      currentMenuView = 'main';
+      render();
+    } catch (err) {
+      if (errorEl) errorEl.textContent = lang === 'en' ? 'Error saving. Try again.' : 'Error al guardar. Intentá de nuevo.';
+      chooseUsernameBtn.disabled = false;
+      chooseUsernameBtn.textContent = lang === 'en' ? 'Start playing' : '¡Empezar a jugar!';
+    }
+  };
+
   const qtNextBtn = document.getElementById('qt-next-btn');
   if (qtNextBtn) qtNextBtn.onclick = () => {
     if (quickTutorialStep < QUICK_TUTORIAL_STEPS.length - 1) {
@@ -9538,6 +9609,7 @@ function startClock() {
     if (state.gamePhase === 'main-menu' || state.gamePhase === 'game-over' || state.gamePhase === 'half-time') return;
     if (state.gameMode === 'online' && document.visibilityState === 'hidden') return;
     if (state.targetGoals) return; // goals mode — no clock
+    if (['resolving-offside', 'goalkeeper-swap'].includes(state.gamePhase)) return; // paused during resolution
     if (state.gameClock > 0) {
       setLocalOnlyState(s => ({ ...s, gameClock: s.gameClock - 1 }));
       return;
