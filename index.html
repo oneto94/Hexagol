@@ -1355,6 +1355,7 @@ function applyRemoteState(remote) {
   const remoteOvertimeStarted = !isFirstState && remote.overtimeMode === 'extra-time' && state.overtimeMode !== 'extra-time';
 
   const remoteIsNewOffside = !isFirstState && remote.gamePhase === 'resolving-offside' && state.gamePhase !== 'resolving-offside';
+  const remoteIsNewSwap = !isFirstState && remote.gamePhase === 'goalkeeper-swap' && state.gamePhase !== 'goalkeeper-swap';
 
   state = {
     ...remote,
@@ -1365,6 +1366,8 @@ function applyRemoteState(remote) {
       : state.timer,
     // Preserve offsideTimer locally — each client runs its own countdown
     offsideTimer: (isFirstState || remoteIsNewOffside) ? remote.offsideTimer : state.offsideTimer,
+    // Preserve swapTimer locally — each client runs its own countdown
+    swapTimer: (isFirstState || remoteIsNewSwap) ? GOALKEEPER_SWAP_DURATION : state.swapTimer,
   };
   onlineReceivedFirstState = true;
   // Fix 2: record wall-clock time when half-time state first arrives.
@@ -4424,6 +4427,15 @@ function updateClockDisplaySurgically() {
     const timerFill = document.querySelector('.turn-timer-fill');
     if (timerLabel) timerLabel.textContent = `⏳ ${state.offsideTimer}s`;
     if (timerFill) timerFill.style.width = `${Math.round((state.offsideTimer / 15) * 100)}%`;
+    return;
+  }
+
+  // Update swap timer surgically
+  if (state.gamePhase === 'goalkeeper-swap') {
+    const swapLabel = document.getElementById('swap-timer-label');
+    const swapFill = document.getElementById('swap-timer-fill');
+    if (swapLabel) swapLabel.textContent = `⏳ ${state.swapTimer}s`;
+    if (swapFill) swapFill.style.width = `${Math.round((state.swapTimer / 15) * 100)}%`;
     return;
   }
 
@@ -8459,7 +8471,17 @@ function renderDicePanel(s) {
       ${isOpponentOnlineTurn && s.gamePhase === 'rolling' ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> ${opponentLabel}</div>` : ''}
     </div>
     ${isZero ? `<div class="zero-note">${zeroNote}</div>` : ''}
-    ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">${t('msg.swap.skip')}</button>` : ''}
+    ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `
+    <div class="turn-timer-row" style="margin-top:4px;">
+      <div class="turn-timer-bar"><div class="turn-timer-fill ${s.swapTimer <= 5 ? 'low' : ''}" id="swap-timer-fill" style="width:${Math.round((s.swapTimer / 15) * 100)}%;"></div></div>
+      <span class="turn-timer-label ${s.swapTimer <= 5 ? 'low' : ''}" id="swap-timer-label">⏳ ${s.swapTimer}s</span>
+    </div>
+    <button class="btn ghost" id="skip-swap-btn" style="width:100%;">${t('msg.swap.skip')}</button>` : ''}
+    ${s.gamePhase === 'goalkeeper-swap' && blockControls ? `
+    <div class="turn-timer-row" style="margin-top:4px;">
+      <div class="turn-timer-bar"><div class="turn-timer-fill ${s.swapTimer <= 5 ? 'low' : ''}" id="swap-timer-fill" style="width:${Math.round((s.swapTimer / 15) * 100)}%;"></div></div>
+      <span class="turn-timer-label ${s.swapTimer <= 5 ? 'low' : ''}" id="swap-timer-label">⏳ ${s.swapTimer}s</span>
+    </div>` : ''}
     ${s.gamePhase === 'chain-pass' && !blockControls ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">${t('msg.chain.stop')}</button>` : ''}
     ${undoBtnDesktop ? `<div class="undo-desktop" style="margin-top:6px;">${undoBtnDesktop}</div>` : ''}
   </div>`;
@@ -9622,7 +9644,22 @@ function startTurnTimer() {
     }
     if (startTurnTimer._lastOffsideTick) startTurnTimer._lastOffsideTick = null;
 
-    // Fix 1: pre-game-roll timeout (online only) — wall-clock based
+    // Goalkeeper swap timeout — if player doesn't swap in 15s, skip swap (goalkeeper stays out)
+    if (state.gamePhase === 'goalkeeper-swap') {
+      if (!startTurnTimer._lastSwapTick) startTurnTimer._lastSwapTick = Date.now();
+      const now = Date.now();
+      if (now - startTurnTimer._lastSwapTick < 950) return;
+      startTurnTimer._lastSwapTick = now;
+      if (state.swapTimer > 0) {
+        setLocalOnlyState(s => ({ ...s, swapTimer: s.swapTimer - 1 }));
+        return;
+      }
+      // Time's up — skip swap, goalkeeper stays where they are
+      startTurnTimer._lastSwapTick = null;
+      setState(s => advanceToNextTurn(s, { skipSwapCheck: true }));
+      return;
+    }
+    if (startTurnTimer._lastSwapTick) startTurnTimer._lastSwapTick = null;
     const isPreGameRoll = state.gamePhase === 'pre-game-roll' && state.gameMode === 'online';
     if (isPreGameRoll) {
       if (preGameRollStartedAt === null) preGameRollStartedAt = Date.now(); // safety
