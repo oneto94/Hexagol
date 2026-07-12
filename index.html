@@ -927,6 +927,166 @@ function t(key, params) {
 }
 
 const i18n = {
+  pt: {
+    // Landing
+    'landing.subtitle': 'Futebol de dados · Estratégia por turnos',
+    'landing.google': 'Continuar com Google',
+    'landing.email': '✉️ Registrar com email',
+    'landing.divider': 'ou',
+    'landing.guest': 'Jogar como convidado →',
+    'landing.feature.online': 'Multijogador online',
+    'landing.feature.ai': 'Vs. IA com dificuldade',
+    'landing.feature.league': 'Liga e torneio',
+    'landing.lang': 'Español',
+    'auth.login': 'Entrar',
+    'auth.username': 'Nome de usuário',
+    'auth.email': 'Email',
+    'auth.password': 'Senha (mín. 6 caracteres)',
+    'auth.submit.login': 'Entrar',
+    'auth.submit.register': 'Criar conta',
+    'auth.loading': 'Carregando...',
+    'auth.switch.to.register': 'Não tem conta?',
+    'auth.switch.to.login': 'Já tem conta?',
+    'auth.switch.register': 'Registrar',
+    'auth.switch.login': 'Entrar',
+    'auth.back': '← Voltar',
+    // Menu
+    'menu.title': '⚽ Hexagol',
+    'menu.subtitle': 'Futebol de dados — estratégia por turnos',
+    'menu.online': '🌐 Jogar online',
+    'menu.online.desc': 'Jogue contra outra pessoa em qualquer parte do mundo.',
+    'menu.local': '1 vs 1 local',
+    'menu.local.desc': 'Dois jogadores compartilham o mesmo dispositivo e se alternam.',
+    'menu.ai': '🤖 Vs. Computador',
+    'menu.ai.desc': 'Jogue sozinho contra um rival controlado pela máquina.',
+    'menu.tutorial': '🎓 Tutorial',
+    'menu.tutorial.desc': 'Aprenda as regras passo a passo com uma partida guiada.',
+    'menu.quicktutorial': '🚀 Primeira partida',
+    'menu.quicktutorial.desc': 'Aprenda o básico e jogue sua primeira partida.',
+    'menu.league': '🏆 Liga / Torneio',
+    'menu.league.desc': 'Monte um fixture de ida e volta entre vários times.',
+    'menu.rules': 'Como jogar',
+    'menu.rules.desc': 'Regras rápidas antes de começar sua primeira partida.',
+    'menu.leaderboard': '🏅 Ranking',
+    'menu.leaderboard.desc': 'Os melhores jogadores por ELO no ranking global.',
+    'menu.training': '🧪 Treino livre',
+    'menu.training.desc': 'Mova jogadores e a bola livremente, sem turnos ou regras.',
+    'menu.donate': '❤️ Doações',
+    'menu.community': '💬 Comunidade',
+    'menu.bug': '🐛 Reportar bug',
+    // User chip
+    'user.guest': 'Convidado',
+    'user.guest.desc': 'Crie uma conta para salvar seu progresso',
+    'user.logout': 'sair',
+    // Setup
+    'setup.title': 'Configurar partida',
+    'setup.subtitle': 'Escolha os times e a duração de cada tempo.',
+    'setup.duration': 'Duração por tempo',
+    'setup.start': 'Começar partida →',
+    'setup.back': '← Voltar',
+    'setup.notimer': 'Sem limite de turno',
+    'setup.notimer.desc': '(modo relaxado para iniciantes)',
+    // AI
+    'ai.title': '🤖 Vs. Computador',
+    'ai.difficulty': 'Dificuldade',
+    'ai.easy': 'Fácil',
+    'ai.normal': 'Normal',
+    'ai.hard': 'Difícil',
+    // Online setup
+    'online.create': 'Criar sala',
+    'online.join': 'Entrar com código',
+    'online.quick': 'Partida rápida',
+    'online.waiting': 'Aguardando adversário...',
+    'online.searching': 'Procurando adversário...',
+    'online.copy': 'Copiar código',
+    'online.copied': 'Copiado!',
+    'online.cancel': '✕ Cancelar sala',
+    'online.back': '← Voltar',
+    'online.join.title': '🔑 Entrar na sala',
+    'online.join.subtitle': 'Peça o código ao seu adversário e insira aqui.',
+    'online.join.btn': 'Entrar →',
+    'online.waiting.title': 'Sala criada',
+    'online.waiting.hint': 'Seu adversário deve inserir este código em <b>Entrar com código</b>.',
+    // Game over
+    'gameover.win': '🏆 Você ganhou!',
+    'gameover.loss': '😔 Você perdeu',
+    'gameover.draw': '🤝 Empate',
+    'gameover.share': '📤 Compartilhar resultado',
+    'gameover.rematch': '🔁 Pedir revanche',
+    'gameover.waiting': '⏳ Aguardando o adversário aceitar a revanche...',
+    'gameover.back': 'Voltar ao menu',
+    'gameover.league': '🏆 Voltar à liga',
+    'gameover.finished': 'Partida finalizada',
+    'rematch.request': 'pediu uma revanche.',
+    'rematch.accept': '✓ Aceitar',
+    'rematch.decline': '✕ Não, obrigado',
+    // Leaderboard
+    'lb.title': '🏅 Ranking',
+    'lb.subtitle': 'Top jogadores por ELO global',
+    'lb.loading': 'Carregando...',
+    'lb.empty': 'Ainda não há jogadores com partidas. Seja o primeiro!',
+    'lb.back': '← Voltar',
+    'lb.myposition': 'Sua posição: fora do top 50',
+    // Rules
+    'rules.title': 'Como jogar',
+    'rules.back': '← Voltar',
+    // Pre-game roll
+    'pregame.title': 'Sorteio inicial',
+    'pregame.subtitle': 'Quem tirar mais alto começa com a bola.',
+    // Half time
+    'halftime.title': 'Intervalo',
+    'halftime.start2nd': 'Começar 2º tempo →',
+    'halftime.waiting': 'Aguardando 2º tempo...',
+    'halftime.autoinicio': 'Auto-início em',
+    // In-game
+    'game.roll': 'Lançar dado',
+    'game.skip': 'Passar turno',
+    'game.reiniciar': 'Reiniciar',
+    'game.menu': 'Menu principal',
+    'game.stats': 'Estatísticas',
+    'game.log': 'Jogadas',
+    'game.possession': 'Posse',
+    'game.shots': 'Chutes',
+    'game.passes': 'Passes',
+    'game.offsides': 'Impedimentos',
+    'game.turn': 'Turno de',
+    'game.half': 'T.',
+    'game.turnlabel': 'Turno',
+    // Game messages
+    'msg.zero': 'Você tirou 0! Perde o turno.',
+    'msg.rolled': 'Você tirou {value}. Escolha um jogador de {team} para mover.',
+    'msg.choose': 'Escolha um jogador de {team} para mover.',
+    'msg.goal': '⚽ GOL de {scorer}! {conceder} bota para o jogo. Lance o dado.',
+    'msg.halftime': 'Intervalo!',
+    'msg.kickoff': 'Começa o {half}. Sai {team}.',
+    'msg.second': 'segundo tempo',
+    'msg.offside': 'Impedimento! Mova o jogador marcado para uma posição válida.',
+    'msg.chain': 'Passe em cadeia. Escolha onde continuar ou encerre a jogada.',
+    'msg.chain.stop': 'Encerrar jogada aqui',
+    'msg.swap': 'Você pode trocar o jogador pelo goleiro.',
+    'msg.swap.skip': 'Não trocar, finalizar turno',
+    'msg.timeout': 'Tempo esgotado!',
+    'msg.disconnect': 'desconectou. Você ganhou por abandono.',
+    // Share
+    'share.win': 'Ganhei',
+    'share.loss': 'Perdi',
+    'share.draw': 'Empatei',
+    'share.text': '{result} {score} jogando Hexagol com {myTeam} vs {theirTeam}{elo} ⚽🎲\n👉 hexagol.com.ar',
+    // Chat
+    'chat.empty': 'Ainda não há mensagens. Diga algo!',
+    'chat.placeholder': 'Mensagem...',
+    'chat.send': 'Enviar',
+    // Reconnect
+    'reconnect.title': 'Partida em andamento',
+    'reconnect.desc': 'Você tem uma partida online em curso. Deseja reconectar?',
+    'reconnect.yes': 'Reconectar',
+    'reconnect.no': 'Não, voltar ao menu',
+    // Training
+    'training.reset': '↺ Resetar posições',
+    'training.back': '← Voltar ao menu',
+    'training.dice': 'Escolha o valor do dado',
+    'training.move': 'Toque em qualquer casa para mover o jogador até lá.',
+  },
   es: {
     // Landing
     'landing.subtitle': 'Fútbol de dados · Estrategia por turnos',
@@ -1063,7 +1223,7 @@ const i18n = {
     'msg.kickoff': 'Comienza el {half}. Saca {team}.',
     'msg.second': 'segundo tiempo',
     'msg.offside': '¡Fuera de juego! Mové al jugador marcado a una posición válida.',
-    'msg.chain': lang === 'en' ? 'Chain pass. Choose where to continue or end the play.' : 'Pase en cadena. Elegí dónde continuar o terminá la jugada.',
+    'msg.chain': lang === 'en' ? 'Chain pass. Choose where to continue or end the play.' : lang === 'pt' ? 'Passe em cadeia. Escolha onde continuar ou encerre a jogada.' : 'Pase en cadena. Elegí dónde continuar o terminá la jugada.',
     'msg.chain.stop': 'Terminar jugada acá',
     'msg.swap': 'Podés intercambiar al jugador con el arquero.',
     'msg.swap.skip': 'No cambiar, finalizar turno',
@@ -1099,9 +1259,7 @@ const i18n = {
     'landing.feature.online': 'Online multiplayer',
     'landing.feature.ai': 'vs AI with difficulty',
     'landing.feature.league': 'League & tournament',
-    'landing.lang': 'Español',
-    // Auth
-    'auth.create': 'Create account',
+    'landing.lang': 'Português',
     'auth.login': 'Log in',
     'auth.username': 'Username',
     'auth.email': 'Email',
@@ -1308,7 +1466,7 @@ function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGo
     targetGoals: targetGoals || null,
     turnDuration: turnDur,
     timer: turnDur,
-    message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+    message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
   };
 }
 
@@ -1595,7 +1753,7 @@ let onlineChatMessages = [];
 let onlineChatOpen = false;
 let onlineChatUnread = 0;
 let onlineChatEverLoaded = false;
-const CHAT_QUICK_PHRASES = lang === 'en' ? ['Good play!', 'Bad luck 😅', 'Let\'s go!', 'haha', 'GG', 'Rematch?'] : ['¡Buena jugada!', 'Mala suerte 😅', 'Vamos!', 'jaja', 'GG', '¿Revancha?'];
+const CHAT_QUICK_PHRASES = lang === 'en' ? ['Good play!', 'Bad luck 😅', 'Let\'s go!', 'haha', 'GG', 'Rematch?'] : lang === 'pt' ? ['Boa jogada!', 'Má sorte 😅', 'Vamos!', 'haha', 'GG', 'Revanche?'] : ['¡Buena jugada!', 'Mala suerte 😅', 'Vamos!', 'jaja', 'GG', '¿Revancha?'];
 
 function attachOnlineChat() {
   if (!onlineRoomRef) return;
@@ -1650,7 +1808,7 @@ function renderChatPanel() {
   if (!messagesEl) { render(); return; }
   const wasScrolledToBottom = messagesEl.scrollTop + messagesEl.clientHeight >= messagesEl.scrollHeight - 20;
   messagesEl.innerHTML = onlineChatMessages.length === 0
-    ? `<div class="chat-empty">${lang === 'en' ? 'No messages yet. Say something!' : 'Todavía no hay mensajes. ¡Decí algo!'}</div>`
+    ? `<div class="chat-empty">${lang === 'en' ? 'No messages yet. Say something!' : lang === 'pt' ? 'Ainda não há mensagens. Diga algo!' : 'Todavía no hay mensajes. ¡Decí algo!'}</div>`
     : onlineChatMessages.map(m => `<div class="chat-msg ${m.from === onlineMyTeam ? 'mine' : 'theirs'}">${escapeHtml(m.text)}</div>`).join('');
   if (wasScrolledToBottom) messagesEl.scrollTop = messagesEl.scrollHeight;
   if (chatFab) {
@@ -1713,7 +1871,7 @@ async function loadOrCreateUserProfile(user) {
       onlineTeamPicker.home = {
         mode: 'custom',
         presetIdx: 0,
-        customName: userProfile.customTeam.name || (lang === 'en' ? 'My Team' : 'Mi Equipo'),
+        customName: userProfile.customTeam.name || (lang === 'en' ? 'My Team' : lang === 'pt' ? 'Meu Time' : 'Mi Equipo'),
         customKit: userProfile.customTeam.kit || defaultHomeKit(),
       };
     }
@@ -1768,7 +1926,7 @@ async function loginWithEmail(email, password) {
     await auth.signInWithEmailAndPassword(email, password);
   } catch (err) {
     if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-      throw new Error(lang === 'en' ? 'Incorrect email or password.' : 'Email o contraseña incorrectos.');
+      throw new Error(lang === 'en' ? 'Incorrect email or password.' : lang === 'pt' ? 'Email ou senha incorretos.' : 'Email o contraseña incorrectos.');
     }
     throw new Error(err.message);
   }
@@ -1781,7 +1939,7 @@ async function registerWithEmail(email, password, username) {
     // onAuthStateChanged fires and calls loadOrCreateUserProfile with the new display name
   } catch (err) {
     if (err.code === 'auth/email-already-in-use') throw new Error('Ese email ya tiene una cuenta.');
-    if (err.code === 'auth/weak-password') throw new Error(lang === 'en' ? 'Password must be at least 6 characters.' : 'La contraseña debe tener al menos 6 caracteres.');
+    if (err.code === 'auth/weak-password') throw new Error(lang === 'en' ? 'Password must be at least 6 characters.' : lang === 'pt' ? 'A senha deve ter pelo menos 6 caracteres.' : 'La contraseña debe tener al menos 6 caracteres.');
     throw new Error(err.message);
   }
 }
@@ -1849,7 +2007,7 @@ async function updateEloAfterMatch(myResult, opponentUid) {
       eloChange: userProfile.elo - prevElo,
       eloAfter: userProfile.elo,
       opponentUid: null,
-      opponentName: lang === 'en' ? 'Guest' : 'Invitado',
+      opponentName: lang === 'en' ? 'Guest' : lang === 'pt' ? 'Convidado' : 'Invitado',
       playedAt: firebase.firestore.FieldValue.serverTimestamp(),
     }).catch(() => {});
     return;
@@ -1964,15 +2122,15 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
 async function onlineJoinRoom(code, awayTeam) {
   const ref = db.collection('rooms').doc(code.toUpperCase());
   const snap = await ref.get();
-  if (!snap.exists) { alert(lang === 'en' ? 'Room not found. Check the code and try again.' : 'Sala no encontrada. Revisá el código e intentá de nuevo.'); return; }
+  if (!snap.exists) { alert(lang === 'en' ? 'Room not found. Check the code and try again.' : lang === 'pt' ? 'Sala não encontrada. Verifique o código e tente novamente.' : 'Sala no encontrada. Revisá el código e intentá de nuevo.'); return; }
   const data = snap.data();
-  if (data.status !== 'waiting') { alert(lang === 'en' ? 'That room is already in use or does not exist.' : 'Esa sala ya está en juego o no existe.'); return; }
+  if (data.status !== 'waiting') { alert(lang === 'en' ? 'That room is already in use or does not exist.' : lang === 'pt' ? 'Essa sala já está em uso ou não existe.' : 'Esa sala ya está en juego o no existe.'); return; }
 
   // Delete stale rooms with no activity for more than 2 hours
   const updatedAt = data.updatedAt?.toMillis?.() || data.createdAt?.toMillis?.() || 0;
   if (updatedAt && Date.now() - updatedAt > 7200000) {
     ref.delete().catch(() => {});
-    alert(lang === 'en' ? 'That room has been inactive for too long. Ask the host to create a new one.' : 'Esa sala lleva demasiado tiempo inactiva. Pedile al anfitrión que cree una nueva.');
+    alert(lang === 'en' ? 'That room has been inactive for too long. Ask the host to create a new one.' : lang === 'pt' ? 'Essa sala ficou inativa por muito tempo. Peça ao anfitrião que crie uma nova.' : 'Esa sala lleva demasiado tiempo inactiva. Pedile al anfitrión que cree una nueva.');
     return;
   }
 
@@ -2099,7 +2257,7 @@ function handleOpponentDisconnected() {
     gamePhase: 'game-over',
     isClockRunning: false,
     message: `${opponentName} ${t('msg.disconnect')}`,
-    toastToShow: { title: lang === 'en' ? 'Opponent disconnected' : 'Rival desconectado', description: lang === 'en' ? `${opponentName} lost connection. You win by forfeit.` : `${opponentName} perdió la conexión. Ganás la partida por abandono.` },
+    toastToShow: { title: lang === 'en' ? 'Opponent disconnected' : lang === 'pt' ? 'Adversário desconectado' : 'Rival desconectado', description: lang === 'en' ? `${opponentName} lost connection. You win by forfeit.` : lang === 'pt' ? `${opponentName} perdeu a conexão. Você venceu por abandono.` : `${opponentName} perdió la conexión. Ganás la partida por abandono.` },
   };
   render();
 }
@@ -2219,7 +2377,7 @@ function onUndoAccepted() {
   setState(s => {
     if (!s.prevTurnSnapshot) return s;
     const snap = s.prevTurnSnapshot;
-    const logMsg = lang === 'en' ? 'Undo accepted. Turn reverted.' : 'Deshacer aceptado. Se revirtió el turno.';
+    const logMsg = lang === 'en' ? 'Undo accepted. Turn reverted.' : lang === 'pt' ? 'Desfazer aceito. Turno revertido.' : 'Deshacer aceptado. Se revirtió el turno.';
     const reverted = {
       ...s,
       players: snap.players,
@@ -2261,7 +2419,7 @@ function startOnlineRematch() {
     halfDurationMinutes: state.halfDurationMinutes,
     gameClock: state.halfDurationMinutes * 60,
     turnDuration: state.turnDuration, timer: state.turnDuration,
-    message: lang === 'en' ? 'Rematch. Roll the dice to decide who starts.' : 'Revancha. Tiren los dados para decidir quién empieza.',
+    message: lang === 'en' ? 'Rematch. Roll the dice to decide who starts.' : lang === 'pt' ? 'Revanche. Lance o dado para decidir quem começa.' : 'Revancha. Tiren los dados para decidir quién empieza.',
   };
   clearOnlineRematchNode();
   clearOnlineUndoNode();
@@ -2375,31 +2533,31 @@ const LEAGUE_STORAGE_KEY = 'hexagol_league_save';
    palette/format means a custom team renders through the existing jersey
    drawing code (getJerseyFillDef) with zero changes there. */
 const KIT_DESIGNS = [
-  { id: 'solid', name: 'Sólido', nameEn: 'Solid' },
-  { id: 'vertical-stripes', name: 'Rayas verticales', nameEn: 'Vertical stripes' },
-  { id: 'horizontal-stripe', name: 'Franja horizontal', nameEn: 'Horizontal stripe' },
-  { id: 'sash', name: 'Banda cruzada', nameEn: 'Sash' },
-  { id: 'v-shape', name: 'En V', nameEn: 'V-shape' },
-  { id: 'double-vertical-stripe', name: 'Doble franja vertical', nameEn: 'Double vertical stripe' },
-  { id: 'triple-horizontal-stripe', name: 'Triple franja horizontal', nameEn: 'Triple horizontal stripe' },
+  { id: 'solid', name: 'Sólido', nameEn: 'Solid', namePt: 'Sólido' },
+  { id: 'vertical-stripes', name: 'Rayas verticales', nameEn: 'Vertical stripes', namePt: 'Listras verticais' },
+  { id: 'horizontal-stripe', name: 'Franja horizontal', nameEn: 'Horizontal stripe', namePt: 'Faixa horizontal' },
+  { id: 'sash', name: 'Banda cruzada', nameEn: 'Sash', namePt: 'Faixa diagonal' },
+  { id: 'v-shape', name: 'En V', nameEn: 'V-shape', namePt: 'Em V' },
+  { id: 'double-vertical-stripe', name: 'Doble franja vertical', nameEn: 'Double vertical stripe', namePt: 'Dupla listra vertical' },
+  { id: 'triple-horizontal-stripe', name: 'Triple franja horizontal', nameEn: 'Triple horizontal stripe', namePt: 'Tripla faixa horizontal' },
 ];
 const KIT_COLOR_PALETTE = [
-  { name: 'Rojo', value: '0 84% 60%' },
-  { name: 'Azul', value: '221 83% 53%' },
-  { name: 'Celeste', value: '205 78% 65%' },
-  { name: 'Verde', value: '142 76% 36%' },
-  { name: 'Amarillo', value: '45 100% 51%' },
-  { name: 'Naranja', value: '25 95% 53%' },
-  { name: 'Blanco', value: '0 0% 100%' },
-  { name: 'Negro', value: '0 0% 0%' },
-  { name: 'Gris', value: '240 5% 65%' },
-  { name: 'Violeta', value: '262 84% 60%' },
+  { name: 'Rojo', nameEn: 'Red', namePt: 'Vermelho', value: '0 84% 60%' },
+  { name: 'Azul', nameEn: 'Blue', namePt: 'Azul', value: '221 83% 53%' },
+  { name: 'Celeste', nameEn: 'Sky blue', namePt: 'Azul claro', value: '205 78% 65%' },
+  { name: 'Verde', nameEn: 'Green', namePt: 'Verde', value: '142 76% 36%' },
+  { name: 'Amarillo', nameEn: 'Yellow', namePt: 'Amarelo', value: '45 100% 51%' },
+  { name: 'Naranja', nameEn: 'Orange', namePt: 'Laranja', value: '25 95% 53%' },
+  { name: 'Blanco', nameEn: 'White', namePt: 'Branco', value: '0 0% 100%' },
+  { name: 'Negro', nameEn: 'Black', namePt: 'Preto', value: '0 0% 0%' },
+  { name: 'Gris', nameEn: 'Gray', namePt: 'Cinza', value: '240 5% 65%' },
+  { name: 'Violeta', nameEn: 'Purple', namePt: 'Roxo', value: '262 84% 60%' },
 ];
 const KIT_TEXT_COLOR_PALETTE = [
-  { name: 'Blanco', value: '0 0% 100%' },
-  { name: 'Negro', value: '215 28% 17%' },
-  { name: 'Rojo', value: '0 84% 60%' },
-  { name: 'Azul', value: '221 83% 53%' },
+  { name: 'Blanco', nameEn: 'White', namePt: 'Branco', value: '0 0% 100%' },
+  { name: 'Negro', nameEn: 'Black', namePt: 'Preto', value: '215 28% 17%' },
+  { name: 'Rojo', nameEn: 'Red', namePt: 'Vermelho', value: '0 84% 60%' },
+  { name: 'Azul', nameEn: 'Blue', namePt: 'Azul', value: '221 83% 53%' },
   { name: 'Amarillo', value: '45 100% 51%' },
 ];
 
@@ -2434,7 +2592,7 @@ function customKitsClash(kit1, kit2) {
 function buildCustomTeam(name, kit, idSuffix) {
   return {
     id: 'custom-' + idSuffix,
-    name: name || (lang === 'en' ? 'My Team' : 'Mi Equipo'),
+    name: name || (lang === 'en' ? 'My Team' : lang === 'pt' ? 'Meu Time' : 'Mi Equipo'),
     design: kit.design,
     primaryColor: kit.primaryColor,
     secondaryColor: kit.design !== 'solid' ? kit.secondaryColor : undefined,
@@ -3540,6 +3698,7 @@ const tutorialScript = [
         id: 'welcome',
         message: '¡Bienvenido a Hexagol! Este tutorial te guiará por las reglas. Para empezar, lanza el dado.',
         messageEn: 'Welcome to Hexagol! This tutorial will guide you through the rules. To start, roll the dice.',
+        messagePt: 'Bem-vindo ao Hexagol! Este tutorial vai te guiar pelas regras. Para começar, lance o dado.',
         highlightId: 'dice-roll-button',
         action: { type: 'click_element', payload: { elementId: 'dice-roll-button' } },
         initialState: {
@@ -3554,6 +3713,7 @@ const tutorialScript = [
         id: 'move-intro',
         message: '¡Sacaste un 4! El número del dado indica cuántas casillas puedes moverte. Selecciona al jugador #8.',
         messageEn: 'You rolled 4! The dice number shows how many squares you can move. Select player #8.',
+        messagePt: 'Você tirou 4! O número do dado mostra quantas casas você pode mover. Selecione o jogador #8.',
         highlightId: 'player-8-home',
         action: { type: 'click_player', payload: { playerNumber: 8, team: 'home' } },
         initialState: {
@@ -3567,6 +3727,7 @@ const tutorialScript = [
         id: 'move-execute',
         message: 'Excelente. Muévelo 4 casillas en diagonal a la casilla N10.',
         messageEn: 'Great. Move them 4 squares diagonally to square N10.',
+        messagePt: 'Ótimo. Mova-o 4 casas na diagonal até a casa N10.',
         highlightId: 'square-13-10',
         action: { type: 'click_square', payload: { position: { x: 13, y: 10 } } },
         initialState: {
@@ -3581,6 +3742,7 @@ const tutorialScript = [
         id: 'kick-intro',
         message: '¡Vamos a chutar! Un jugador adyacente al balón puede chutarlo. Selecciona al jugador #9.',
         messageEn: "Let's kick! A player next to the ball can kick it. Select player #9.",
+        messagePt: "Vamos chutar! Um jogador ao lado da bola pode chutá-la. Selecione o jogador #9.",
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -3594,6 +3756,7 @@ const tutorialScript = [
         id: 'kick-execute',
         message: '¡Perfecto! Al chutar, el jugador ocupa la casilla del balón. Chuta el balón 4 casillas hacia adelante a J6.',
         messageEn: 'Perfect! When kicking, the player moves to the ball square. Kick the ball 4 squares forward to J6.',
+        messagePt: 'Perfeito! Ao chutar, o jogador se move para a casa da bola. Chute a bola 4 casas para a frente até J6.',
         highlightId: 'square-9-6',
         action: { type: 'click_square', payload: { position: { x: 9, y: 6 } } },
         initialState: {
@@ -3608,6 +3771,7 @@ const tutorialScript = [
         id: 'drag-intro',
         message: 'Ahora, "arrastrar". Cuesta moverte HASTA el balón, y el resto para arrastrarlo. Selecciona al jugador #7.',
         messageEn: 'Now, "drag". It costs moves to reach the ball, and the rest to drag it. Select player #7.',
+        messagePt: 'Agora, "arrastar". Custa movimentos para chegar à bola e o restante para arrastá-la. Selecione o jogador #7.',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3621,6 +3785,7 @@ const tutorialScript = [
         id: 'drag-execute',
         message: 'Moverse 2 casillas a la bola cuesta 2. Te quedan 2 para arrastrar. Arrástralo a L14.',
         messageEn: 'Moving 2 squares to the ball costs 2. You have 2 left to drag. Drag it to L14.',
+        messagePt: 'Mover 2 casas até a bola custa 2. Você tem 2 restantes para arrastar. Arraste até L14.',
         highlightId: 'square-11-14',
         action: { type: 'click_square', payload: { position: { x: 11, y: 14 } } },
         initialState: {
@@ -3635,6 +3800,7 @@ const tutorialScript = [
         id: 'lofted-pass-intro',
         message: 'El "Pase Elevado" te permite pasar por encima de tus compañeros. Selecciona al jugador #9.',
         messageEn: 'The "Lofted Pass" lets you pass over your teammates. Select player #9.',
+        messagePt: 'O "Passe Elevado" permite passar por cima dos seus companheiros. Selecione o jogador #9.',
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -3651,6 +3817,7 @@ const tutorialScript = [
         id: 'lofted-pass-execute',
         message: 'Ahora, realiza un pase elevado por encima de tu compañero (#8) hacia la casilla vacía N14.',
         messageEn: 'Now, make a lofted pass over your teammate (#8) to the empty square N14.',
+        messagePt: 'Agora, faça um passe elevado por cima do seu companheiro (#8) até a casa vazia N14.',
         highlightId: 'square-13-14',
         action: { type: 'click_square', payload: { position: { x: 13, y: 14 } } },
         initialState: {
@@ -3668,6 +3835,7 @@ const tutorialScript = [
         id: 'lofted-drag-intro',
         message: 'El "Arrastre Elevado" combina arrastre y pase elevado. Si arrastras sobre un compañero, el balón lo ignora. Selecciona al jugador #7.',
         messageEn: 'The "Lofted Drag" combines drag and lofted pass. If you drag over a teammate, the ball ignores them. Select player #7.',
+        messagePt: 'O "Arrasto Elevado" combina arrasto e passe elevado. Se você arrastar por cima de um companheiro, a bola o ignora. Selecione o jogador #7.',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3684,6 +3852,7 @@ const tutorialScript = [
         id: 'lofted-drag-execute',
         message: 'Cuesta 2 llegar. Te quedan 4. Arrastra el balón 4 casillas a J8, pasando por encima de tu compañero.',
         messageEn: 'It costs 2 to reach the ball. You have 4 left. Drag the ball 4 squares to J8, over your teammate.',
+        messagePt: 'Custa 2 para chegar à bola. Você tem 4 restantes. Arraste a bola 4 casas até J8, por cima do seu companheiro.',
         highlightId: 'square-9-8',
         action: { type: 'click_square', payload: { position: { x: 9, y: 8 } } },
         initialState: {
@@ -3701,6 +3870,7 @@ const tutorialScript = [
         id: 'stacking-move-over-opponent-intro',
         message: 'Puedes moverte por encima de otros jugadores. Selecciona al jugador #8 para saltar por encima del rival.',
         messageEn: 'You can move over other players. Select player #8 to jump over the opponent.',
+        messagePt: 'Você pode mover por cima de outros jogadores. Selecione o jogador #8 para pular sobre o adversário.',
         highlightId: 'player-8-home',
         action: { type: 'click_player', payload: { playerNumber: 8, team: 'home' } },
         initialState: {
@@ -3717,6 +3887,7 @@ const tutorialScript = [
         id: 'stacking-move-over-opponent-execute',
         message: 'Ahora muévelo 4 casillas en línea recta hasta J10, pasando por encima del jugador rival.',
         messageEn: 'Now move them 4 squares in a straight line to J10, over the opponent.',
+        messagePt: 'Agora mova-o 4 casas em linha reta até J10, por cima do adversário.',
         highlightId: 'square-9-10',
         action: { type: 'click_square', payload: { position: { x: 9, y: 10 } } },
         initialState: {
@@ -3733,6 +3904,7 @@ const tutorialScript = [
         id: 'stacking-on-teammate-intro',
         message: 'También puedes apilar hasta 2 jugadores de tu equipo en una misma casilla. Selecciona al jugador #7.',
         messageEn: 'You can also stack up to 2 of your players on the same square. Select player #7.',
+        messagePt: 'Você também pode empilhar até 2 dos seus jogadores na mesma casa. Selecione o jogador #7.',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3749,6 +3921,7 @@ const tutorialScript = [
         id: 'stacking-on-teammate-execute',
         message: 'Mueve al jugador #7 dos casillas para apilarlo con el jugador #8 en la casilla M12.',
         messageEn: 'Move player #7 two squares to stack with player #8 at square M12.',
+        messagePt: 'Mova o jogador #7 duas casas para empilhar com o jogador #8 na casa M12.',
         highlightId: 'square-12-12',
         action: { type: 'click_square', payload: { position: { x: 12, y: 12 } } },
         initialState: {
@@ -3766,6 +3939,7 @@ const tutorialScript = [
         id: 'defensive-stacking-intro',
         message: 'Ahora, tácticas defensivas. El rival está listo para un pase. ¡Evítalo seleccionando a tu jugador #7!',
         messageEn: 'Now, defensive tactics. The opponent is ready to pass. Stop it by selecting your player #7!',
+        messagePt: 'Agora, táticas defensivas. O adversário está pronto para passar. Impeça-o selecionando seu jogador #7!',
         highlightId: 'player-7-home',
         action: { type: 'click_player', payload: { playerNumber: 7, team: 'home' } },
         initialState: {
@@ -3783,6 +3957,7 @@ const tutorialScript = [
         id: 'defensive-stacking-execute',
         message: '¡Exacto! Ahora muévelo para apilarlo sobre el receptor rival (#8). Esto bloquea un posible pase en cadena.',
         messageEn: 'Exactly! Now move them to stack on the opponent receiver (#8). This blocks a possible chain pass.',
+        messagePt: 'Exato! Agora mova-o para empilhar no receptor adversário (#8). Isso bloqueia um possível passe em cadeia.',
         highlightId: 'square-12-11',
         action: { type: 'click_square', payload: { position: { x: 12, y: 11 } } },
         initialState: {
@@ -3800,6 +3975,7 @@ const tutorialScript = [
         id: 'pass-blocking-intro',
         message: 'También puedes bloquear un pase interceptando la línea de visión. Selecciona a tu jugador #4 para cortar la jugada.',
         messageEn: 'You can also block a pass by intercepting the line of sight. Select your player #4 to cut the play.',
+        messagePt: 'Você também pode bloquear um passe interceptando a linha de visão. Selecione seu jogador #4 para cortar a jogada.',
         highlightId: 'player-4-home',
         action: { type: 'click_player', payload: { playerNumber: 4, team: 'home' } },
         initialState: {
@@ -3817,6 +3993,7 @@ const tutorialScript = [
         id: 'pass-blocking-execute',
         message: '¡Bien! Ahora muévelo 2 casillas a la posición L10, bloqueando el camino entre el balón y el receptor.',
         messageEn: 'Good! Now move them 2 squares to position L10, blocking the path between the ball and the receiver.',
+        messagePt: 'Ótimo! Agora mova-o 2 casas até a posição L10, bloqueando o caminho entre a bola e o receptor.',
         highlightId: 'square-11-10',
         action: { type: 'click_square', payload: { position: { x: 11, y: 10 } } },
         initialState: {
@@ -3835,6 +4012,7 @@ const tutorialScript = [
         id: 'chain-pass-intro',
         message: 'Pase en Cadena: Un pase a un compañero permite otro pase inmediato. Selecciona al jugador #9 para empezar.',
         messageEn: 'Chain Pass: A pass to a teammate allows another immediate pass. Select player #9 to start.',
+        messagePt: 'Passe em Cadeia: Um passe para um companheiro permite outro passe imediato. Selecione o jogador #9 para começar.',
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -3852,6 +4030,7 @@ const tutorialScript = [
         id: 'chain-pass-select-target',
         message: '¡Bien! Ahora pásale el balón a tu compañero #10, que está en la casilla K10.',
         messageEn: 'Good! Now pass the ball to your teammate #10, who is at square K10.',
+        messagePt: 'Ótimo! Agora passe a bola para seu companheiro #10, que está na casa K10.',
         highlightId: 'square-10-10',
         action: { type: 'click_square', payload: { position: { x: 10, y: 10 } } },
         initialState: {
@@ -3869,6 +4048,7 @@ const tutorialScript = [
         id: 'chain-pass-execute',
         message: '¡Pase conectado! Ahora el #10 puede pasar 4 casillas. Pásasela a tu compañero #11 en O10.',
         messageEn: 'Pass connected! Now #10 can pass 4 squares. Pass it to your teammate #11 at O10.',
+        messagePt: 'Passe conectado! Agora o #10 pode passar 4 casas. Passe para seu companheiro #11 em O10.',
         highlightId: 'square-14-10',
         action: { type: 'click_square', payload: { position: { x: 14, y: 10 } } },
         initialState: {
@@ -3886,6 +4066,7 @@ const tutorialScript = [
         id: 'chain-pass-final-kick',
         message: '¡Excelente! El jugador #11 ahora puede realizar el pase final de 4 casillas. ¡Patea el balón a S10!',
         messageEn: 'Excellent! Player #11 can now make the final 4-square pass. Kick the ball to S10!',
+        messagePt: 'Excelente! O jogador #11 pode agora fazer o passe final de 4 casas. Chute a bola para S10!',
         highlightId: 'square-18-10',
         action: { type: 'click_square', payload: { position: { x: 18, y: 10 } } },
         initialState: {
@@ -3904,6 +4085,7 @@ const tutorialScript = [
         id: 'goal-block-gk-intro',
         message: '¡Peligro! El rival solo tiene un camino para marcar. Mueve a tu arquero para bloquear el tiro. Selecciónalo.',
         messageEn: 'Danger! The opponent only has one path to score. Move your goalkeeper to block the shot. Select them.',
+        messagePt: 'Perigo! O adversário tem apenas um caminho para marcar. Mova seu goleiro para bloquear o chute. Selecione-o.',
         highlightId: 'player-1-home',
         action: { type: 'click_player', payload: { playerNumber: 1, team: 'home' } },
         initialState: {
@@ -3921,6 +4103,7 @@ const tutorialScript = [
         id: 'goal-block-gk-execute',
         message: '¡Rápido! El único tiro posible es a J24. ¡Muévelo a la línea de tiro en J22 para interceptar!',
         messageEn: 'Quick! The only possible shot is to J24. Move them to the shot line at J22 to intercept!',
+        messagePt: 'Rápido! O único chute possível é para J24. Mova-o para a linha de chute em J22 para interceptar!',
         highlightId: 'square-9-22',
         action: { type: 'click_square', payload: { position: { x: 9, y: 22 } } },
         initialState: {
@@ -3938,6 +4121,7 @@ const tutorialScript = [
         id: 'goal-block-defender-intro',
         message: 'También puedes usar un defensor. El rival tiene tiro libre. Selecciona a tu defensor #4.',
         messageEn: 'You can also use a defender. The opponent has a clear shot. Select your defender #4.',
+        messagePt: 'Você também pode usar um defensor. O adversário tem um chute livre. Selecione seu defensor #4.',
         highlightId: 'player-4-home',
         action: { type: 'click_player', payload: { playerNumber: 4, team: 'home' } },
         initialState: {
@@ -3954,6 +4138,7 @@ const tutorialScript = [
         id: 'goal-block-defender-execute',
         message: '¡Bien! Ahora muévelo 2 casillas a la línea de tiro en J21 para bloquear el gol.',
         messageEn: 'Good! Now move them 2 squares to the shot line at J21 to block the goal.',
+        messagePt: 'Ótimo! Agora mova-o 2 casas até a linha de chute em J21 para bloquear o gol.',
         highlightId: 'square-9-21',
         action: { type: 'click_square', payload: { position: { x: 9, y: 21 } } },
         initialState: {
@@ -3971,6 +4156,7 @@ const tutorialScript = [
         id: 'gk-move-intro',
         message: 'El arquero se mueve al 50% de coste en su área. Con un dado de 3 puede moverse hasta 6 casillas. ¡Selecciónalo!',
         messageEn: 'The goalkeeper moves at 50% cost in their area. With a dice of 3 they can move up to 6 squares. Select them!',
+        messagePt: 'O goleiro se move com custo de 50% em sua área. Com um dado de 3, ele pode se mover até 6 casas. Selecione-o!',
         highlightId: 'player-1-home',
         action: { type: 'click_player', payload: { playerNumber: 1, team: 'home' } },
         initialState: {
@@ -3984,6 +4170,7 @@ const tutorialScript = [
         id: 'gk-move-execute',
         message: 'Observa su gran alcance. Muévelo 5 casillas a E19 en línea recta.',
         messageEn: 'See their great range. Move them 5 squares to E19 in a straight line.',
+        messagePt: 'Veja seu grande alcance. Mova-o 5 casas até E19 em linha reta.',
         highlightId: 'square-4-19',
         action: { type: 'click_square', payload: { position: { x: 4, y: 19 } } },
         initialState: {
@@ -3997,6 +4184,7 @@ const tutorialScript = [
         id: 'gk-kick-intro',
         message: 'El chute del arquero se duplica si él y el balón están en el área. Sacaste 3 (chute de 6). Selecciónalo.',
         messageEn: "The goalkeeper's kick doubles if both they and the ball are in the area. You rolled 3 (kick of 6). Select them.",
+        messagePt: "O chute do goleiro dobra se ele e a bola estiverem na área. Você tirou 3 (chute de 6). Selecione-o.",
         highlightId: 'player-1-home',
         action: { type: 'click_player', payload: { playerNumber: 1, team: 'home' } },
         initialState: {
@@ -4010,6 +4198,7 @@ const tutorialScript = [
         id: 'gk-kick-execute',
         message: '¡Un despeje potente! Chuta el balón 6 casillas hasta J15.',
         messageEn: 'A powerful clearance! Kick the ball 6 squares to J15.',
+        messagePt: 'Um chute poderoso! Chute a bola 6 casas até J15.',
         highlightId: 'square-9-15',
         action: { type: 'click_square', payload: { position: { x: 9, y: 15 } } },
         initialState: {
@@ -4023,6 +4212,7 @@ const tutorialScript = [
         id: 'gk-swap-intro',
         message: 'Si el GK termina fuera de su área, puedes cambiarlo por un compañero que esté dentro. Intercambia con el jugador #5.',
         messageEn: 'If the GK ends up outside their area, you can swap them with a teammate inside. Swap with player #5.',
+        messagePt: 'Se o goleiro sair de sua área, você pode trocá-lo com um companheiro dentro dela. Troque pelo jogador #5.',
         highlightId: 'player-5-home',
         action: { type: 'click_player', payload: { playerNumber: 5, team: 'home' } },
         initialState: {
@@ -4040,6 +4230,7 @@ const tutorialScript = [
         id: 'gk-swap-skip-intro',
         message: 'También puedes omitir el cambio y finalizar tu turno. Haz clic en el botón para continuar.',
         messageEn: 'You can also skip the swap and end your turn. Click the button to continue.',
+        messagePt: 'Você também pode pular a troca e encerrar seu turno. Clique no botão para continuar.',
         highlightId: 'skip-swap-button',
         action: { type: 'click_element', payload: { elementId: 'skip-swap-button' } },
         initialState: {
@@ -4058,6 +4249,7 @@ const tutorialScript = [
         id: 'offside-explain-position',
         message: 'FUERA DE JUEGO: El jugador #11 está adelantado. La infracción ocurre si se le pasa el balón. Selecciona al pasador, #10.',
         messageEn: 'OFFSIDE: Player #11 is ahead. The infraction occurs if the ball is passed to them. Select the passer, #10.',
+        messagePt: 'IMPEDIMENTO: O jogador #11 está adiantado. A infração ocorre se a bola for passada para ele. Selecione o passador, #10.',
         highlightId: 'player-10-home',
         action: { type: 'click_player', payload: { playerNumber: 10, team: 'home' } },
         initialState: {
@@ -4076,6 +4268,7 @@ const tutorialScript = [
         id: 'offside-cause-infraction',
         message: 'Ahora, demuestra la infracción. Pasa el balón a la casilla K5, adyacente a tu compañero adelantado.',
         messageEn: 'Now, demonstrate the infraction. Pass the ball to square K5, next to your advanced teammate.',
+        messagePt: 'Agora, demonstre a infração. Passe a bola para a casa K5, ao lado do seu companheiro adiantado.',
         highlightId: 'square-10-5',
         action: { type: 'click_square', payload: { position: { x: 10, y: 5 } } },
         initialState: {
@@ -4094,6 +4287,7 @@ const tutorialScript = [
         id: 'offside-resolve-intro',
         message: '¡INFRACCIÓN! El rival debe mover al jugador adelantado. Selecciona al jugador #11 para reposicionarlo.',
         messageEn: 'INFRACTION! The opponent must move the advanced player. Select player #11 to reposition them.',
+        messagePt: 'INFRAÇÃO! O adversário deve mover o jogador adiantado. Selecione o jogador #11 para reposicioná-lo.',
         highlightId: 'player-11-home',
         action: { type: 'click_player', payload: { playerNumber: 11, team: 'home' } },
         initialState: {
@@ -4113,6 +4307,7 @@ const tutorialScript = [
         id: 'offside-resolve-execute',
         message: 'La línea de fuera de juego está en y=8. Mueve al jugador a la casilla J8 para corregir su posición.',
         messageEn: 'The offside line is at y=8. Move the player to square J8 to correct their position.',
+        messagePt: 'A linha de impedimento está em y=8. Mova o jogador para a casa J8 para corrigir sua posição.',
         highlightId: 'square-9-8',
         action: { type: 'click_square', payload: { position: { x: 9, y: 8 } } },
         initialState: {
@@ -4133,6 +4328,7 @@ const tutorialScript = [
         id: 'goal-intro',
         message: 'El objetivo final: ¡marcar un GOL! Selecciona a tu jugador #9.',
         messageEn: 'The final objective: score a GOAL! Select your player #9.',
+        messagePt: 'O objetivo final: marcar um GOL! Selecione seu jogador #9.',
         highlightId: 'player-9-home',
         action: { type: 'click_player', payload: { playerNumber: 9, team: 'home' } },
         initialState: {
@@ -4148,6 +4344,7 @@ const tutorialScript = [
         id: 'goal-execute',
         message: 'Ahora, ¡chuta a la portería rival en J24 para marcar!',
         messageEn: 'Now, shoot at the opponent goal at J24 to score!',
+        messagePt: 'Agora, chute no gol adversário em J24 para marcar!',
         highlightId: 'square-9-24',
         action: { type: 'click_square', payload: { position: { x: 9, y: 24 } } },
         initialState: {
@@ -4164,6 +4361,7 @@ const tutorialScript = [
         id: 'blocked-ball-intro',
         message: 'Si el balón está rodeado por rivales, se considera "bloqueado" y el juego se reinicia. Lanza el dado para ver qué pasa.',
         messageEn: 'If the ball is surrounded by opponents, it is "blocked" and the game resets. Roll the dice to see what happens.',
+        messagePt: 'Se a bola for cercada pelos adversários, ela fica "bloqueada" e o jogo é reiniciado. Lance o dado para ver o que acontece.',
         highlightId: 'dice-roll-button',
         action: { type: 'click_element', payload: { elementId: 'dice-roll-button' } },
         initialState: {
@@ -4187,6 +4385,7 @@ const tutorialScript = [
         id: 'end',
         message: '¡Felicidades! Has completado el tutorial y ya sabes todo lo necesario para dominar Hexagol. ¡Mucha suerte!',
         messageEn: 'Congratulations! You have completed the tutorial and know everything you need to master Hexagol. Good luck!',
+        messagePt: 'Parabéns! Você completou o tutorial e sabe tudo o que precisa para dominar o Hexagol. Boa sorte!',
         highlightId: '',
         action: { type: 'click_element', payload: { elementId: 'final-ok-button' } }, // A dummy action to end the tutorial
         initialState: {
@@ -4275,7 +4474,7 @@ function getInitialState() {
     offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
     swapCandidates: [],
     toastToShow: null,
-    gameLog: [{ turn: 0, message: lang === 'en' ? 'Match is about to begin.' : 'El partido está por comenzar.', actionType: 'game-event' }],
+    gameLog: [{ turn: 0, message: lang === 'en' ? 'Match is about to begin.' : lang === 'pt' ? 'A partida está prestes a começar.' : 'El partido está por comenzar.', actionType: 'game-event' }],
     stats: { possession: { home: 0, away: 0 }, shotsOnGoal: { home: 0, away: 0 }, offsides: { home: 0, away: 0 }, passes: { home: 0, away: 0 } },
     matchStats: { goals: {}, assists: {} },
     assistProviderId: null,
@@ -4470,9 +4669,9 @@ function updateClockDisplaySurgically() {
 
   if (clockEl) {
     if (state.targetGoals) {
-      clockEl.textContent = lang === 'en' ? `🥅 First to ${state.targetGoals}` : `🥅 Al ${state.targetGoals}`;
+      clockEl.textContent = lang === 'en' ? `🥅 First to ${state.targetGoals}` : lang === 'pt' ? `🥅 Primeiro a ${state.targetGoals}` : `🥅 Al ${state.targetGoals}`;
     } else if (state.overtimeMode === 'golden-goal') {
-      clockEl.textContent = lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro';
+      clockEl.textContent = lang === 'en' ? '⚽ Golden goal' : lang === 'pt' ? '⚽ Gol de ouro' : '⚽ Gol de oro';
     } else {
       clockEl.textContent = '⏱ ' + formatClock(state.gameClock);
     }
@@ -4568,11 +4767,11 @@ function advanceToNextTurn(s, opts) {
       if (teammatesInArea.length > 0) {
         const news = {
           ...s, gamePhase: 'goalkeeper-swap', swapCandidates: [gk.id, ...teammatesInArea.map(p => p.id)],
-          message: lang === 'en' ? 'Goalkeeper is out of the area. Choose a player to swap, or end the turn.' : 'El arquero está fuera del área. Elige un jugador para cambiar, o finaliza el turno.',
+          message: lang === 'en' ? 'Goalkeeper is out of the area. Choose a player to swap, or end the turn.' : lang === 'pt' ? 'O goleiro saiu da área. Escolha um jogador para trocar ou encerre o turno.' : 'El arquero está fuera del área. Elige un jugador para cambiar, o finaliza el turno.',
           turnStartState: null, swapTimer: GOALKEEPER_SWAP_DURATION,
           ...freshActionState(), isKickoffTurn: false, assistProviderId: null,
         };
-        return logAction(news, lang === 'en' ? 'Goalkeeper is out of the area. You can swap them.' : 'El arquero está fuera del área. Puedes intercambiarlo.', 'game-event');
+        return logAction(news, lang === 'en' ? 'Goalkeeper is out of the area. You can swap them.' : lang === 'pt' ? 'O goleiro saiu da área. Você pode trocá-lo.' : 'El arquero está fuera del área. Puedes intercambiarlo.', 'game-event');
       }
     }
   }
@@ -4586,7 +4785,7 @@ function advanceToNextTurn(s, opts) {
     const { offsidePlayers, offsideLineY } = checkForOffside(players, currentPlayer, offsideCheckBall, s.lastPlayerToTouchBallId);
     if (offsidePlayers.length > 0 && offsideLineY !== null) {
       const nextStats = { ...s.stats, offsides: { ...s.stats.offsides, [currentPlayer]: s.stats.offsides[currentPlayer] + 1 } };
-      const msg = lang === 'en' ? `Offside! ${teamToKickOffName}, move the highlighted players.` : `¡Fuera de juego! ${teamToKickOffName}, debes mover a los jugadores resaltados.`;
+      const msg = lang === 'en' ? `Offside! ${teamToKickOffName}, move the highlighted players.` : lang === 'pt' ? `Impedimento! ${teamToKickOffName}, mova os jogadores destacados.` : `¡Fuera de juego! ${teamToKickOffName}, debes mover a los jugadores resaltados.`;
       const news = {
         ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'resolving-offside', diceValue: null,
         ...freshActionState(), validOffsideMoves: [], offsidePlayerIds: offsidePlayers.map(p => p.id),
@@ -4601,12 +4800,12 @@ function advanceToNextTurn(s, opts) {
   if (isBallTotallyBlocked(ballPosition, players, nextPlayer)) {
     const teamCausingBlockName = getTeamName(s, currentPlayer);
     const playersForKickoff = movePlayersForKickoff(getInitialPlayers(), nextPlayer);
-    const msg = lang === 'en' ? `Ball blocked! ${teamToKickOffName} kicks off. Roll the dice.` : `¡Balón bloqueado! Saca ${teamToKickOffName}. Lanza el dado.`;
+    const msg = lang === 'en' ? `Ball blocked! ${teamToKickOffName} kicks off. Roll the dice.` : lang === 'pt' ? `Bola bloqueada! ${teamToKickOffName} sai com a bola. Lance o dado.` : `¡Balón bloqueado! Saca ${teamToKickOffName}. Lanza el dado.`;
     const news = {
       ...s, players: playersForKickoff, ballPosition: { ...INITIAL_BALL_POSITION }, currentPlayer: nextPlayer,
       gamePhase: 'rolling', diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, offsidePlayerIds: [], validOffsideMoves: [], swapCandidates: [],
-      timer: s.turnDuration, toastToShow: { title: lang === 'en' ? 'Ball blocked!' : '¡Juego trabado!', description: lang === 'en' ? `${teamCausingBlockName} has blocked the ball. Resetting kickoff.` : `${teamCausingBlockName} ha bloqueado el balón. Se reinicia el saque.` },
+      timer: s.turnDuration, toastToShow: { title: lang === 'en' ? 'Ball blocked!' : lang === 'pt' ? 'Bola bloqueada!' : '¡Juego trabado!', description: lang === 'en' ? `${teamCausingBlockName} has blocked the ball. Resetting kickoff.` : lang === 'pt' ? `${teamCausingBlockName} bloqueou a bola. Reiniciando o saque.` : `${teamCausingBlockName} ha bloqueado el balón. Se reinicia el saque.` },
       turnStartState: null, isKickoffTurn: true, assistProviderId: null,
     };
     return logAction(news, msg, 'game-event', currentPlayer);
@@ -4625,7 +4824,7 @@ function advanceToNextTurn(s, opts) {
       };
     }
   }
-  const baseMsg = lang === 'en' ? `${teamToKickOffName}'s turn. Roll the dice.` : `Turno de ${teamToKickOffName}. Lanza el dado.`;
+  const baseMsg = lang === 'en' ? `${teamToKickOffName}'s turn. Roll the dice.` : lang === 'pt' ? `Turno de ${teamToKickOffName}. Lance o dado.` : `Turno de ${teamToKickOffName}. Lanza el dado.`;
   const news = {
     ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
@@ -4654,7 +4853,7 @@ function handleGoal(s) {
                     (s.overtimeMode === 'golden-goal');
 
   if (matchEnds) {
-    const winMsg = lang === 'en' ? `GOAL! ${scorerName} wins the match!` : `¡GOL! ¡${scorerName} gana el partido!`;
+    const winMsg = lang === 'en' ? `GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL! ${scorerName} venceu a partida!` : `¡GOL! ¡${scorerName} gana el partido!`;
     // First show the goal normally (with toast and board reset), then end match after a delay
     const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
     const goalState = logAction({
@@ -4663,7 +4862,7 @@ function handleGoal(s) {
       ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
       turnStartState: null, lastAction: null, matchStats: newMatchStats, assistProviderId: null,
       gamePhase: 'rolling',
-      toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : `¡${scorerName} gana!` },
+      toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : lang === 'pt' ? '⚽ FIM DE JOGO!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : lang === 'pt' ? `${scorerName} venceu!` : `¡${scorerName} gana!` },
     }, winMsg, 'goal', scoringTeam);
     // Delay game-over so the goal toast and board reset are visible
     setTimeout(() => {
@@ -4675,13 +4874,13 @@ function handleGoal(s) {
   }
 
   const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
-  const msg = lang === 'en' ? `GOAL by ${scorerName}! ${concederName} kicks off.` : `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
+  const msg = lang === 'en' ? `GOAL by ${scorerName}! ${concederName} kicks off.` : lang === 'pt' ? `GOL de ${scorerName}! ${concederName} sai com a bola.` : `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
   const news = {
     ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
     currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
     turnStartState: null, lastAction: null, isKickoffTurn: true, matchStats: newMatchStats, assistProviderId: null,
-    toastToShow: { title: lang === 'en' ? '⚽ GOAAAL!' : '¡GOOOOL!', description: lang === 'en' ? `${scorerName} scored!` : `${scorerName} ha marcado.` },
+    toastToShow: { title: lang === 'en' ? '⚽ GOAAAL!' : lang === 'pt' ? '⚽ GOOOLLL!' : '¡GOOOOL!', description: lang === 'en' ? `${scorerName} scored!` : lang === 'pt' ? `${scorerName} marcou!` : `${scorerName} ha marcado.` },
   };
   return logAction(news, msg, 'goal', scoringTeam);
 }
@@ -4697,17 +4896,17 @@ function handleOwnGoal(s) {
                     (s.overtimeMode === 'golden-goal');
 
   const newPlayers = movePlayersForKickoff(getInitialPlayers(), team);
-  const msg = lang === 'en' ? `OWN GOAL by ${concederName}!` : `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
+  const msg = lang === 'en' ? `OWN GOAL by ${concederName}!` : lang === 'pt' ? `GOL CONTRA de ${concederName}!` : `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
 
   if (matchEnds) {
-    const winMsg = lang === 'en' ? `OWN GOAL! ${scorerName} wins the match!` : `¡AUTOGOL! ¡${scorerName} gana el partido!`;
+    const winMsg = lang === 'en' ? `OWN GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL CONTRA! ${scorerName} venceu a partida!` : `¡AUTOGOL! ¡${scorerName} gana el partido!`;
     const goalState = logAction({
       ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
       currentPlayer: team, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
       turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
       gamePhase: 'rolling',
-      toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : `¡${scorerName} gana!` },
+      toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : lang === 'pt' ? '⚽ FIM DE JOGO!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : lang === 'pt' ? `${scorerName} venceu!` : `¡${scorerName} gana!` },
     }, winMsg, 'goal', scoringTeam);
     setTimeout(() => {
       setState(s2 => s2.gamePhase === 'rolling' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
@@ -4722,7 +4921,7 @@ function handleOwnGoal(s) {
     currentPlayer: team, gamePhase: 'rolling', diceValue: null, ...freshActionState(),
     lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
     turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
-    toastToShow: { title: lang === 'en' ? '⚽ OWN GOAL!' : '¡AUTOGOL!', description: lang === 'en' ? `${concederName} scored an own goal.` : `${concederName} ha marcado en propia puerta.` },
+    toastToShow: { title: lang === 'en' ? '⚽ OWN GOAL!' : lang === 'pt' ? '⚽ GOL CONTRA!' : '¡AUTOGOL!', description: lang === 'en' ? `${concederName} scored an own goal.` : lang === 'pt' ? `${concederName} fez um gol contra.` : `${concederName} ha marcado en propia puerta.` },
   };
   return logAction(news, msg, 'goal', scoringTeam);
 }
@@ -4753,9 +4952,9 @@ function handleEndHalfOrMatch(s) {
   // Regular end
   const homeName = getTeamName(s, 'home'), awayName = getTeamName(s, 'away');
   let msg = lang === 'en' ? "Match over! " : '¡Fin del partido! ';
-  if (s.score.home > s.score.away) msg += lang === 'en' ? `${homeName} wins.` : `${homeName} ha ganado.`;
-  else if (s.score.away > s.score.home) msg += lang === 'en' ? `${awayName} wins.` : `${awayName} ha ganado.`;
-  else msg += lang === 'en' ? 'The result is a draw.' : 'El resultado es un empate.';
+  if (s.score.home > s.score.away) msg += lang === 'en' ? `${homeName} wins.` : lang === 'pt' ? `${homeName} venceu.` : `${homeName} ha ganado.`;
+  else if (s.score.away > s.score.home) msg += lang === 'en' ? `${awayName} wins.` : lang === 'pt' ? `${awayName} venceu.` : `${awayName} ha ganado.`;
+  else msg += lang === 'en' ? 'The result is a draw.' : lang === 'pt' ? 'O resultado é empate.' : 'El resultado es un empate.';
   return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
 }
 
@@ -5609,7 +5808,7 @@ function runBotTurn() {
         } else {
           step.chainDepth = 0;
           setState(s2 => {
-            const logState = logAction(s2, lang === 'en' ? 'Opponent ends the play.' : 'El equipo rival termina la jugada.', 'game-event');
+            const logState = logAction(s2, lang === 'en' ? 'Opponent ends the play.' : lang === 'pt' ? 'O adversário encerra a jogada.' : 'El equipo rival termina la jugada.', 'game-event');
             const reverted = { ...logState, players: s2.turnStartState.players, ballPosition: s2.turnStartState.ballPosition, lastPlayerToTouchBallId: s2.turnStartState.lastPlayerToTouchBallId };
             return advanceToNextTurn(reverted);
           });
@@ -5719,7 +5918,7 @@ function startTutorial() {
   const step0 = tutorialScript[0];
   return {
     ...getInitialState(), gameMode: 'tutorial', gamePhase: 'tutorial',
-    message: (lang === 'en' && step0.messageEn) ? step0.messageEn : step0.message, players: [...step0.initialState.players],
+    message: lang === 'en' && step0.messageEn ? step0.messageEn : lang === 'pt' && step0.messagePt ? step0.messagePt : step0.message, players: [...step0.initialState.players],
     ballPosition: step0.initialState.ballPosition ? { ...step0.initialState.ballPosition } : null,
     diceValue: step0.initialState.diceValue ?? null,
     homeTeam: TEAMS.find(t => t.id === 'estudiantes'), awayTeam: TEAMS.find(t => t.id === 'colegiales'),
@@ -5750,7 +5949,7 @@ function startSandbox() {
     turnCount: 1,
     isClockRunning: false,
     isKickoffTurn: true,
-    message: lang === 'en' ? 'Training — choose the dice value to start.' : 'Entrenamiento — elegí el valor del dado para empezar.',
+    message: lang === 'en' ? 'Training — choose the dice value to start.' : lang === 'pt' ? 'Treino — escolha o valor do dado para começar.' : 'Entrenamiento — elegí el valor del dado para empezar.',
   };
 }
 
@@ -5763,7 +5962,7 @@ function handleTrainingDiceSelect(value) {
     const teamName = getTeamName(s, s.currentPlayer);
     const withLog = logAction(
       { ...s, diceValue: value },
-      `Dado: ${value}. Elige un jugador de ${teamName} para mover.`,
+      lang === 'en' ? `Dice: ${value}. Choose a ${teamName} player to move.` : lang === 'pt' ? `Dado: ${value}. Escolha um jogador de ${teamName} para mover.` : `Dado: ${value}. Elige un jugador de ${teamName} para mover.`,
       'roll'
     );
     if (value === 0) {
@@ -5822,7 +6021,7 @@ function advanceTutorial(s) {
     players: [...nextStep.initialState.players],
     ballPosition: nextStep.initialState.ballPosition ? { ...nextStep.initialState.ballPosition } : null,
     diceValue: nextStep.initialState.diceValue ?? null,
-    message: (lang === 'en' && nextStep.messageEn) ? nextStep.messageEn : nextStep.message,
+    message: lang === 'en' && nextStep.messageEn ? nextStep.messageEn : lang === 'pt' && nextStep.messagePt ? nextStep.messagePt : nextStep.message,
     offsidePlayerIds: nextStep.initialState.offsidePlayerIds ?? [],
     selectedPlayerId: null,
     validMoves: [], validKickTargets: [], validDragTargets: [],
@@ -5845,7 +6044,7 @@ function handleTutorialAction(userAction) {
   if (s.gameMode !== 'tutorial' || s.isTutorialAnimating) return;
   const currentStep = tutorialScript[s.tutorialStep];
   if (!tutorialActionsMatch(userAction, currentStep.action)) {
-    setState({ toastToShow: { title: lang === 'en' ? 'Not yet' : 'Todavía no', description: lang === 'en' ? 'Follow the highlighted hint on the board.' : 'Seguí la indicación resaltada en el tablero.', variant: 'destructive' } });
+    setState({ toastToShow: { title: lang === 'en' ? 'Not yet' : lang === 'pt' ? 'Ainda não' : 'Todavía no', description: lang === 'en' ? 'Follow the highlighted hint on the board.' : lang === 'pt' ? 'Siga a dica destacada no tabuleiro.' : 'Seguí la indicación resaltada en el tablero.', variant: 'destructive' } });
     return;
   }
   setState({ isTutorialAnimating: true });
@@ -5856,7 +6055,7 @@ function handleTutorialAction(userAction) {
     if (nextStepIndex >= tutorialScript.length) {
       currentMenuView = 'main';
       setState(getInitialState());
-      setState({ toastToShow: { title: lang === 'en' ? 'Tutorial complete!' : '¡Tutorial completado!', description: lang === 'en' ? 'You are ready to play. Choose a game mode.' : 'Ya estás listo para jugar. Elige un modo de juego.' } });
+      setState({ toastToShow: { title: lang === 'en' ? 'Tutorial complete!' : lang === 'pt' ? 'Tutorial concluído!' : '¡Tutorial completado!', description: lang === 'en' ? 'You are ready to play. Choose a game mode.' : lang === 'pt' ? 'Você está pronto para jogar. Escolha um modo de jogo.' : 'Ya estás listo para jugar. Elige un modo de juego.' } });
       return;
     }
     setState(s2 => ({ ...advanceTutorial(s2), isTutorialAnimating: false }));
@@ -5894,8 +6093,8 @@ function startLeagueMatch(s, matchId) {
     homeTeam: finalHomeTeam, awayTeam: finalAwayTeam, gamePhase: 'pre-game-roll',
     halfDurationMinutes: s.leagueState.matchDurationMinutes, gameClock: s.leagueState.matchDurationMinutes * 60,
     turnDuration: turnDur, timer: turnDur,
-    message: lang === 'en' ? `Round ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Roll the dice.` : `Jornada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Tiren los dados.`,
-    toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeamData.name} will use their alternate kit.` : `${awayTeamData.name} usará su camiseta alternativa.` } : null,
+    message: lang === 'en' ? `Round ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Roll the dice.` : lang === 'pt' ? `Rodada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Lance o dado.` : `Jornada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Tiren los dados.`,
+    toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeamData.name} will use their alternate kit.` : lang === 'pt' ? `${awayTeamData.name} usará seu uniforme alternativo.` : `${awayTeamData.name} usará su camiseta alternativa.` } : null,
   };
 }
 
@@ -5951,7 +6150,7 @@ function finishLeagueMatch(s) {
     const champion = getSortedLeagueTeams(updatedTeams, updatedSchedule)[0];
     return {
       ...getInitialState(), gameMode: 'league', gamePhase: 'league-over', leagueState: updatedLeagueState,
-      message: lang === 'en' ? `${champion.name} is the league champion!` : `¡${champion.name} es el campeón de la liga!`,
+      message: lang === 'en' ? `${champion.name} is the league champion!` : lang === 'pt' ? `${champion.name} é o campeão da liga!` : `¡${champion.name} es el campeón de la liga!`,
     };
   }
   return {
@@ -5966,7 +6165,7 @@ function handleLocalUndo() {
   setState(s => {
     if (!s.prevTurnSnapshot) return s;
     const snap = s.prevTurnSnapshot;
-    const logMsg = lang === 'en' ? 'Turn undone.' : 'Jugada deshecha.';
+    const logMsg = lang === 'en' ? 'Turn undone.' : lang === 'pt' ? 'Jogada desfeita.' : 'Jugada deshecha.';
     const reverted = {
       ...s,
       players: snap.players,
@@ -5991,9 +6190,9 @@ function handleDeselectPlayer(s, showToast) {
   const teamName = getTeamName(s, s.currentPlayer);
   const patch = freshActionState({
     gamePhase: 'selecting-piece',
-    message: `Sacaste un ${s.diceValue}. Elige un jugador de ${teamName} para mover.`,
+    message: lang === 'en' ? `You rolled ${s.diceValue}. Choose a ${teamName} player to move.` : lang === 'pt' ? `Você tirou ${s.diceValue}. Escolha um jogador de ${teamName} para mover.` : `Sacaste un ${s.diceValue}. Elige un jugador de ${teamName} para mover.`,
   });
-  if (showToast) patch.toastToShow = { title: lang === 'en' ? 'Invalid move' : 'Movimiento inválido', description: lang === 'en' ? 'You cannot move to that square.' : 'No puedes moverte a esa casilla.', variant: 'destructive' };
+  if (showToast) patch.toastToShow = { title: lang === 'en' ? 'Invalid move' : lang === 'pt' ? 'Movimento inválido' : 'Movimiento inválido', description: lang === 'en' ? 'You cannot move to that square.' : lang === 'pt' ? 'Você não pode mover para essa casa.' : 'No puedes moverte a esa casilla.', variant: 'destructive' };
   return { ...s, ...patch };
 }
 
@@ -6010,8 +6209,8 @@ function handlePlayerSelection(s, playerId) {
     const isTarget = s.validChainPassTargets.some(p => p.x === clickedPlayer.position.x && p.y === clickedPlayer.position.y);
     const isInvalid = s.invalidOffsideChainPassTargets.some(p => p.x === clickedPlayer.position.x && p.y === clickedPlayer.position.y);
     if (isTarget) return handleActionExecution(s, 'chain-pass', clickedPlayer.position);
-    if (isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
-    return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid pass' : 'Pase inválido', description: lang === 'en' ? 'You cannot continue the chain with that player.' : 'No puedes continuar la cadena con ese jugador.', variant: 'destructive' } };
+    if (isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : lang === 'pt' ? 'Jogada ilegal' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+    return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid pass' : lang === 'pt' ? 'Passe inválido' : 'Pase inválido', description: lang === 'en' ? 'You cannot continue the chain with that player.' : lang === 'pt' ? 'Você não pode continuar a cadeia com esse jogador.' : 'No puedes continuar la cadena con ese jugador.', variant: 'destructive' } };
   }
 
   if (s.gamePhase === 'goalkeeper-swap') {
@@ -6025,7 +6224,7 @@ function handlePlayerSelection(s, playerId) {
       if (p.id === playerToSwap.id) return { ...p, position: gk.position };
       return p;
     });
-    const logState = logAction(s, lang === 'en' ? `Goalkeeper #${gk.playerNumber} swaps with player #${playerToSwap.playerNumber}.` : `El arquero #${gk.playerNumber} intercambia posición con el jugador #${playerToSwap.playerNumber}.`, 'move');
+    const logState = logAction(s, lang === 'en' ? `Goalkeeper #${gk.playerNumber} swaps with player #${playerToSwap.playerNumber}.` : lang === 'pt' ? `Goleiro #${gk.playerNumber} troca com o jogador #${playerToSwap.playerNumber}.` : `El arquero #${gk.playerNumber} intercambia posición con el jugador #${playerToSwap.playerNumber}.`, 'move');
     const afterSwap = { ...logState, players: newPlayers, swapCandidates: [], lastAction: { from: gk.position, to: playerToSwap.position } };
     return advanceToNextTurn(afterSwap, { skipSwapCheck: true });
   }
@@ -6035,7 +6234,7 @@ function handlePlayerSelection(s, playerId) {
       const player = s.players.find(p => p.id === playerId);
       if (!player || !s.offsideContext || !s.ballPosition) return s;
       const validMoves = getValidOffsideResolutionMoves(player, s.offsideContext.offsideLineY, s.players, s.ballPosition);
-      return { ...s, selectedPlayerId: playerId, validOffsideMoves: validMoves, message: lang === 'en' ? `Move player ${player.playerNumber} to one of the highlighted squares.` : `Mueve al jugador ${player.playerNumber} a una de las casillas resaltadas.` };
+      return { ...s, selectedPlayerId: playerId, validOffsideMoves: validMoves, message: lang === 'en' ? `Move player ${player.playerNumber} to one of the highlighted squares.` : lang === 'pt' ? `Mova o jogador ${player.playerNumber} para uma das casas destacadas.` : `Mueve al jugador ${player.playerNumber} a una de las casillas resaltadas.` };
     }
     return s;
   }
@@ -6043,7 +6242,7 @@ function handlePlayerSelection(s, playerId) {
   if ((s.gamePhase === 'selecting-piece' || s.gamePhase === 'moving-piece') && clickedPlayer.team === s.currentPlayer) {
     if (clickedPlayer.id === s.selectedPlayerId) return handleDeselectPlayer(s, false);
     if (!s.diceValue || !s.ballPosition) {
-      return { ...s, toastToShow: { title: lang === 'en' ? 'Roll the dice' : 'Lanza el dado', description: lang === 'en' ? 'You must roll before selecting a player.' : 'Debes lanzar el dado antes de seleccionar un jugador.', variant: 'destructive' } };
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Roll the dice' : lang === 'pt' ? 'Lance o dado' : 'Lanza el dado', description: lang === 'en' ? 'You must roll before selecting a player.' : lang === 'pt' ? 'Você deve lançar o dado antes de selecionar um jogador.' : 'Debes lanzar el dado antes de seleccionar un jugador.', variant: 'destructive' } };
     }
 
     const newValidMoves = getValidMoves(clickedPlayer, s.diceValue, s.players, s.ballPosition);
@@ -6097,7 +6296,7 @@ function handlePlayerSelection(s, playerId) {
       invalidOffsideLoftedDragTargets: loftedDragResult.invalidOffsideTargets,
       validChainPassTargets: [], invalidOffsideChainPassTargets: [],
       chainPassReceivers: newChainReceivers, chainPassInitiatorId: null,
-      gamePhase: 'moving-piece', message: lang === 'en' ? `Player #${clickedPlayer.playerNumber} (${teamName}) selected.` : `Jugador #${clickedPlayer.playerNumber} (${teamName}) seleccionado.`,
+      gamePhase: 'moving-piece', message: lang === 'en' ? `Player #${clickedPlayer.playerNumber} (${teamName}) selected.` : lang === 'pt' ? `Jogador #${clickedPlayer.playerNumber} (${teamName}) selecionado.` : `Jugador #${clickedPlayer.playerNumber} (${teamName}) seleccionado.`,
     };
   }
 
@@ -6117,14 +6316,14 @@ function handleSquareSelection(s, position) {
   if (gamePhase === 'resolving-offside') {
     if (!selectedPlayerId) return s;
     const isTarget = s.validOffsideMoves.some(p => p.x === position.x && p.y === position.y);
-    if (!isTarget) return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid move' : 'Movimiento inválido', description: lang === 'en' ? 'You must move the offside player to a valid square.' : 'Debes mover al jugador a una casilla permitida.', variant: 'destructive' } };
+    if (!isTarget) return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid move' : lang === 'pt' ? 'Movimento inválido' : 'Movimiento inválido', description: lang === 'en' ? 'You must move the offside player to a valid square.' : lang === 'pt' ? 'Você deve mover o jogador em impedimento para uma casa válida.' : 'Debes mover al jugador a una casilla permitida.', variant: 'destructive' } };
     const newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position } : p);
     const remaining = s.offsidePlayerIds.filter(id => id !== selectedPlayerId);
     if (remaining.length > 0) {
-      return { ...s, players: newPlayers, offsidePlayerIds: remaining, selectedPlayerId: null, validOffsideMoves: [], message: lang === 'en' ? `Good! ${remaining.length} player(s) still to move.` : `¡Bien! Aún quedan ${remaining.length} jugadores por mover.` };
+      return { ...s, players: newPlayers, offsidePlayerIds: remaining, selectedPlayerId: null, validOffsideMoves: [], message: lang === 'en' ? `Good! ${remaining.length} player(s) still to move.` : lang === 'pt' ? `Ótimo! ${remaining.length} jogador(es) ainda precisam mover.` : `¡Bien! Aún quedan ${remaining.length} jugadores por mover.` };
     }
     const nextPlayerName = getTeamName(s, s.currentPlayer);
-    const msg = lang === 'en' ? `Offside resolved. ${nextPlayerName}'s turn. Roll the dice.` : `Fuera de juego resuelto. Turno de ${nextPlayerName}. Lanza el dado.`;
+    const msg = lang === 'en' ? `Offside resolved. ${nextPlayerName}'s turn. Roll the dice.` : lang === 'pt' ? `Impedimento resolvido. Turno de ${nextPlayerName}. Lance o dado.` : `Fuera de juego resuelto. Turno de ${nextPlayerName}. Lanza el dado.`;
     const logState = logAction(s, msg, 'game-event', s.currentPlayer);
     return { ...logState, players: newPlayers, gamePhase: 'rolling', selectedPlayerId: null, offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null, timer: s.turnDuration };
   }
@@ -6132,8 +6331,8 @@ function handleSquareSelection(s, position) {
   if (gamePhase === 'chain-pass') {
     const isTarget = validChainPassTargets.some(p => p.x === position.x && p.y === position.y);
     const isInvalid = invalidOffsideChainPassTargets.some(p => p.x === position.x && p.y === position.y);
-    if (!isTarget && !isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid move' : 'Movimiento inválido', description: lang === 'en' ? 'You cannot pass the ball to that square.' : 'No puedes pasar el balón a esa casilla.', variant: 'destructive' } };
-    if (isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+    if (!isTarget && !isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid move' : lang === 'pt' ? 'Movimento inválido' : 'Movimiento inválido', description: lang === 'en' ? 'You cannot pass the ball to that square.' : lang === 'pt' ? 'Você não pode passar a bola para essa casa.' : 'No puedes pasar el balón a esa casilla.', variant: 'destructive' } };
+    if (isInvalid) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : lang === 'pt' ? 'Jogada ilegal' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     return handleActionExecution({ ...s, actionChoice: null }, 'chain-pass', position);
   }
 
@@ -6153,7 +6352,7 @@ function handleSquareSelection(s, position) {
       (invalidOffsideDragTargets ?? []).some(p => p.x === position.x && p.y === position.y) ||
       (invalidOffsideLoftedDragTargets ?? []).some(p => p.x === position.x && p.y === position.y) ||
       isActionOffside(actingPlayer, position, players, ballPosition);
-    if (isInvalidOffside) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+    if (isInvalidOffside) return { ...s, toastToShow: { title: lang === 'en' ? 'Illegal play' : lang === 'pt' ? 'Jogada ilegal' : 'Jugada Ilegal', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     return handleDeselectPlayer(s, false);
   }
 
@@ -6184,8 +6383,8 @@ function handleActionExecution(s, executedAction, position) {
     const playerNewPos = ballPosition;
     let newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p);
     const logMsg = executedAction === 'drag'
-      ? (lang === 'en' ? `Player #${actingPlayer.playerNumber} drags the ball to (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} arrastra el balón a (${position.x}, ${position.y}).`)
-      : (lang === 'en' ? `Player #${actingPlayer.playerNumber} lofts the ball to (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} arrastra el balón por encima a (${position.x}, ${position.y}).`);
+      ? (lang === 'en' ? `Player #${actingPlayer.playerNumber} drags the ball to (${position.x}, ${position.y}).` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} arrasta a bola para (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} arrastra el balón a (${position.x}, ${position.y}).`)
+      : (lang === 'en' ? `Player #${actingPlayer.playerNumber} lofts the ball to (${position.x}, ${position.y}).` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} lança a bola para (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} arrastra el balón por encima a (${position.x}, ${position.y}).`);
     const logState = logAction(s, logMsg, executedAction);
 
     const dir = { dx: Math.sign(position.x - playerNewPos.x), dy: Math.sign(position.y - playerNewPos.y) };
@@ -6202,12 +6401,12 @@ function handleActionExecution(s, executedAction, position) {
     }
 
     if (isActionOffside(actingPlayer, finalBallPos, players, ballPosition)) {
-      return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : lang === 'pt' ? 'Jogada inválida' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     }
 
     const opponentGoal = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
     if (opponentGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) {
-      const goalLog = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} drags toward goal!` : `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
+      const goalLog = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} drags toward goal!` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} arrasta em direção ao gol!` : `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
       const withStat = { ...goalLog, stats: { ...goalLog.stats, shotsOnGoal: { ...goalLog.stats.shotsOnGoal, [currentPlayer]: goalLog.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
@@ -6228,7 +6427,7 @@ function handleActionExecution(s, executedAction, position) {
         assistProviderId: selectedPlayerId, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
         lastAction: { from: ballPosition, to: finalBallPos },
-        message: lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}! Choose an action for the chain.` : `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
+        message: lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}! Choose an action for the chain.` : lang === 'pt' ? `Passe para #${receivingTeammate.playerNumber}! Escolha uma ação para a cadeia.` : `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
         actionChoice: null, validMoves: [], validKickTargets: [], invalidOffsideKickTargets: [],
         validDragTargets: [], invalidOffsideDragTargets: [], validLoftedPassTargets: [],
         validLoftedDragTargets: [], invalidOffsideLoftedDragTargets: [], selectedPlayerId: receivingTeammate.id,
@@ -6240,7 +6439,7 @@ function handleActionExecution(s, executedAction, position) {
   }
 
   if (executedAction === 'move') {
-    const logState = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} moves to (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} se mueve a (${position.x}, ${position.y}).`, 'move');
+    const logState = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} moves to (${position.x}, ${position.y}).` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} move para (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} se mueve a (${position.x}, ${position.y}).`, 'move');
     const newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position } : p);
     const nextChange = { ...logState, players: newPlayers, lastAction: { from: actingPlayer.position, to: position } };
     return advanceToNextTurn(nextChange);
@@ -6251,13 +6450,13 @@ function handleActionExecution(s, executedAction, position) {
     const currentPasser = executedAction === 'chain-pass' ? players.find(p => p.id === s.chainPassInitiatorId) : actingPlayer;
 
     if (isActionOffside(currentPasser, position, players, startPos)) {
-      return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : lang === 'pt' ? 'Jogada inválida' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     }
 
     const opponentGoal = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
     if (opponentGoal.some(p => p.x === position.x && p.y === position.y)) {
       const shooter = executedAction === 'chain-pass' ? s.players.find(p => p.id === s.chainPassInitiatorId) : actingPlayer;
-      const logState = logAction(s, lang === 'en' ? `Player #${shooter.playerNumber} shoots!` : `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
+      const logState = logAction(s, lang === 'en' ? `Player #${shooter.playerNumber} shoots!` : lang === 'pt' ? `Jogador #${shooter.playerNumber} chuta!` : `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
       const withStat = { ...logState, stats: { ...logState.stats, shotsOnGoal: { ...logState.stats.shotsOnGoal, [currentPlayer]: logState.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
@@ -6267,7 +6466,7 @@ function handleActionExecution(s, executedAction, position) {
     const playersOnTarget = players.filter(p => p.position.x === position.x && p.position.y === position.y);
     const opponentOnTarget = playersOnTarget.find(p => p.team !== currentPlayer);
     if (opponentOnTarget) {
-      const logState = logAction(s, lang === 'en' ? `Ball blocked by opponent #${opponentOnTarget.playerNumber}.` : `El balón es bloqueado por #${opponentOnTarget.playerNumber} rival.`, 'kick');
+      const logState = logAction(s, lang === 'en' ? `Ball blocked by opponent #${opponentOnTarget.playerNumber}.` : lang === 'pt' ? `Bola bloqueada pelo adversário #${opponentOnTarget.playerNumber}.` : `El balón es bloqueado por #${opponentOnTarget.playerNumber} rival.`, 'kick');
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
       const nextChange = { ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } };
@@ -6278,7 +6477,7 @@ function handleActionExecution(s, executedAction, position) {
     if (receivingTeammate) {
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
-      const logState = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
+      const logState = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : lang === 'pt' ? `Passe para #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
       // Count pass stat
       const withPassStat = { ...logState, stats: { ...logState.stats, passes: { ...logState.stats.passes, [currentPlayer]: (logState.stats.passes?.[currentPlayer] || 0) + 1 } } };
       const chainResult = getValidChainPassTargets(receivingTeammate, newPlayers);
@@ -6292,7 +6491,7 @@ function handleActionExecution(s, executedAction, position) {
         lastPlayerToTouchBallId: currentPasser.id, chainPassInitiatorId: receivingTeammate.id,
         assistProviderId: currentPasser.id, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
-        lastAction: { from: startPos, to: position }, message: lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}! Choose an action for the chain.` : `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
+        lastAction: { from: startPos, to: position }, message: lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}! Choose an action for the chain.` : lang === 'pt' ? `Passe para #${receivingTeammate.playerNumber}! Escolha uma ação para a cadeia.` : `¡Pase a #${receivingTeammate.playerNumber}! Elige una acción para la cadena.`,
         actionChoice: null, validMoves: [], validKickTargets: [], invalidOffsideKickTargets: [],
         validDragTargets: [], invalidOffsideDragTargets: [], validLoftedPassTargets: [],
         validLoftedDragTargets: [], invalidOffsideLoftedDragTargets: [], selectedPlayerId: receivingTeammate.id,
@@ -6300,7 +6499,7 @@ function handleActionExecution(s, executedAction, position) {
     }
 
     // Count shot on goal if there's a clear line to opponent goal within 6 squares
-    const logState = logAction(s, lang === 'en' ? `Pass to (${position.x}, ${position.y}).` : `Pase a (${position.x}, ${position.y}).`, 'kick');
+    const logState = logAction(s, lang === 'en' ? `Pass to (${position.x}, ${position.y}).` : lang === 'pt' ? `Passe para (${position.x}, ${position.y}).` : `Pase a (${position.x}, ${position.y}).`, 'kick');
     const oppGoalForShot = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
     const distToGoal = Math.min(...oppGoalForShot.map(g => Math.abs(g.x - position.x) + Math.abs(g.y - position.y)));
     const hasClearLineToGoal = distToGoal <= 6 && botHasDirectShotFromPos(position, currentPlayer, players);
@@ -6859,9 +7058,9 @@ function renderLanding() {
       🌐 ${t('landing.lang')}
     </button>
     <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
-      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
-      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
-      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
+      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : lang === 'pt' ? '© 2026 Hexagol. Todos os direitos reservados.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : lang === 'pt' ? 'Termos de Uso' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -6912,7 +7111,7 @@ function renderMainMenu() {
       <div class="user-chip-avatar">${avatarContent}</div>
       <div>
         <div class="user-chip-name">${userProfile.username}</div>
-        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : 'D'}</div>
+        <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D'}</div>
       </div>
       <button data-menu="match-history" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">📋</button>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
@@ -6928,8 +7127,8 @@ function renderMainMenu() {
     <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:#f0f4ff;">
-        <div class="t">🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</div>
-        <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : 'Online, local, vs IA, liga y más.'}</div>
+        <div class="t">🎮 ${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</div>
+        <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : lang === 'pt' ? 'Online, local, vs IA, liga e mais.' : 'Online, local, vs IA, liga y más.'}</div>
       </button>
       <button class="menu-btn" data-menu="quick-tutorial" style="border-color:#e8a020;background:#fffbf0;">
         <div class="t">${t('menu.quicktutorial')}</div>
@@ -6951,7 +7150,7 @@ function renderMainMenu() {
     <div style="margin-top:14px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
       <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
          style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        ❤️ ${lang === 'en' ? 'Donate' : 'Donaciones'}
+        ❤️ ${lang === 'en' ? 'Donate' : lang === 'pt' ? 'Doações' : 'Donaciones'}
       </a>
       <a href="javascript:void(0)" onclick="showCommunityModal()"
          style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
@@ -6967,9 +7166,9 @@ function renderMainMenu() {
       </button>
     </div>
     <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
-      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
-      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : 'Términos de Uso'}</button> ·
-      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : 'Política de Privacidad'}</button>
+      ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : lang === 'pt' ? '© 2026 Hexagol. Todos os direitos reservados.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : lang === 'pt' ? 'Termos de Uso' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -6977,8 +7176,8 @@ function renderMainMenu() {
 function renderPlayMenu() {
   return `
   <div class="menu-screen">
-    <h1>🎮 ${lang === 'en' ? 'Play' : 'Jugar'}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Choose a game mode.' : 'Elegí un modo de juego.'}</div>
+    <h1>🎮 ${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Choose a game mode.' : lang === 'pt' ? 'Escolha um modo de jogo.' : 'Elegí un modo de juego.'}</div>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:#f0f4ff;">
         <div class="t">${t('menu.online')}</div>
@@ -7011,11 +7210,11 @@ function renderPlayMenu() {
 function renderTeamPickerCard(side) {
   const picker = onlineTeamPicker[side];
   const label = side === 'home'
-    ? (lang === 'en' ? 'Your team' : 'Tu equipo')
-    : (lang === 'en' ? 'Opponent team (suggested)' : 'Equipo visitante (sugerido)');
-  const presetBtn = lang === 'en' ? 'Preset' : 'Predefinido';
-  const customBtn = lang === 'en' ? 'Custom' : 'Personalizado';
-  const editBtn = lang === 'en' ? '✎ Edit' : '✎ Editar';
+    ? (lang === 'en' ? 'Your team' : lang === 'pt' ? 'Seu time' : 'Tu equipo')
+    : (lang === 'en' ? 'Opponent team (suggested)' : lang === 'pt' ? 'Time visitante (sugerido)' : 'Equipo visitante (sugerido)');
+  const presetBtn = lang === 'en' ? 'Preset' : lang === 'pt' ? 'Predefinido' : 'Predefinido';
+  const customBtn = lang === 'en' ? 'Custom' : lang === 'pt' ? 'Personalizado' : 'Personalizado';
+  const editBtn = lang === 'en' ? '✎ Edit' : lang === 'pt' ? '✎ Editar' : '✎ Editar';
   const presetOptions = TEAMS.map((t, i) => `<option value="${i}" ${picker.presetIdx === i ? 'selected' : ''}>${t.name}</option>`).join('');
   const customTeam = picker.mode === 'custom' ? buildCustomTeam(picker.customName, picker.customKit, side) : null;
 
@@ -7033,7 +7232,7 @@ function renderTeamPickerCard(side) {
         ${jerseyDot(customTeam, 28)}
         <div class="custom-team-summary-text">
           <strong>${customTeam.name}</strong>
-          <span>${(() => { const d = KIT_DESIGNS.find(d => d.id === picker.customKit.design); return d ? (lang === 'en' ? d.nameEn : d.name) : (lang === 'en' ? 'Solid' : 'Sólido'); })()}</span>
+          <span>${(() => { const d = KIT_DESIGNS.find(d => d.id === picker.customKit.design); return d ? (lang === 'en' ? d.nameEn : lang === 'pt' ? d.namePt : d.name) : (lang === 'en' ? 'Solid' : lang === 'pt' ? 'Sólido' : 'Sólido'); })()}</span>
         </div>
         <button class="btn ghost" id="edit-custom-kit-${side}" style="margin-left:auto; padding:6px 12px; font-size:0.74rem;">${editBtn}</button>
       </div>
@@ -7051,22 +7250,22 @@ function renderCustomKitEditor() {
   const needsTertiary = kit.design === 'double-vertical-stripe' || kit.design === 'triple-horizontal-stripe';
 
   const jerseyTitle = side === 'home'
-    ? (lang === 'en' ? 'Your kit' : 'Tu camiseta')
-    : (lang === 'en' ? 'Away kit' : 'Camiseta visitante');
-  const subtitle = lang === 'en' ? 'Choose name, design and colors for your team.' : 'Elegí nombre, diseño y colores para tu equipo.';
-  const teamNamePlaceholder = lang === 'en' ? 'Team name' : 'Nombre del equipo';
-  const designLabel = lang === 'en' ? 'Design' : 'Diseño';
-  const primaryLabel = lang === 'en' ? 'Primary color' : 'Color primario';
-  const secondaryLabel = lang === 'en' ? 'Secondary color' : 'Color secundario';
-  const tertiaryLabel = lang === 'en' ? 'Tertiary color' : 'Color terciario';
-  const textLabel = lang === 'en' ? 'Text / number color' : 'Color del texto/número';
-  const saveDesc = lang === 'en' ? 'This team will be preloaded next time.' : 'Este equipo aparecerá precargado la próxima vez.';
-  const saveProfile = lang === 'en' ? '💾 Save to profile' : '💾 Guardar en mi perfil';
-  const discard = lang === 'en' ? '← Back without saving' : '← Volver sin guardar';
-  const done = lang === 'en' ? '✓ Done' : '✓ Listo';
+    ? (lang === 'en' ? 'Your kit' : lang === 'pt' ? 'Seu uniforme' : 'Tu camiseta')
+    : (lang === 'en' ? 'Away kit' : lang === 'pt' ? 'Uniforme visitante' : 'Camiseta visitante');
+  const subtitle = lang === 'en' ? 'Choose name, design and colors for your team.' : lang === 'pt' ? 'Escolha nome, design e cores para seu time.' : 'Elegí nombre, diseño y colores para tu equipo.';
+  const teamNamePlaceholder = lang === 'en' ? 'Team name' : lang === 'pt' ? 'Nome do time' : 'Nombre del equipo';
+  const designLabel = lang === 'en' ? 'Design' : lang === 'pt' ? 'Design' : 'Diseño';
+  const primaryLabel = lang === 'en' ? 'Primary color' : lang === 'pt' ? 'Cor primária' : 'Color primario';
+  const secondaryLabel = lang === 'en' ? 'Secondary color' : lang === 'pt' ? 'Cor secundária' : 'Color secundario';
+  const tertiaryLabel = lang === 'en' ? 'Tertiary color' : lang === 'pt' ? 'Cor terciária' : 'Color terciario';
+  const textLabel = lang === 'en' ? 'Text / number color' : lang === 'pt' ? 'Cor do texto/número' : 'Color del texto/número';
+  const saveDesc = lang === 'en' ? 'This team will be preloaded next time.' : lang === 'pt' ? 'Este time será pré-carregado na próxima vez.' : 'Este equipo aparecerá precargado la próxima vez.';
+  const saveProfile = lang === 'en' ? '💾 Save to profile' : lang === 'pt' ? '💾 Salvar no perfil' : '💾 Guardar en mi perfil';
+  const discard = lang === 'en' ? '← Back without saving' : lang === 'pt' ? '← Voltar sem salvar' : '← Volver sin guardar';
+  const done = lang === 'en' ? '✓ Done' : lang === 'pt' ? '✓ Pronto' : '✓ Listo';
 
   const colorSwatches = (paletteVar, current, fieldName) => KIT_COLOR_PALETTE.map(c => `
-    <button class="color-swatch ${current === c.value ? 'active' : ''}" data-kit-color="${fieldName}:${c.value}" title="${c.name}" style="background:${hsl(c.value)};"></button>
+    <button class="color-swatch ${current === c.value ? 'active' : ''}" data-kit-color="${fieldName}:${c.value}" title="${lang === 'en' ? (c.nameEn || c.name) : lang === 'pt' ? (c.namePt || c.name) : c.name}" style="background:${hsl(c.value)};"></button>
   `).join('');
 
   const textSwatches = KIT_TEXT_COLOR_PALETTE.map(c => `
@@ -7087,7 +7286,7 @@ function renderCustomKitEditor() {
         ${KIT_DESIGNS.map(d => `
           <button class="kit-design-btn ${kit.design === d.id ? 'active' : ''}" data-kit-design="${d.id}">
             ${jerseyDot({ design: d.id, primaryColor: kit.primaryColor, secondaryColor: kit.secondaryColor, tertiaryColor: kit.tertiaryColor }, 22)}
-            <span>${lang === 'en' ? d.nameEn : d.name}</span>
+            <span>${lang === 'en' ? d.nameEn : lang === 'pt' ? d.namePt : d.name}</span>
           </button>
         `).join('')}
       </div>
@@ -7125,13 +7324,13 @@ function renderCustomKitEditor() {
 }
 
 function renderOnlineSetup() {
-  const createDesc = lang === 'en' ? 'Generate a code and share it with your opponent.' : 'Generás un código y se lo compartís a tu rival.';
-  const quickDesc = lang === 'en' ? 'We match you with someone available automatically.' : 'Te emparejamos con alguien disponible automáticamente.';
-  const joinDesc = lang === 'en' ? 'You have a room code and want to enter.' : 'Tenés el código de una sala y querés entrar.';
+  const createDesc = lang === 'en' ? 'Generate a code and share it with your opponent.' : lang === 'pt' ? 'Gere um código e compartilhe com seu adversário.' : 'Generás un código y se lo compartís a tu rival.';
+  const quickDesc = lang === 'en' ? 'We match you with someone available automatically.' : lang === 'pt' ? 'Te emparelhamos com alguém disponível automaticamente.' : 'Te emparejamos con alguien disponible automáticamente.';
+  const joinDesc = lang === 'en' ? 'You have a room code and want to enter.' : lang === 'pt' ? 'Você tem o código de uma sala e quer entrar.' : 'Tenés el código de una sala y querés entrar.';
   return `
   <div class="menu-screen">
     <h1>${t('menu.online')}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Create a room or join an existing one.' : 'Creá una sala o unite a una existente.'}</div>
+    <div class="subtitle">${lang === 'en' ? 'Create a room or join an existing one.' : lang === 'pt' ? 'Crie uma sala ou entre em uma existente.' : 'Creá una sala o unite a una existente.'}</div>
     <div class="setup-row">
       <div class="team-picker-grid">
         ${renderTeamPickerCard('home')}
@@ -7144,7 +7343,7 @@ function renderOnlineSetup() {
         </div>
       </div>
       <div>
-        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : 'O: primero en marcar N goles'}</span>
+        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : 'O: primero en marcar N goles'}</span>
         <div class="duration-row" id="online-goals-row">
           ${[1, 3, 5].map(g => `<button data-online-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
@@ -7187,7 +7386,7 @@ function renderOnlineJoin() {
 }
 
 function renderOnlineWaiting() {
-  const expiryNote = lang === 'en' ? 'Room expires in 10 minutes.' : 'La sala expira en 10 minutos.';
+  const expiryNote = lang === 'en' ? 'Room expires in 10 minutes.' : lang === 'pt' ? 'A sala expira em 10 minutos.' : 'La sala expira en 10 minutos.';
   const connectingDesc = lang === 'en'
     ? `Room ${onlineRoomId || ''} — waiting for host to start.`
     : `Sala ${onlineRoomId || ''} — esperando que el anfitrión arranque el partido.`;
@@ -7195,7 +7394,7 @@ function renderOnlineWaiting() {
     return `
     <div class="menu-screen" style="text-align:center;">
       <h1>🏠 ${t('online.waiting.title')}</h1>
-      <div class="subtitle">${lang === 'en' ? 'Share this code with your opponent.' : 'Compartí este código con tu rival.'}</div>
+      <div class="subtitle">${lang === 'en' ? 'Share this code with your opponent.' : lang === 'pt' ? 'Compartilhe este código com seu adversário.' : 'Compartí este código con tu rival.'}</div>
       <div class="room-code-display" id="room-code-display">${onlineRoomId || '...'}</div>
       <p style="font-size:0.85rem; color:#6b7a64; margin: 0 0 20px;">${t('online.waiting.hint')}<br>${expiryNote}</p>
       <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.waiting')}</span>
@@ -7206,10 +7405,10 @@ function renderOnlineWaiting() {
   }
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>🔗 ${lang === 'en' ? 'Connecting...' : 'Conectando...'}</h1>
+    <h1>🔗 ${lang === 'en' ? 'Connecting...' : lang === 'pt' ? 'Conectando...' : 'Conectando...'}</h1>
     <div class="subtitle">${connectingDesc}</div>
     <div style="margin: 30px 0;">
-      <span class="online-badge waiting"><span class="online-dot"></span> ${lang === 'en' ? 'Connecting...' : 'Conectando...'}</span>
+      <span class="online-badge waiting"><span class="online-dot"></span> ${lang === 'en' ? 'Connecting...' : lang === 'pt' ? 'Conectando...' : 'Conectando...'}</span>
     </div>
     <div class="menu-grid">
       <button class="menu-btn" id="online-cancel-btn"><div class="t">${t('online.cancel')}</div></button>
@@ -7220,20 +7419,20 @@ function renderOnlineWaiting() {
 function renderOnlineSearching() {
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>⚡ ${lang === 'en' ? 'Finding opponent' : 'Buscando rival'}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Connecting you with someone available...' : 'Conectándote con alguien disponible...'}</div>
+    <h1>⚡ ${lang === 'en' ? 'Finding opponent' : lang === 'pt' ? 'Procurando adversário' : 'Buscando rival'}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Connecting you with someone available...' : lang === 'pt' ? 'Conectando você com alguém disponível...' : 'Conectándote con alguien disponible...'}</div>
     <div style="margin: 30px 0;">
       <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.searching')}</span>
     </div>
     <div class="menu-grid">
-      <button class="menu-btn" id="online-cancel-btn"><div class="t">${lang === 'en' ? '✕ Cancel' : '✕ Cancelar'}</div></button>
+      <button class="menu-btn" id="online-cancel-btn"><div class="t">${lang === 'en' ? '✕ Cancel' : lang === 'pt' ? '✕ Cancelar' : '✕ Cancelar'}</div></button>
     </div>
   </div>`;
 }
 
 function renderOnlineReconnect() {
-  const returnDesc = lang === 'en' ? 'Pick up right where you left off.' : 'Retomás justo donde la dejaste.';
-  const declineDesc = lang === 'en' ? 'That match will be forfeited for your opponent.' : 'Esa partida queda abandonada para tu rival.';
+  const returnDesc = lang === 'en' ? 'Pick up right where you left off.' : lang === 'pt' ? 'Continue de onde parou.' : 'Retomás justo donde la dejaste.';
+  const declineDesc = lang === 'en' ? 'That match will be forfeited for your opponent.' : lang === 'pt' ? 'Essa partida será dada como abandono para seu adversário.' : 'Esa partida queda abandonada para tu rival.';
   return `
   <div class="menu-screen" style="text-align:center;">
     <h1>🔄 ${t('reconnect.title')}</h1>
@@ -7436,7 +7635,7 @@ async function loadLeaderboard() {
         .map(doc => ({ uid: doc.id, ...doc.data() }))
         .filter(u => (u.gamesPlayed || 0) >= 1);
     } catch (err2) {
-      leaderboardError = lang === 'en' ? 'Could not load the table. Try again.' : 'No se pudo cargar la tabla. Intentá de nuevo.';
+      leaderboardError = lang === 'en' ? 'Could not load the table. Try again.' : lang === 'pt' ? 'Não foi possível carregar a tabela. Tente novamente.' : 'No se pudo cargar la tabla. Intentá de nuevo.';
     }
   }
   leaderboardLoading = false;
@@ -7449,28 +7648,28 @@ let quickTutorialStep = 0;
 const QUICK_TUTORIAL_STEPS = [
   {
     icon: '🎲',
-    title: { es: 'El dado', en: 'The dice' },
-    desc: { es: 'Al inicio de tu turno tirás el dado. El número que sale es cuántas casillas podés usar ese turno.', en: 'At the start of your turn you roll the dice. The number you get is how many squares you can use that turn.' },
+    title: { es: 'El dado', en: 'The dice', pt: 'O dado' },
+    desc: { es: 'Al inicio de tu turno tirás el dado. El número que sale es cuántas casillas podés usar ese turno.', en: 'At the start of your turn you roll the dice. The number you get is how many squares you can use that turn.', pt: 'No início do seu turno você lança o dado. O número que sair é quantas casas você pode usar nesse turno.' },
   },
   {
     icon: '🏃',
-    title: { es: 'Mover un jugador', en: 'Move a player' },
-    desc: { es: 'Elegís uno de tus jugadores y lo movés esa cantidad o menos de casillas en cualquier dirección.', en: 'You choose one of your players and move them that many squares or fewer in any direction.' },
+    title: { es: 'Mover un jugador', en: 'Move a player', pt: 'Mover um jogador' },
+    desc: { es: 'Elegís uno de tus jugadores y lo movés esa cantidad o menos de casillas en cualquier dirección.', en: 'You choose one of your players and move them that many squares or fewer in any direction.', pt: 'Você escolhe um dos seus jogadores e o move essa quantidade ou menos de casas em qualquer direção.' },
   },
   {
     icon: '⚽',
-    title: { es: 'Patear la pelota', en: 'Kick the ball' },
-    desc: { es: 'Si tu jugador está al lado de la pelota, podés patearla en vez de mover. Si llega a otro compañero tuyo, ¡seguís jugando!', en: "If your player is next to the ball, you can kick it instead of moving. If it reaches a teammate, you keep playing!" },
+    title: { es: 'Patear la pelota', en: 'Kick the ball', pt: 'Chutar a bola' },
+    desc: { es: 'Si tu jugador está al lado de la pelota, podés patearla en vez de mover. Si llega a otro compañero tuyo, ¡seguís jugando!', en: "If your player is next to the ball, you can kick it instead of moving. If it reaches a teammate, you keep playing!", pt: 'Se seu jogador estiver ao lado da bola, você pode chutá-la em vez de mover. Se chegar a um companheiro, você continua jogando!' },
   },
   {
     icon: '🥅',
-    title: { es: 'El objetivo', en: 'The goal' },
-    desc: { es: 'Metés la pelota en el arco rival para marcar. Gana quien tenga más goles al final del tiempo.', en: 'You score by getting the ball into the opponent\'s goal. The team with the most goals at the end wins.' },
+    title: { es: 'El objetivo', en: 'The goal', pt: 'O objetivo' },
+    desc: { es: 'Metés la pelota en el arco rival para marcar. Gana quien tenga más goles al final del tiempo.', en: "You score by getting the ball into the opponent's goal. The team with the most goals at the end wins.", pt: 'Você marca colocando a bola no gol adversário. Vence quem tiver mais gols no final do tempo.' },
   },
   {
     icon: '🚀',
-    title: { es: '¡A jugar!', en: "Let's play!" },
-    desc: { es: 'Ahora vas a jugar tu primera partida contra la IA en modo fácil. Aparecerán consejos cuando ocurran situaciones nuevas.', en: "Now you'll play your first match against the AI on easy mode. Tips will appear when new situations occur." },
+    title: { es: '¡A jugar!', en: "Let's play!", pt: 'Vamos jogar!' },
+    desc: { es: 'Ahora vas a jugar tu primera partida contra la IA en modo fácil. Aparecerán consejos cuando ocurran situaciones nuevas.', en: "Now you'll play your first match against the AI on easy mode. Tips will appear when new situations occur.", pt: 'Agora você vai jogar sua primeira partida contra a IA no modo fácil. Dicas aparecerão quando situações novas ocorrerem.' },
   },
 ];
 
@@ -7479,23 +7678,23 @@ function renderQuickTutorial() {
   const isLast = quickTutorialStep === QUICK_TUTORIAL_STEPS.length - 1;
   const progress = Math.round(((quickTutorialStep + 1) / QUICK_TUTORIAL_STEPS.length) * 100);
   const nextLabel = isLast
-    ? (lang === 'en' ? '▶ Start match!' : '▶ ¡Empezar partida!')
-    : (lang === 'en' ? 'Next →' : 'Siguiente →');
-  const skipLabel = lang === 'en' ? 'Skip' : 'Saltar';
+    ? (lang === 'en' ? '▶ Start match!' : lang === 'pt' ? '▶ Começar partida!' : '▶ ¡Empezar partida!')
+    : (lang === 'en' ? 'Next →' : lang === 'pt' ? 'Próximo →' : 'Siguiente →');
+  const skipLabel = lang === 'en' ? 'Skip' : lang === 'pt' ? 'Pular' : 'Saltar';
 
   return `
   <div class="menu-screen" style="max-width:480px;text-align:center;">
     <div style="font-size:0.72rem;color:#9aa593;margin-bottom:16px;">
-      ${lang === 'en' ? 'First match' : 'Primera partida'} · ${quickTutorialStep + 1}/${QUICK_TUTORIAL_STEPS.length}
+      ${lang === 'en' ? 'First match' : lang === 'pt' ? 'Primeira partida' : 'Primera partida'} · ${quickTutorialStep + 1}/${QUICK_TUTORIAL_STEPS.length}
     </div>
     <div style="background:#f0f4ee;border-radius:16px;height:4px;margin-bottom:24px;">
       <div style="background:var(--accent);border-radius:16px;height:4px;width:${progress}%;transition:width 0.3s;"></div>
     </div>
     <div style="font-size:3.5rem;line-height:1;margin-bottom:16px;">${step.icon}</div>
-    <h2 style="margin:0 0 12px;font-size:1.4rem;">${lang === 'en' ? step.title.en : step.title.es}</h2>
-    <p style="color:#384032;font-size:0.92rem;line-height:1.6;margin:0 0 32px;">${lang === 'en' ? step.desc.en : step.desc.es}</p>
+    <h2 style="margin:0 0 12px;font-size:1.4rem;">${lang === 'en' ? step.title.en : lang === 'pt' ? step.title.pt : step.title.es}</h2>
+    <p style="color:#384032;font-size:0.92rem;line-height:1.6;margin:0 0 32px;">${lang === 'en' ? step.desc.en : lang === 'pt' ? step.desc.pt : step.desc.es}</p>
     <div style="display:flex;gap:10px;justify-content:center;">
-      ${quickTutorialStep > 0 ? `<button class="btn ghost" id="qt-prev-btn" style="padding:10px 20px;">← ${lang === 'en' ? 'Back' : 'Atrás'}</button>` : `<button class="btn ghost" id="qt-skip-btn" style="padding:10px 20px;">${skipLabel}</button>`}
+      ${quickTutorialStep > 0 ? `<button class="btn ghost" id="qt-prev-btn" style="padding:10px 20px;">← ${lang === 'en' ? 'Back' : lang === 'pt' ? 'Voltar' : 'Atrás'}</button>` : `<button class="btn ghost" id="qt-skip-btn" style="padding:10px 20px;">${skipLabel}</button>`}
       <button class="btn" id="qt-next-btn" style="padding:10px 24px;background:var(--accent);border-color:var(--accent);color:#fff;">${nextLabel}</button>
     </div>
   </div>`;
@@ -7521,7 +7720,7 @@ function startQuickTutorialMatch() {
     halfDurationMinutes: 5, gameClock: 5 * 60,
     turnDuration: TURN_DURATION, timer: TURN_DURATION,
     isQuickTutorialMatch: true,
-    message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+    message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
   });
 }
 
@@ -7563,7 +7762,7 @@ function checkContextTooltips(prev, next) {
     if (hasAdj) {
       showContextTooltip('adjacent',
         lang === 'en' ? '⚽ You\'re next to the ball!' : '⚽ ¡Estás al lado de la pelota!',
-        lang === 'en' ? 'Select that player to kick or drag the ball.' : 'Seleccioná ese jugador para patear o arrastrar la pelota.'
+        lang === 'en' ? 'Select that player to kick or drag the ball.' : lang === 'pt' ? 'Selecione esse jogador para chutar ou arrastar a bola.' : 'Seleccioná ese jugador para patear o arrastrar la pelota.'
       );
     }
   }
@@ -7571,16 +7770,16 @@ function checkContextTooltips(prev, next) {
   // Tip: chain pass
   if (!localStorage.getItem('hx_tip_chain') && next.gamePhase === 'chain-pass') {
     showContextTooltip('chain',
-      lang === 'en' ? '🔗 Chain pass!' : '🔗 ¡Pase en cadena!',
-      lang === 'en' ? 'The ball reached a teammate — keep playing without spending a turn!' : '¡La pelota llegó a un compañero! Seguís jugando sin gastar un turno.'
+      lang === 'en' ? '🔗 Chain pass!' : lang === 'pt' ? '🔗 Passe em cadeia!' : '🔗 ¡Pase en cadena!',
+      lang === 'en' ? 'The ball reached a teammate — keep playing without spending a turn!' : lang === 'pt' ? 'A bola chegou a um companheiro — continue jogando sem gastar um turno!' : '¡La pelota llegó a un compañero! Seguís jugando sin gastar un turno.'
     );
   }
 
   // Tip: offside
   if (!localStorage.getItem('hx_tip_offside') && next.gamePhase === 'resolving-offside') {
     showContextTooltip('offside',
-      lang === 'en' ? '🚩 Offside!' : '🚩 ¡Fuera de juego!',
-      lang === 'en' ? 'Move the marked player behind the offside line.' : 'Mové al jugador marcado detrás de la línea de fuera de juego.'
+      lang === 'en' ? '🚩 Offside!' : lang === 'pt' ? '🚩 Impedimento!' : '🚩 ¡Fuera de juego!',
+      lang === 'en' ? 'Move the marked player behind the offside line.' : lang === 'pt' ? 'Mova o jogador marcado para trás da linha de impedimento.' : 'Mové al jugador marcado detrás de la línea de fuera de juego.'
     );
   }
 
@@ -7591,8 +7790,8 @@ function checkContextTooltips(prev, next) {
     const inArea = (ball.y >= homeGoalY - 3 && ball.y <= homeGoalY) || (ball.y >= awayGoalY && ball.y <= awayGoalY + 3);
     if (inArea && prev.ballPosition && !((prev.ballPosition.y >= homeGoalY - 3) || (prev.ballPosition.y <= awayGoalY + 3))) {
       showContextTooltip('area',
-        lang === 'en' ? '🥅 Goalkeeper area' : '🥅 Área del arquero',
-        lang === 'en' ? 'The goalkeeper moves double squares inside their area.' : 'El arquero se mueve el doble de casillas dentro de su área.'
+        lang === 'en' ? '🥅 Goalkeeper area' : lang === 'pt' ? '🥅 Área do goleiro' : '🥅 Área del arquero',
+        lang === 'en' ? 'The goalkeeper moves double squares inside their area.' : lang === 'pt' ? 'O goleiro se move o dobro de casas dentro de sua área.' : 'El arquero se mueve el doble de casillas dentro de su área.'
       );
     }
   }
@@ -7600,8 +7799,8 @@ function checkContextTooltips(prev, next) {
   // Tip: rolled zero
   if (!localStorage.getItem('hx_tip_zero') && next.diceValue === 0 && prev.diceValue !== 0) {
     showContextTooltip('zero',
-      lang === 'en' ? '0 — Turn skipped' : '0 — Turno perdido',
-      lang === 'en' ? 'You rolled 0! Your turn is skipped automatically.' : '¡Sacaste 0! Tu turno se pierde automáticamente.'
+      lang === 'en' ? '0 — Turn skipped' : lang === 'pt' ? '0 — Turno perdido' : '0 — Turno perdido',
+      lang === 'en' ? 'You rolled 0! Your turn is skipped automatically.' : lang === 'pt' ? 'Você tirou 0! Seu turno é pulado automaticamente.' : '¡Sacaste 0! Tu turno se pierde automáticamente.'
     );
   }
 }
@@ -7611,27 +7810,27 @@ function renderChooseUsername() {
   return `
   <div class="menu-screen" style="max-width:420px;text-align:center;">
     <div style="font-size:2.5rem;margin-bottom:12px;">👤</div>
-    <h2 style="margin:0 0 8px;">${lang === 'en' ? 'Choose your username' : 'Elegí tu nombre de usuario'}</h2>
+    <h2 style="margin:0 0 8px;">${lang === 'en' ? 'Choose your username' : lang === 'pt' ? 'Escolha seu nome de usuário' : 'Elegí tu nombre de usuario'}</h2>
     <p style="color:#6b7a64;font-size:0.85rem;margin:0 0 24px;line-height:1.5;">
-      ${lang === 'en' ? 'This is how other players will see you.' : 'Así te van a ver los demás jugadores.'}
+      ${lang === 'en' ? 'This is how other players will see you.' : lang === 'pt' ? 'É assim que os outros jogadores vão te ver.' : 'Así te van a ver los demás jugadores.'}
     </p>
-    <input type="text" id="choose-username-input" maxlength="20" placeholder="${lang === 'en' ? 'Username' : 'Nombre de usuario'}"
+    <input type="text" id="choose-username-input" maxlength="20" placeholder="${lang === 'en' ? 'Username' : lang === 'pt' ? 'Nome de usuário' : 'Nombre de usuario'}"
       value="${suggested}"
       style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:1rem;font-family:inherit;margin-bottom:8px;outline:none;">
     <div id="choose-username-error" style="color:#9a2f24;font-size:0.78rem;min-height:18px;margin-bottom:12px;"></div>
     <button class="btn" id="choose-username-btn" style="width:100%;background:var(--accent);border-color:var(--accent);color:#fff;padding:12px;">
-      ${lang === 'en' ? 'Start playing' : '¡Empezar a jugar!'}
+      ${lang === 'en' ? 'Start playing' : lang === 'pt' ? 'Começar a jogar!' : '¡Empezar a jugar!'}
     </button>
   </div>`;
 }
 
 async function renderMatchHistory() {
   const app = document.getElementById('app');
-  app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : 'Cargando...'}</div></div>`;
+  app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : lang === 'pt' ? 'Carregando...' : 'Cargando...'}</div></div>`;
 
   if (!currentUser || currentUser.isAnonymous) {
-    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1>
-      <p style="color:#6b7a64;text-align:center;">${lang === 'en' ? 'You need an account to see your match history.' : 'Necesitás una cuenta para ver tu historial.'}</p>
+    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
+      <p style="color:#6b7a64;text-align:center;">${lang === 'en' ? 'You need an account to see your match history.' : lang === 'pt' ? 'Você precisa de uma conta para ver seu histórico.' : 'Necesitás una cuenta para ver tu historial.'}</p>
       <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
     document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
     return;
@@ -7644,12 +7843,12 @@ async function renderMatchHistory() {
     const matches = snap ? snap.docs.map(doc => doc.data()) : [];
 
     const rows = matches.length === 0
-      ? `<p style="text-align:center;color:#8a9582;padding:20px 0;">${lang === 'en' ? 'No matches yet.' : 'Todavía no jugaste ninguna partida.'}</p>`
+      ? `<p style="text-align:center;color:#8a9582;padding:20px 0;">${lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda não há partidas.' : 'Todavía no jugaste ninguna partida.'}</p>`
       : matches.map(m => {
           const resultColor = m.result === 'win' ? '#2a6e3f' : m.result === 'loss' ? '#9a2f24' : '#6b7a64';
-          const resultLabel = m.result === 'win' ? (lang === 'en' ? 'W' : 'G') : m.result === 'loss' ? (lang === 'en' ? 'L' : 'D') : (lang === 'en' ? 'D' : 'E');
+          const resultLabel = m.result === 'win' ? (lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'G') : m.result === 'loss' ? (lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D') : (lang === 'en' ? 'D' : lang === 'pt' ? 'E' : 'E');
           const eloSign = m.eloChange >= 0 ? '+' : '';
-          const date = m.playedAt?.toDate?.() ? m.playedAt.toDate().toLocaleDateString(lang === 'en' ? 'en-US' : 'es-AR', { day: '2-digit', month: '2-digit' }) : '';
+          const date = m.playedAt?.toDate?.() ? m.playedAt.toDate().toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'pt' ? 'pt-BR' : 'es-AR', { day: '2-digit', month: '2-digit' }) : '';
           return `
           <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #e1e8db;">
             <div style="font-size:1.1rem;font-weight:900;color:${resultColor};min-width:20px;text-align:center;">${resultLabel}</div>
@@ -7664,8 +7863,8 @@ async function renderMatchHistory() {
 
     app.innerHTML = `
     <div class="menu-screen" style="max-width:560px;">
-      <h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1>
-      <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;text-align:center;">${lang === 'en' ? 'Last 20 matches' : 'Últimas 20 partidas'}</div>
+      <h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
+      <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;text-align:center;">${lang === 'en' ? 'Last 20 matches' : lang === 'pt' ? 'Últimas 20 partidas' : 'Últimas 20 partidas'}</div>
       <div>${rows}</div>
       <div class="menu-grid" style="margin-top:16px;">
         <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button>
@@ -7675,8 +7874,8 @@ async function renderMatchHistory() {
       currentMenuView = 'main'; render();
     });
   } catch (e) {
-    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : 'Historial de partidas'}</h1>
-      <p style="color:#9a2f24;text-align:center;">${lang === 'en' ? 'Could not load history.' : 'No se pudo cargar el historial.'}</p>
+    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
+      <p style="color:#9a2f24;text-align:center;">${lang === 'en' ? 'Could not load history.' : lang === 'pt' ? 'Não foi possível carregar o histórico.' : 'No se pudo cargar el historial.'}</p>
       <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
     document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
   }
@@ -7684,7 +7883,7 @@ async function renderMatchHistory() {
 
 function renderLeaderboard() {
   const myUid = currentUser?.uid;
-  const playerLabel = lang === 'en' ? 'Player' : 'Jugador';
+  const playerLabel = lang === 'en' ? 'Player' : lang === 'pt' ? 'Jogador' : 'Jugador';
   const rows = leaderboardLoading
     ? `<div style="text-align:center; padding:24px; color:#6b7a64;">${t('lb.loading')}</div>`
     : leaderboardError
@@ -7696,8 +7895,8 @@ function renderLeaderboard() {
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
         const winRate = u.gamesPlayed > 0
           ? Math.round((u.wins / u.gamesPlayed) * 100) : 0;
-        const wLabel = lang === 'en' ? 'W' : 'V';
-        const lLabel = lang === 'en' ? 'L' : 'D';
+        const wLabel = lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V';
+        const lLabel = lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D';
         return `<div class="lb-row ${isMe ? 'lb-me' : ''}">
           <span class="lb-rank">${medal}</span>
           <span class="lb-name">${escapeHtml(u.username || playerLabel)}</span>
@@ -7826,7 +8025,7 @@ function renderSetup() {
     <div class="subtitle">${t('setup.subtitle')}</div>
     <div class="setup-row">
       <div>
-        <span class="field-label">${lang === 'en' ? 'Teams' : 'Equipos'}</span>
+        <span class="field-label">${lang === 'en' ? 'Teams' : lang === 'pt' ? 'Times' : 'Equipos'}</span>
         <div class="team-select-grid">
           <select class="team-pick" id="home-team-select">${homeOptions}</select>
           <select class="team-pick" id="away-team-select">${awayOptions}</select>
@@ -7839,7 +8038,7 @@ function renderSetup() {
         </div>
       </div>
       <div>
-        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : 'O: primero en marcar N goles'}</span>
+        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : 'O: primero en marcar N goles'}</span>
         <div class="duration-row" id="goals-row">
           ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
@@ -7866,16 +8065,16 @@ let aiDifficultyChoice = 'normal';
 function renderAiSetup() {
   const homeOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===0?'selected':''}>${t.name}</option>`).join('');
   const awayOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===1?'selected':''}>${t.name}</option>`).join('');
-  const sideHome = lang === 'en' ? 'Home team' : 'Equipo local';
-  const sideAway = lang === 'en' ? 'Away team' : 'Equipo visitante';
-  const youControl = lang === 'en' ? 'You control' : 'Vos controlás';
+  const sideHome = lang === 'en' ? 'Home team' : lang === 'pt' ? 'Time da casa' : 'Equipo local';
+  const sideAway = lang === 'en' ? 'Away team' : lang === 'pt' ? 'Time visitante' : 'Equipo visitante';
+  const youControl = lang === 'en' ? 'You control' : lang === 'pt' ? 'Você controla' : 'Vos controlás';
   return `
   <div class="menu-screen">
     <h1>${t('ai.title')}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Choose your team, opponent, difficulty and duration.' : 'Elige tu equipo, el rival, la dificultad y la duración.'}</div>
+    <div class="subtitle">${lang === 'en' ? 'Choose your team, opponent, difficulty and duration.' : lang === 'pt' ? 'Escolha seu time, adversário, dificuldade e duração.' : 'Elige tu equipo, el rival, la dificultad y la duración.'}</div>
     <div class="setup-row">
       <div>
-        <span class="field-label">${lang === 'en' ? 'Teams' : 'Equipos'}</span>
+        <span class="field-label">${lang === 'en' ? 'Teams' : lang === 'pt' ? 'Times' : 'Equipos'}</span>
         <div class="team-select-grid">
           <select class="team-pick" id="ai-home-team-select">${homeOptions}</select>
           <select class="team-pick" id="ai-away-team-select">${awayOptions}</select>
@@ -7901,7 +8100,7 @@ function renderAiSetup() {
         </div>
       </div>
       <div>
-        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : 'O: primero en marcar N goles'}</span>
+        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : 'O: primero en marcar N goles'}</span>
         <div class="duration-row" id="goals-row">
           ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
@@ -7968,8 +8167,8 @@ function jerseyDot(teamIdOrTeam, size) {
 
 function renderLeagueSetup() {
   if (leagueSelectedTeams.length !== leagueNumTeams) leagueSelectedTeams = Array(leagueNumTeams).fill(null);
-  const teamLabel = (i) => lang === 'en' ? `Team ${i + 1}` : `Equipo ${i + 1}`;
-  const choosePlaceholder = lang === 'en' ? 'Choose a team' : 'Elige un equipo';
+  const teamLabel = (i) => lang === 'en' ? `Team ${i + 1}` : lang === 'pt' ? `Time ${i + 1}` : `Equipo ${i + 1}`;
+  const choosePlaceholder = lang === 'en' ? 'Choose a team' : lang === 'pt' ? 'Escolha um time' : 'Elige un equipo';
   const teamSelectors = Array.from({ length: leagueNumTeams }).map((_, i) => {
     const options = TEAMS.map(t => {
       const disabled = leagueSelectedTeams.includes(t.id) && leagueSelectedTeams[i] !== t.id;
@@ -7988,14 +8187,14 @@ function renderLeagueSetup() {
 
   const hasDuplicates = leagueSelectedTeams.filter(Boolean).length !== new Set(leagueSelectedTeams.filter(Boolean)).size;
   const allSelected = leagueSelectedTeams.every(Boolean);
-  const dupMsg = lang === 'en' ? 'You cannot select the same team twice.' : 'No puedes seleccionar el mismo equipo dos veces.';
-  const numTeamsLabel = lang === 'en' ? 'Number of teams' : 'Número de equipos';
-  const teamsUnit = lang === 'en' ? 'teams' : 'equipos';
+  const dupMsg = lang === 'en' ? 'You cannot select the same team twice.' : lang === 'pt' ? 'Você não pode selecionar o mesmo time duas vezes.' : 'No puedes seleccionar el mismo equipo dos veces.';
+  const numTeamsLabel = lang === 'en' ? 'Number of teams' : lang === 'pt' ? 'Número de times' : 'Número de equipos';
+  const teamsUnit = lang === 'en' ? 'teams' : lang === 'pt' ? 'times' : 'equipos';
 
   return `
   <div class="menu-screen" style="max-width:680px;">
-    <h1>🏆 ${lang === 'en' ? 'League setup' : 'Configurar Liga'}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Choose teams and match duration. Home and away format.' : 'Elige los equipos y la duración de cada partido. Se juega ida y vuelta.'}</div>
+    <h1>🏆 ${lang === 'en' ? 'League setup' : lang === 'pt' ? 'Configurar Liga' : 'Configurar Liga'}</h1>
+    <div class="subtitle">${lang === 'en' ? 'Choose teams and match duration. Home and away format.' : lang === 'pt' ? 'Escolha os times e a duração das partidas. Formato ida e volta.' : 'Elige los equipos y la duración de cada partido. Se juega ida y vuelta.'}</div>
     <div class="setup-row">
       <div>
         <span class="field-label">${numTeamsLabel}</span>
@@ -8016,7 +8215,7 @@ function renderLeagueSetup() {
     ${hasDuplicates ? `<p style="color:#9a2f24; font-size:0.8rem; text-align:center; margin-top:8px;">${dupMsg}</p>` : ''}
     <div class="menu-grid" style="margin-top:16px;">
       <button class="menu-btn" id="start-league-btn" style="background:var(--accent); border-color:var(--accent); ${(!allSelected || hasDuplicates) ? 'opacity:0.5; pointer-events:none;' : ''}">
-        <div class="t" style="color:#fff;">🏆 ${lang === 'en' ? 'Start league →' : 'Comenzar liga →'}</div>
+        <div class="t" style="color:#fff;">🏆 ${lang === 'en' ? 'Start league →' : lang === 'pt' ? 'Começar liga →' : 'Comenzar liga →'}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
@@ -8035,16 +8234,16 @@ function renderLeagueView(s) {
     ? [{ id: 'standings', label: '📊 Table' }, { id: 'schedule', label: '📅 Schedule' }, { id: 'scorers', label: '⭐ Scorers' }]
     : [{ id: 'standings', label: '📊 Tabla' }, { id: 'schedule', label: '📅 Calendario' }, { id: 'scorers', label: '⭐ Goleadores' }];
 
-  const thTeam = lang === 'en' ? 'Team' : 'Equipo';
-  const thPlayer = lang === 'en' ? 'Player' : 'Jugador';
-  const roundLabel = (r) => lang === 'en' ? `Round ${r}${r === ls.currentRound ? ' (current)' : ''}` : `Jornada ${r}${r === ls.currentRound ? ' (actual)' : ''}`;
-  const playBtn = lang === 'en' ? 'Play' : 'Jugar';
-  const noStats = lang === 'en' ? 'No stats yet.' : 'Aún no hay estadísticas.';
-  const scorersTitle = lang === 'en' ? 'Top Scorers' : 'Goleadores';
-  const assistsTitle = lang === 'en' ? 'Top Assists' : 'Asistencias';
-  const goalsLabel = lang === 'en' ? 'Goals' : 'Goles';
-  const assistsLabel = lang === 'en' ? 'Assists' : 'Asist.';
-  const exitLabel = lang === 'en' ? 'Exit league' : 'Salir de la liga';
+  const thTeam = lang === 'en' ? 'Team' : lang === 'pt' ? 'Time' : 'Equipo';
+  const thPlayer = lang === 'en' ? 'Player' : lang === 'pt' ? 'Jogador' : 'Jugador';
+  const roundLabel = (r) => lang === 'en' ? `Round ${r}${r === ls.currentRound ? ' (current)' : ''}` : lang === 'pt' ? `Rodada ${r}${r === ls.currentRound ? ' (atual)' : ''}` : `Jornada ${r}${r === ls.currentRound ? ' (actual)' : ''}`;
+  const playBtn = lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar';
+  const noStats = lang === 'en' ? 'No stats yet.' : lang === 'pt' ? 'Ainda não há estatísticas.' : 'Aún no hay estadísticas.';
+  const scorersTitle = lang === 'en' ? 'Top Scorers' : lang === 'pt' ? 'Artilheiros' : 'Goleadores';
+  const assistsTitle = lang === 'en' ? 'Top Assists' : lang === 'pt' ? 'Assistências' : 'Asistencias';
+  const goalsLabel = lang === 'en' ? 'Goals' : lang === 'pt' ? 'Gols' : 'Goles';
+  const assistsLabel = lang === 'en' ? 'Assists' : lang === 'pt' ? 'Assist.' : 'Asist.';
+  const exitLabel = lang === 'en' ? 'Exit league' : lang === 'pt' ? 'Sair da liga' : 'Salir de la liga';
 
   let body = '';
   if (leagueViewTab === 'standings') {
@@ -8095,7 +8294,7 @@ function renderLeagueView(s) {
   return `
   <div class="menu-screen league-screen" style="max-width:760px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <h1 style="margin:0; font-size:1.6rem;">🏆 ${lang === 'en' ? 'Hexagol League' : 'Liga Hexagol'}</h1>
+      <h1 style="margin:0; font-size:1.6rem;">🏆 ${lang === 'en' ? 'Hexagol League' : lang === 'pt' ? 'Liga Hexagol' : 'Liga Hexagol'}</h1>
       <button class="btn ghost" data-menu="league-exit" style="padding:7px 14px; font-size:0.78rem;">${exitLabel}</button>
     </div>
     <div class="league-tabs">
@@ -8110,12 +8309,12 @@ function renderLeagueOver(s) {
   const sortedTeams = getSortedLeagueTeams(ls.teams, ls.schedule);
   const champion = sortedTeams[0];
   const championTeam = TEAMS.find(t => t.id === champion.teamId);
-  const champTitle = lang === 'en' ? 'CHAMPIONS!' : '¡CAMPEONES!';
+  const champTitle = lang === 'en' ? 'CHAMPIONS!' : lang === 'pt' ? 'CAMPEÕES!' : '¡CAMPEONES!';
   const champDesc = lang === 'en'
     ? `The league is over and <b style="color:${hsl(championTeam.primaryColor)};">${champion.name}</b> has been crowned the best team.`
     : `La liga ha terminado y <b style="color:${hsl(championTeam.primaryColor)};">${champion.name}</b> se coronó como el mejor equipo.`;
-  const thTeam = lang === 'en' ? 'Team' : 'Equipo';
-  const gdLabel = lang === 'en' ? 'GD' : 'DG';
+  const thTeam = lang === 'en' ? 'Team' : lang === 'pt' ? 'Time' : 'Equipo';
+  const gdLabel = lang === 'en' ? 'GD' : lang === 'pt' ? 'SG' : 'DG';
   return `
   <div class="menu-screen" style="max-width:600px;">
     <div style="font-size:3.5rem; line-height:1;">🏆</div>
@@ -8129,7 +8328,7 @@ function renderLeagueOver(s) {
       </tbody>
     </table>
     <div class="menu-grid" style="margin-top:16px;">
-      <button class="menu-btn" data-menu="back"><div class="t">${lang === 'en' ? '← Back to main menu' : '← Volver al menú principal'}</div></button>
+      <button class="menu-btn" data-menu="back"><div class="t">${lang === 'en' ? '← Back to main menu' : lang === 'pt' ? '← Voltar ao menu principal' : '← Volver al menú principal'}</div></button>
     </div>
   </div>`;
 }
@@ -8155,16 +8354,16 @@ function renderGameScreen(s) {
 
   const isOnline = s.gameMode === 'online';
   const isMyTurn = !isOnline || s.currentPlayer === onlineMyTeam;
-  const opponentLabel = isOnline && !isMyTurn ? lang === 'en' ? `<div class="spectator-banner">⏳ Opponent's turn — wait for yours</div>` : `<div class="spectator-banner">⏳ Turno del rival — esperá tu turno</div>` : '';
-  const onlineIndicator = isOnline ? `<span class="online-badge"><span class="online-dot"></span> Online · ${onlineMyTeam === 'home' ? (lang === 'en' ? 'Home' : 'Local') : (lang === 'en' ? 'Away' : 'Visitante')}</span>` : '';
+  const opponentLabel = isOnline && !isMyTurn ? lang === 'en' ? `<div class="spectator-banner">⏳ Opponent's turn — wait for yours</div>` : lang === 'pt' ? `<div class="spectator-banner">⏳ Turno do adversário — aguarde o seu</div>` : `<div class="spectator-banner">⏳ Turno del rival — esperá tu turno</div>` : '';
+  const onlineIndicator = isOnline ? `<span class="online-badge"><span class="online-dot"></span> Online · ${onlineMyTeam === 'home' ? (lang === 'en' ? 'Home' : lang === 'pt' ? 'Casa' : 'Local') : (lang === 'en' ? 'Away' : lang === 'pt' ? 'Visitante' : 'Visitante')}</span>` : '';
 
   // Contextual banners for situations that require specific player interaction.
   // These sit above the board message so they're the first thing the eye lands on.
   const offsideBanner = s.gamePhase === 'resolving-offside'
-    ? `<div class="situation-banner offside-banner">🚩 ${lang === 'en' ? 'Offside — move the player marked in red to the allowed line' : 'Fuera de juego — mové al jugador marcado en rojo a la línea permitida'}</div>`
+    ? `<div class="situation-banner offside-banner">🚩 ${lang === 'en' ? 'Offside — move the player marked in red to the allowed line' : lang === 'pt' ? 'Impedimento — mova o jogador marcado em vermelho para a linha permitida' : 'Fuera de juego — mové al jugador marcado en rojo a la línea permitida'}</div>`
     : '';
   const swapBanner = s.gamePhase === 'goalkeeper-swap'
-    ? `<div class="situation-banner swap-banner">🔄 ${lang === 'en' ? 'You can swap the goalkeeper with a player in their area' : 'Podés cambiar al arquero por uno de los jugadores en su área'}</div>`
+    ? `<div class="situation-banner swap-banner">🔄 ${lang === 'en' ? 'You can swap the goalkeeper with a player in their area' : lang === 'pt' ? 'Você pode trocar o goleiro por um jogador de sua área' : 'Podés cambiar al arquero por uno de los jugadores en su área'}</div>`
     : '';
 
   return `
@@ -8192,7 +8391,7 @@ function renderGameScreen(s) {
           <span class="mini-team-name">${s.awayTeam.name}</span>
           <span class="mini-score">${s.score.away}</span>
         </div>
-        <div class="mini-meta"><span class="clock" id="match-clock">${s.targetGoals ? `🥅 ${lang === 'en' ? `First to ${s.targetGoals}` : `Al ${s.targetGoals}`}` : s.overtimeMode === 'golden-goal' ? (lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro') : '⏱ ' + formatClock(s.gameClock)}</span><span>${s.overtimeMode === 'extra-time' ? (lang === 'en' ? 'ET' : 'TE') : s.overtimeMode === 'golden-goal' ? (lang === 'en' ? 'GG' : 'GO') : s.half === 1 ? (lang === 'en' ? '1st H.' : '1er T.') : (lang === 'en' ? '2nd H.' : '2do T.')}</span><span>${lang === 'en' ? 'Turn' : 'Turno'} ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? (lang === 'en' ? 'Mute' : 'Silenciar sonido') : (lang === 'en' ? 'Unmute' : 'Activar sonido')}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? (lang === 'en' ? 'Exit fullscreen' : 'Salir de pantalla completa') : (lang === 'en' ? 'Fullscreen' : 'Pantalla completa')}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
+        <div class="mini-meta"><span class="clock" id="match-clock">${s.targetGoals ? `🥅 ${lang === 'en' ? `First to ${s.targetGoals}` : lang === 'pt' ? `Primeiro a ${s.targetGoals}` : `Al ${s.targetGoals}`}` : s.overtimeMode === 'golden-goal' ? (lang === 'en' ? '⚽ Golden goal' : lang === 'pt' ? '⚽ Gol de ouro' : '⚽ Gol de oro') : '⏱ ' + formatClock(s.gameClock)}</span><span>${s.overtimeMode === 'extra-time' ? (lang === 'en' ? 'ET' : lang === 'pt' ? 'TE' : 'TE') : s.overtimeMode === 'golden-goal' ? (lang === 'en' ? 'GG' : lang === 'pt' ? 'GO' : 'GO') : s.half === 1 ? (lang === 'en' ? '1st H.' : lang === 'pt' ? '1º T.' : '1er T.') : (lang === 'en' ? '2nd H.' : lang === 'pt' ? '2º T.' : '2do T.')}</span><span>${lang === 'en' ? 'Turn' : lang === 'pt' ? 'Turno' : 'Turno'} ${s.turnCount}</span>${onlineIndicator}<button class="sound-toggle-btn" id="sound-toggle-btn" title="${soundEnabled ? (lang === 'en' ? 'Mute' : lang === 'pt' ? 'Silenciar' : 'Silenciar sonido') : (lang === 'en' ? 'Unmute' : lang === 'pt' ? 'Ativar som' : 'Activar sonido')}">${soundEnabled ? '🔊' : '🔇'}</button><button class="fullscreen-btn" id="fullscreen-btn" title="${document.fullscreenElement ? (lang === 'en' ? 'Exit fullscreen' : lang === 'pt' ? 'Sair da tela cheia' : 'Salir de pantalla completa') : (lang === 'en' ? 'Fullscreen' : lang === 'pt' ? 'Tela cheia' : 'Pantalla completa')}">${document.fullscreenElement ? '✕⤢' : '⤢'}</button></div>
       </div>
       ${s.gameMode === 'tutorial' ? renderTutorialPanel(s) : s.gameMode === 'training' ? renderSandboxPanel(s) : renderDicePanel(s)}
       <div class="panel-stats-section">
@@ -8211,27 +8410,27 @@ function renderGameScreen(s) {
         </ul>
       </div>
       <div class="btn-row" style="gap:6px;">
-        ${s.gameMode !== 'online' ? `<button class="btn ghost hide-on-mobile" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : 'Reiniciar'}</button>` : ''}
-        <button class="btn ghost hide-on-mobile" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : 'Menú principal'}</button>
+        ${s.gameMode !== 'online' ? `<button class="btn ghost hide-on-mobile" id="reset-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Restart' : lang === 'pt' ? 'Reiniciar' : 'Reiniciar'}</button>` : ''}
+        <button class="btn ghost hide-on-mobile" id="exit-to-menu-btn" style="flex:1; font-size:0.76rem; padding:9px 8px;">${lang === 'en' ? 'Main menu' : lang === 'pt' ? 'Menu principal' : 'Menú principal'}</button>
       </div>
     </div>
   </div>
   ${isOnline ? `
   <div class="chat-panel ${onlineChatOpen ? 'open' : ''}" id="chat-panel">
     <div class="chat-header">
-      <span>💬 ${lang === 'en' ? 'Chat with opponent' : 'Chat con el rival'}</span>
+      <span>💬 ${lang === 'en' ? 'Chat with opponent' : lang === 'pt' ? 'Chat com o adversário' : 'Chat con el rival'}</span>
       <button class="chat-close-btn" id="chat-close-btn">✕</button>
     </div>
     <div class="chat-messages" id="chat-messages">
       ${onlineChatMessages.length === 0
-        ? `<div class="chat-empty">${lang === 'en' ? 'No messages yet. Say something!' : 'Todavía no hay mensajes. ¡Decí algo!'}</div>`
+        ? `<div class="chat-empty">${lang === 'en' ? 'No messages yet. Say something!' : lang === 'pt' ? 'Ainda não há mensagens. Diga algo!' : 'Todavía no hay mensajes. ¡Decí algo!'}</div>`
         : onlineChatMessages.map(m => `<div class="chat-msg ${m.from === onlineMyTeam ? 'mine' : 'theirs'}">${escapeHtml(m.text)}</div>`).join('')}
     </div>
     <div class="chat-quick-row">
       ${CHAT_QUICK_PHRASES.map(p => `<button class="chat-quick-btn" data-quick-phrase="${escapeHtml(p)}">${p}</button>`).join('')}
     </div>
     <div class="chat-input-row">
-      <input type="text" id="chat-input" class="chat-input" placeholder="${lang === 'en' ? 'Write a message...' : 'Escribí un mensaje...'}" maxlength="200" autocomplete="off" />
+      <input type="text" id="chat-input" class="chat-input" placeholder="${lang === 'en' ? 'Write a message...' : lang === 'pt' ? 'Escreva uma mensagem...' : 'Escribí un mensaje...'}" maxlength="200" autocomplete="off" />
       <button class="chat-send-btn" id="chat-send-btn">➤</button>
     </div>
   </div>` : ''}
@@ -8252,13 +8451,13 @@ function renderTutorialPanel(s) {
   const needsDiceButton = step.action.type === 'click_element' && step.action.payload.elementId === 'dice-roll-button';
   const needsSkipSwapButton = step.action.type === 'click_element' && step.action.payload.elementId === 'skip-swap-button';
   const diceDisplay = s.diceValue !== null ? s.diceValue : '🎲';
-  const rollLabel = lang === 'en' ? 'Roll dice' : 'Lanzar dado';
-  const skipSwapLabel = lang === 'en' ? 'End turn (skip swap)' : 'Finalizar turno (omitir cambio)';
-  const diceLabel = lang === 'en' ? 'Dice:' : 'Dado:';
-  const hintLabel = lang === 'en' ? 'Follow the highlighted hint on the board.' : 'Seguí la indicación resaltada en el tablero.';
-  const doneLabel = lang === 'en' ? 'Got it! →' : '¡Entendido! →';
-  const exitLabel = lang === 'en' ? 'Exit tutorial' : 'Salir del tutorial';
-  const stepLabel = lang === 'en' ? `Step ${s.tutorialStep + 1}/${tutorialScript.length}` : `Paso ${s.tutorialStep + 1}/${tutorialScript.length}`;
+  const rollLabel = lang === 'en' ? 'Roll dice' : lang === 'pt' ? 'Lançar dado' : 'Lanzar dado';
+  const skipSwapLabel = lang === 'en' ? 'End turn (skip swap)' : lang === 'pt' ? 'Finalizar turno (omitir troca)' : 'Finalizar turno (omitir cambio)';
+  const diceLabel = lang === 'en' ? 'Dice:' : lang === 'pt' ? 'Dado:' : 'Dado:';
+  const hintLabel = lang === 'en' ? 'Follow the highlighted hint on the board.' : lang === 'pt' ? 'Siga a dica destacada no tabuleiro.' : 'Seguí la indicación resaltada en el tablero.';
+  const doneLabel = lang === 'en' ? 'Got it! →' : lang === 'pt' ? 'Entendido! →' : '¡Entendido! →';
+  const exitLabel = lang === 'en' ? 'Exit tutorial' : lang === 'pt' ? 'Sair do tutorial' : 'Salir del tutorial';
+  const stepLabel = lang === 'en' ? `Step ${s.tutorialStep + 1}/${tutorialScript.length}` : lang === 'pt' ? `Passo ${s.tutorialStep + 1}/${tutorialScript.length}` : `Paso ${s.tutorialStep + 1}/${tutorialScript.length}`;
 
   let actionHtml = '';
   if (needsDiceButton) {
@@ -8285,14 +8484,14 @@ function renderSandboxPanel(s) {
   const homeOptions = TEAMS.map((t,i) => `<option value="${i}" ${s.homeTeam.id===t.id?'selected':''}>${t.name}</option>`).join('');
   const awayOptions = TEAMS.map((t,i) => `<option value="${i}" ${s.awayTeam.id===t.id?'selected':''}>${t.name}</option>`).join('');
   const teamName = getTeamName(s, s.currentPlayer);
-  const trainingLabel = lang === 'en' ? 'Training' : 'Entrenamiento';
-  const diceLabelSandbox = lang === 'en' ? 'Choose dice value' : 'Elegí el valor del dado';
-  const moveHint = lang === 'en' ? 'Make your move on the board.' : 'Realizá tu jugada en el tablero.';
-  const teamsLabel = lang === 'en' ? 'Teams' : 'Equipos';
-  const resetLabel = lang === 'en' ? '↺ Reset positions' : '↺ Resetear posiciones';
-  const backLabel = lang === 'en' ? '← Back to menu' : '← Volver al menú';
-  const skipSwapSandbox = lang === 'en' ? 'Keep, end turn' : 'No cambiar, finalizar turno';
-  const stopChain = lang === 'en' ? 'End play here' : 'Terminar jugada acá';
+  const trainingLabel = lang === 'en' ? 'Training' : lang === 'pt' ? 'Treino' : 'Entrenamiento';
+  const diceLabelSandbox = lang === 'en' ? 'Choose dice value' : lang === 'pt' ? 'Escolha o valor do dado' : 'Elegí el valor del dado';
+  const moveHint = lang === 'en' ? 'Make your move on the board.' : lang === 'pt' ? 'Faça sua jogada no tabuleiro.' : 'Realizá tu jugada en el tablero.';
+  const teamsLabel = lang === 'en' ? 'Teams' : lang === 'pt' ? 'Times' : 'Equipos';
+  const resetLabel = lang === 'en' ? '↺ Reset positions' : lang === 'pt' ? '↺ Resetar posições' : '↺ Resetear posiciones';
+  const backLabel = lang === 'en' ? '← Back to menu' : lang === 'pt' ? '← Voltar ao menu' : '← Volver al menú';
+  const skipSwapSandbox = lang === 'en' ? 'Keep, end turn' : lang === 'pt' ? 'Manter, finalizar turno' : 'No cambiar, finalizar turno';
+  const stopChain = lang === 'en' ? 'End play here' : lang === 'pt' ? 'Encerrar jogada aqui' : 'Terminar jugada acá';
 
   return `
   <div class="dice-panel">
@@ -8334,7 +8533,7 @@ function renderDicePanel(s) {
         <button class="btn team-btn pregame-roll-btn" id="roll-pre-home" style="${teamButtonStyle(s.homeTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='home') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${homeName}${s.homeRoll !== null ? ` — ${s.homeRoll}` : ''}</button>
         <button class="btn team-btn pregame-roll-btn" id="roll-pre-away" style="${teamButtonStyle(s.awayTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='away') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${awayName}${s.awayRoll !== null ? ` — ${s.awayRoll}` : ''}</button>
       </div>
-      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ ${lang === 'en' ? 'Starting match...' : 'Empezando partido...'}</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:4px;">🤖 ${lang === 'en' ? 'The computer rolls automatically.' : 'La computadora tira automáticamente.'}</div>` : '')}
+      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ ${lang === 'en' ? 'Starting match...' : lang === 'pt' ? 'Iniciando partida...' : 'Empezando partido...'}</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:4px;">🤖 ${lang === 'en' ? 'The computer rolls automatically.' : lang === 'pt' ? 'O computador lança automaticamente.' : 'La computadora tira automáticamente.'}</div>` : '')}
     </div>`;
   }
 
@@ -8342,8 +8541,8 @@ function renderDicePanel(s) {
     const offsideTeamName = getTeamName(s, s.currentPlayer === 'home' ? 'away' : 'home');
     const timerLow = s.offsideTimer <= 5;
     return `<div class="dice-panel">
-      <h3>🚩 ${lang === 'en' ? 'Offside!' : '¡Fuera de juego!'}</h3>
-      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:8px;text-align:center;">${lang === 'en' ? `${offsideTeamName} must move the marked player.` : `${offsideTeamName} debe mover al jugador marcado.`}</div>
+      <h3>🚩 ${lang === 'en' ? 'Offside!' : lang === 'pt' ? 'Impedimento!' : '¡Fuera de juego!'}</h3>
+      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:8px;text-align:center;">${lang === 'en' ? `${offsideTeamName} must move the marked player.` : lang === 'pt' ? `${offsideTeamName} deve mover o jogador marcado.` : `${offsideTeamName} debe mover al jugador marcado.`}</div>
       <div class="turn-timer-row">
         <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" style="width:${Math.round((s.offsideTimer / 15) * 100)}%;"></div></div>
         <span class="turn-timer-label ${timerLow ? 'low' : ''}">⏳ ${s.offsideTimer}s</span>
@@ -8354,12 +8553,12 @@ function renderDicePanel(s) {
   if (s.gamePhase === 'overtime-choice') {
     const isOnline = s.gameMode === 'online';
     const title = lang === 'en' ? "It's a draw!" : '¡Empate!';
-    const extraTimeLabel = lang === 'en' ? `⏱ Extra time (${s.halfDurationMinutes} min)` : `⏱ Prórroga (${s.halfDurationMinutes} min)`;
-    const goldenGoalLabel = lang === 'en' ? '⚽ Golden goal' : '⚽ Gol de oro';
-    const drawLabel = lang === 'en' ? 'End as draw' : 'Terminar en empate';
+    const extraTimeLabel = lang === 'en' ? `⏱ Extra time (${s.halfDurationMinutes} min)` : lang === 'pt' ? `⏱ Prorrogação (${s.halfDurationMinutes} min)` : `⏱ Prórroga (${s.halfDurationMinutes} min)`;
+    const goldenGoalLabel = lang === 'en' ? '⚽ Golden goal' : lang === 'pt' ? '⚽ Gol de ouro' : '⚽ Gol de oro';
+    const drawLabel = lang === 'en' ? 'End as draw' : lang === 'pt' ? 'Terminar em empate' : 'Terminar en empate';
     const countdownHtml = isOnline ? `<div style="font-size:0.75rem;color:#9aa593;text-align:center;margin-bottom:8px;">⏳ <span id="overtime-countdown">${s.timer}</span>s</div>` : '';
-    const waitingLabel = lang === 'en' ? 'Waiting for host to decide...' : 'Esperando que el anfitrión decida...';
-    const continueLabel = lang === 'en' ? 'How do you want to continue?' : '¿Cómo querés continuar?';
+    const waitingLabel = lang === 'en' ? 'Waiting for host to decide...' : lang === 'pt' ? 'Aguardando o anfitrião decidir...' : 'Esperando que el anfitrión decida...';
+    const continueLabel = lang === 'en' ? 'How do you want to continue?' : lang === 'pt' ? 'Como você quer continuar?' : '¿Cómo querés continuar?';
     return `<div class="dice-panel">
       <h3>${title}</h3>
       ${countdownHtml}
@@ -8402,9 +8601,9 @@ function renderDicePanel(s) {
       const theirTeamName = getTeamName(s, theirTeam);
       const resultText = myScore > theirScore ? t('gameover.win') : myScore < theirScore ? t('gameover.loss') : t('gameover.draw');
       const resultColor = myScore > theirScore ? '#1d6b2b' : myScore < theirScore ? '#dc2626' : '#6b7a64';
-      const wLabel = lang === 'en' ? 'W' : 'V';
-      const lLabel = lang === 'en' ? 'L' : 'D';
-      const eLabel = lang === 'en' ? 'D' : 'E';
+      const wLabel = lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V';
+      const lLabel = lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D';
+      const eLabel = lang === 'en' ? 'D' : lang === 'pt' ? 'E' : 'E';
       const eloInfo = userProfile && onlineOpponentUid
         ? `<div style="font-size:0.75rem; color:#6b7a64; text-align:center; margin: 4px 0 6px;">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${wLabel} ${userProfile.losses}${lLabel} ${userProfile.draws}${eLabel}</div>`
         : '';
@@ -8445,9 +8644,9 @@ function renderDicePanel(s) {
   const isTimerActive = ['rolling', 'selecting-piece', 'moving-piece', 'chain-pass'].includes(s.gamePhase) && s.turnDuration !== 9999;
   const timerPct = isTimerActive ? Math.max(0, Math.min(100, (s.timer / s.turnDuration) * 100)) : 100;
   const timerLow = isTimerActive && s.timer <= Math.ceil(s.turnDuration * 0.3);
-  const turnLabel = lang === 'en' ? `Dice — ${teamName}'s turn` : `Dado — turno de ${teamName}`;
-  const thinkingLabel = lang === 'en' ? 'Thinking...' : 'Pensando...';
-  const opponentLabel = lang === 'en' ? 'Opponent rolling...' : 'Rival tirando...';
+  const turnLabel = lang === 'en' ? `Dice — ${teamName}'s turn` : lang === 'pt' ? `Dado — turno de ${teamName}` : `Dado — turno de ${teamName}`;
+  const thinkingLabel = lang === 'en' ? 'Thinking...' : lang === 'pt' ? 'Pensando...' : 'Pensando...';
+  const opponentLabel = lang === 'en' ? 'Opponent rolling...' : lang === 'pt' ? 'Adversário lançando...' : 'Rival tirando...';
   const zeroNote = lang === 'en' ? "You rolled 0! Turn is skipped automatically…" : '¡Sacaste 0! Se pierde el turno automáticamente…';
 
   // Undo button HTML — computed before return to avoid nested template literal issues
@@ -8457,28 +8656,28 @@ function renderDicePanel(s) {
   if (s.prevTurnSnapshot && undoPhases.includes(s.gamePhase)) {
     if (s.gameMode === 'online') {
       if (onlineIncomingUndoFrom) {
-        const undoQ = lang === 'en' ? 'Undo?' : '¿Deshacer?';
+        const undoQ = lang === 'en' ? 'Undo?' : lang === 'pt' ? 'Desfazer?' : '¿Deshacer?';
         const btnsD = '<button class="btn" id="accept-undo-btn-d" style="padding:3px 9px;font-size:0.72rem;margin:0 2px;">✓</button><button class="btn ghost" id="decline-undo-btn-d" style="padding:3px 9px;font-size:0.72rem;">✕</button>';
         const btnsM = '<button class="btn" id="accept-undo-btn-m" style="padding:2px 7px;font-size:0.68rem;margin:0 2px;">✓</button><button class="btn ghost" id="decline-undo-btn-m" style="padding:2px 7px;font-size:0.68rem;">✕</button>';
         undoBtnDesktop = undoQ + ' ' + btnsD;
         undoBtnMobile = '↩ ' + btnsM;
       } else if (onlineUndoRequestedByMe) {
-        undoBtnDesktop = lang === 'en' ? '⏳ Waiting...' : '⏳ Esperando...';
+        undoBtnDesktop = lang === 'en' ? '⏳ Waiting...' : lang === 'pt' ? '⏳ Aguardando...' : '⏳ Esperando...';
         undoBtnMobile = '⏳';
       } else if (onlineMyTeam !== s.currentPlayer && s.diceValue === null) {
-        const undoLabel = lang === 'en' ? '↩ Propose undo' : '↩ Proponer deshacer';
+        const undoLabel = lang === 'en' ? '↩ Propose undo' : lang === 'pt' ? '↩ Propor desfazer' : '↩ Proponer deshacer';
         undoBtnDesktop = '<button class="btn ghost" id="request-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
         undoBtnMobile = '<button class="btn ghost" id="request-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
       }
     } else if (!blockControls) {
-      const undoLabel = lang === 'en' ? '↩ Undo last turn' : '↩ Deshacer última jugada';
+      const undoLabel = lang === 'en' ? '↩ Undo last turn' : lang === 'pt' ? '↩ Desfazer última jogada' : '↩ Deshacer última jugada';
       undoBtnDesktop = '<button class="btn ghost" id="local-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
       undoBtnMobile = '<button class="btn ghost" id="local-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
     }
   }
   const mobilMenuBtns = `<span class="panel-mobile-menu-btns" style="margin-left:auto;display:none;gap:4px;">
-      ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Restart' : 'Reiniciar'}">🔄</button>` : ''}
-      <button class="btn ghost" id="exit-to-menu-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Main menu' : 'Menú principal'}">🏠</button>
+      ${s.gameMode !== 'online' ? `<button class="btn ghost" id="reset-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Restart' : lang === 'pt' ? 'Reiniciar' : 'Reiniciar'}">🔄</button>` : ''}
+      <button class="btn ghost" id="exit-to-menu-btn-mobile" style="padding:1px 6px;font-size:0.75rem;" title="${lang === 'en' ? 'Main menu' : lang === 'pt' ? 'Menu principal' : 'Menú principal'}">🏠</button>
     </span>`;
 
   return `
@@ -8793,7 +8992,7 @@ function wireEvents() {
     saveKitToProfileBtn.onclick = async () => {
       if (!onlineCustomEditorSide) return;
       const picker = onlineTeamPicker[onlineCustomEditorSide];
-      if (!picker.customName || !picker.customName.trim()) picker.customName = lang === 'en' ? 'My Team' : 'Mi Equipo';
+      if (!picker.customName || !picker.customName.trim()) picker.customName = lang === 'en' ? 'My Team' : lang === 'pt' ? 'Meu Time' : 'Mi Equipo';
       const teamToSave = {
         name: picker.customName,
         kit: picker.customKit,
@@ -8878,7 +9077,7 @@ function wireEvents() {
     codeDisplay.title = 'Clic para copiar';
     codeDisplay.onclick = () => {
       navigator.clipboard.writeText(onlineRoomId).then(() => {
-        codeDisplay.textContent = lang === 'en' ? 'Copied!' : '¡Copiado!';
+        codeDisplay.textContent = lang === 'en' ? 'Copied!' : lang === 'pt' ? 'Copiado!' : '¡Copiado!';
         setTimeout(() => { codeDisplay.textContent = onlineRoomId; }, 1500);
       }).catch(() => {});
     };
@@ -8909,8 +9108,8 @@ function wireEvents() {
         gameClock: useGoals ? 0 : setupDuration * 60,
         targetGoals: setupTargetGoals,
         turnDuration: finalTurnDur, timer: finalTurnDur,
-        message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
-        toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : `${awayTeam.name} usará un color alternativo.` } : null,
+        message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
+        toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : lang === 'pt' ? `${awayTeam.name} usará uma cor alternativa.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
     };
   }
@@ -8940,8 +9139,8 @@ function wireEvents() {
         gamePhase: 'pre-game-roll', halfDurationMinutes: useGoalsAi ? 0 : setupDuration, gameClock: useGoalsAi ? 0 : setupDuration * 60,
         targetGoals: setupTargetGoals, turnDuration: finalTurnDurAi, timer: finalTurnDurAi,
         turnDuration: turnDur, timer: turnDur,
-        message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
-        toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : `${awayTeam.name} usará un color alternativo.` } : null,
+        message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
+        toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : lang === 'pt' ? `${awayTeam.name} usará uma cor alternativa.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
     };
   }
@@ -9044,7 +9243,7 @@ function wireEvents() {
 
   const resetBtnMobile = document.getElementById('reset-btn-mobile');
   if (resetBtnMobile) resetBtnMobile.onclick = () => {
-    if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
+    if (confirm(lang === 'en' ? 'Restart current match?' : lang === 'pt' ? 'Reiniciar a partida atual?' : '¿Reiniciar el partido actual?')) {
       setState(s => {
         const fresh = getInitialState();
         return { ...fresh, homeTeam: s.homeTeam, awayTeam: s.awayTeam,
@@ -9053,14 +9252,14 @@ function wireEvents() {
           turnDuration: s.turnDuration, timer: s.turnDuration,
           gameMode: s.gameMode, aiTeam: s.aiTeam, aiDifficulty: s.aiDifficulty,
           gamePhase: 'pre-game-roll',
-          message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+          message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
         };
       });
     }
   };
   const exitMenuBtnMobile = document.getElementById('exit-to-menu-btn-mobile');
   if (exitMenuBtnMobile) exitMenuBtnMobile.onclick = () => {
-    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
+    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : lang === 'pt' ? 'Sair para o menu principal? O progresso da partida será perdido.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
       if (state.gameMode === 'online') leaveOnlineRoom();
       currentMenuView = 'main'; setState(getInitialState());
     }
@@ -9074,7 +9273,7 @@ function wireEvents() {
         const newPlayers = movePlayersForKickoff(getInitialPlayers(), s.score.home > s.score.away ? 'away' : 'home');
         const kickoffTeam = s.score.home <= s.score.away ? 'home' : 'away';
         const kickoffName = getTeamName(s, kickoffTeam);
-        const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : `¡Prórroga! Saca ${kickoffName}.`;
+        const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : lang === 'pt' ? `Prorrogação! ${kickoffName} sai com a bola.` : `¡Prórroga! Saca ${kickoffName}.`;
         return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', half: 2, gameClock: s.halfDurationMinutes * 60,
           overtimeMode: 'extra-time', isClockRunning: false, diceValue: null, homeRoll: null, awayRoll: null,
@@ -9089,7 +9288,7 @@ function wireEvents() {
       if (state.gameMode === 'online' && !onlineIsHost) return;
       setState(s => {
         const newPlayers = movePlayersForKickoff(getInitialPlayers(), 'home');
-        const msg = lang === 'en' ? 'Golden goal! First to score wins.' : '¡Gol de oro! El primero en marcar gana.';
+        const msg = lang === 'en' ? 'Golden goal! First to score wins.' : lang === 'pt' ? 'Gol de ouro! O primeiro a marcar vence.' : '¡Gol de oro! El primero en marcar gana.';
         return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
           diceValue: null, homeRoll: null, awayRoll: null, prevTurnSnapshot: null,
@@ -9102,7 +9301,7 @@ function wireEvents() {
     if (btn) btn.onclick = () => {
       if (state.gameMode === 'online' && !onlineIsHost) return;
       setState(s => {
-        const msg = lang === 'en' ? 'Match ends in a draw.' : 'El partido termina en empate.';
+        const msg = lang === 'en' ? 'Match ends in a draw.' : lang === 'pt' ? 'A partida termina em empate.' : 'El partido termina en empate.';
         return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
       });
     };
@@ -9114,17 +9313,17 @@ function wireEvents() {
     const errorEl = document.getElementById('choose-username-error');
     const username = input?.value?.trim();
     if (!username || username.length < 2) {
-      if (errorEl) errorEl.textContent = lang === 'en' ? 'Username must be at least 2 characters.' : 'El nombre debe tener al menos 2 caracteres.';
+      if (errorEl) errorEl.textContent = lang === 'en' ? 'Username must be at least 2 characters.' : lang === 'pt' ? 'O nome deve ter pelo menos 2 caracteres.' : 'El nombre debe tener al menos 2 caracteres.';
       return;
     }
     if (username.length > 20) {
-      if (errorEl) errorEl.textContent = lang === 'en' ? 'Username must be 20 characters or less.' : 'El nombre debe tener 20 caracteres o menos.';
+      if (errorEl) errorEl.textContent = lang === 'en' ? 'Username must be 20 characters or less.' : lang === 'pt' ? 'O nome deve ter 20 caracteres ou menos.' : 'El nombre debe tener 20 caracteres o menos.';
       return;
     }
     if (!pendingUsernameUser) return;
     const { user } = pendingUsernameUser;
     chooseUsernameBtn.disabled = true;
-    chooseUsernameBtn.textContent = lang === 'en' ? 'Saving...' : 'Guardando...';
+    chooseUsernameBtn.textContent = lang === 'en' ? 'Saving...' : lang === 'pt' ? 'Salvando...' : 'Guardando...';
     try {
       userProfile = {
         username,
@@ -9142,9 +9341,9 @@ function wireEvents() {
       currentMenuView = 'main';
       render();
     } catch (err) {
-      if (errorEl) errorEl.textContent = lang === 'en' ? 'Error saving. Try again.' : 'Error al guardar. Intentá de nuevo.';
+      if (errorEl) errorEl.textContent = lang === 'en' ? 'Error saving. Try again.' : lang === 'pt' ? 'Erro ao salvar. Tente novamente.' : 'Error al guardar. Intentá de nuevo.';
       chooseUsernameBtn.disabled = false;
-      chooseUsernameBtn.textContent = lang === 'en' ? 'Start playing' : '¡Empezar a jugar!';
+      chooseUsernameBtn.textContent = lang === 'en' ? 'Start playing' : lang === 'pt' ? 'Começar a jogar!' : '¡Empezar a jugar!';
     }
   };
 
@@ -9180,7 +9379,7 @@ function wireEvents() {
     const logState = logAction(s, 'Jugada de pase en cadena anulada por el jugador.', 'game-event');
     const teamName = getTeamName(s, s.currentPlayer);
     const reverted = { ...logState, players: s.turnStartState.players, ballPosition: s.turnStartState.ballPosition, lastPlayerToTouchBallId: s.turnStartState.lastPlayerToTouchBallId };
-    return { ...reverted, ...freshActionState({ gamePhase: 'selecting-piece' }), message: `Jugada anulada. Tienes un ${s.diceValue}. Elige un jugador de ${teamName} para mover.` };
+    return { ...reverted, ...freshActionState({ gamePhase: 'selecting-piece' }), message: lang === 'en' ? `Turn undone. You have ${s.diceValue}. Choose a ${teamName} player to move.` : lang === 'pt' ? `Jogada desfeita. Você tem ${s.diceValue}. Escolha um jogador de ${teamName} para mover.` : `Jugada anulada. Tienes un ${s.diceValue}. Elige un jugador de ${teamName} para mover.` };
   });
 
   const start2nd = document.getElementById('start-2nd-half-btn');
@@ -9264,7 +9463,7 @@ function wireEvents() {
 
   const resetBtn = document.getElementById('reset-btn');
   if (resetBtn) resetBtn.onclick = () => {
-    if (confirm(lang === 'en' ? 'Restart current match?' : '¿Reiniciar el partido actual?')) {
+    if (confirm(lang === 'en' ? 'Restart current match?' : lang === 'pt' ? 'Reiniciar a partida atual?' : '¿Reiniciar el partido actual?')) {
       setState(s => {
         const fresh = getInitialState();
         return {
@@ -9281,7 +9480,7 @@ function wireEvents() {
           aiTeam: s.aiTeam,
           aiDifficulty: s.aiDifficulty,
           gamePhase: 'pre-game-roll',
-          message: lang === 'en' ? 'Roll the dice to decide who starts.' : 'Tiren los dados para decidir quién empieza.',
+          message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
         };
       });
     }
@@ -9322,7 +9521,7 @@ function wireEvents() {
 
   const exitToMenuBtn = document.getElementById('exit-to-menu-btn');
   if (exitToMenuBtn) exitToMenuBtn.onclick = () => {
-    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
+    if (confirm(lang === 'en' ? 'Exit to main menu? Current match progress will be lost.' : lang === 'pt' ? 'Sair para o menu principal? O progresso da partida será perdido.' : '¿Salir al menú principal? Se perderá el progreso del partido actual.')) {
       if (state.gameMode === 'online') leaveOnlineRoom();
       currentMenuView = 'main';
       setState(getInitialState());
@@ -9483,7 +9682,7 @@ function doPreGameRoll(team) {
   const fairRoll = Math.floor(Math.random() * 6) + 1;
   setState(s => {
     const teamName = getTeamName(s, team);
-    const logged = logAction(s, lang === 'en' ? `${teamName} rolled ${fairRoll}.` : `${teamName} sacó un ${fairRoll}.`, 'roll', team);
+    const logged = logAction(s, lang === 'en' ? `${teamName} rolled ${fairRoll}.` : lang === 'pt' ? `${teamName} tirou ${fairRoll}.` : `${teamName} sacó un ${fairRoll}.`, 'roll', team);
     const withRoll = { ...logged, [`${team}Roll`]: fairRoll };
     if (withRoll.homeRoll !== null && withRoll.awayRoll !== null) {
       // Both results are in: show them side by side for a moment before resolving the winner,
@@ -9491,8 +9690,8 @@ function doPreGameRoll(team) {
       const winnerName = withRoll.homeRoll === withRoll.awayRoll ? null
         : getTeamName(withRoll, withRoll.homeRoll > withRoll.awayRoll ? 'home' : 'away');
       const pauseMsg = winnerName
-        ? (lang === 'en' ? `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ${winnerName} wins!` : `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ¡Gana ${winnerName}!`)
-        : (lang === 'en' ? `Draw ${withRoll.homeRoll} — ${withRoll.awayRoll}. Rolling again...` : `Empate ${withRoll.homeRoll} a ${withRoll.awayRoll}. Vuelven a tirar...`);
+        ? (lang === 'en' ? `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ${winnerName} wins!` : lang === 'pt' ? `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ${winnerName} venceu!` : `${getTeamName(withRoll,'home')}: ${withRoll.homeRoll} — ${getTeamName(withRoll,'away')}: ${withRoll.awayRoll}. ¡Gana ${winnerName}!`)
+        : (lang === 'en' ? `Draw ${withRoll.homeRoll} — ${withRoll.awayRoll}. Rolling again...` : lang === 'pt' ? `Empate ${withRoll.homeRoll} — ${withRoll.awayRoll}. Lançando novamente...` : `Empate ${withRoll.homeRoll} a ${withRoll.awayRoll}. Vuelven a tirar...`);
       const withPauseMsg = { ...withRoll, message: pauseMsg, isResolvingKickoff: true };
       setTimeout(() => {
         setState(s2 => {
@@ -9515,7 +9714,7 @@ function resolveKickoffWinner(s) {
   if (startingTeam) {
     const winnerName = getTeamName(s, startingTeam);
     const rollVal = startingTeam === 'home' ? s.homeRoll : s.awayRoll;
-    const msg = lang === 'en' ? `${winnerName} rolls ${rollVal} and wins the kickoff! Roll the dice to start.` : `¡${winnerName} saca un ${rollVal} y gana el saque! Lanza el dado para empezar.`;
+    const msg = lang === 'en' ? `${winnerName} rolls ${rollVal} and wins the kickoff! Roll the dice to start.` : lang === 'pt' ? `${winnerName} tira ${rollVal} e vence o sorteio! Lance o dado para começar.` : `¡${winnerName} saca un ${rollVal} y gana el saque! Lanza el dado para empezar.`;
     const newPlayers = movePlayersForKickoff(getInitialPlayers(), startingTeam);
     startClock();
     startTurnTimer();
@@ -9528,7 +9727,7 @@ function resolveKickoffWinner(s) {
     };
     return logAction(finalState, msg, 'game-event', startingTeam);
   }
-  const tieMsg = lang === 'en' ? 'Draw! Roll again.' : '¡Empate! Vuelvan a tirar los dados.';
+  const tieMsg = lang === 'en' ? 'Draw! Roll again.' : lang === 'pt' ? 'Empate! Lance novamente.' : '¡Empate! Vuelvan a tirar los dados.';
   return logAction({ ...s, homeRoll: null, awayRoll: null }, tieMsg, 'roll');
 }
 
@@ -9587,7 +9786,7 @@ function advanceTurnByTimeout(s) {
   if (onlineIncomingUndoFrom) declineOnlineUndo();
   const logState = logAction(s, lang === 'en' ? "Time's up!" : '¡Tiempo agotado!', 'game-event', s.currentPlayer);
   if (s.gamePhase === 'chain-pass' && s.turnStartState) {
-    const logState2 = logAction(logState, lang === 'en' ? 'Chain pass cancelled due to timeout.' : 'La jugada de pase en cadena se anula por falta de tiempo.', 'game-event', s.currentPlayer);
+    const logState2 = logAction(logState, lang === 'en' ? 'Chain pass cancelled due to timeout.' : lang === 'pt' ? 'Passe em cadeia cancelado por tempo esgotado.' : 'La jugada de pase en cadena se anula por falta de tiempo.', 'game-event', s.currentPlayer);
     const reverted = { ...logState2, players: s.turnStartState.players, ballPosition: s.turnStartState.ballPosition, lastPlayerToTouchBallId: s.turnStartState.lastPlayerToTouchBallId, lastAction: null };
     return advanceToNextTurn(reverted);
   }
@@ -9707,7 +9906,7 @@ function startTurnTimer() {
           setState(s => {
             const remaining = s.offsidePlayerIds.filter(id => id !== offsideId);
             if (remaining.length > 0) return { ...s, offsidePlayerIds: remaining, selectedPlayerId: null, validOffsideMoves: [] };
-            const msg = lang === 'en' ? `Offside resolved. ${getTeamName(s, s.currentPlayer)}'s turn.` : `Fuera de juego resuelto. Turno de ${getTeamName(s, s.currentPlayer)}.`;
+            const msg = lang === 'en' ? `Offside resolved. ${getTeamName(s, s.currentPlayer)}'s turn.` : lang === 'pt' ? `Impedimento resolvido. Turno de ${getTeamName(s, s.currentPlayer)}.` : `Fuera de juego resuelto. Turno de ${getTeamName(s, s.currentPlayer)}.`;
             return { ...logAction(s, msg, 'game-event'), gamePhase: 'rolling', selectedPlayerId: null, offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null, timer: s.turnDuration };
           });
         }
@@ -9771,7 +9970,7 @@ function startTurnTimer() {
         overtimeChoiceStartedAt = null;
         setState(s => {
           if (s.gamePhase !== 'overtime-choice') return s;
-          const msg = lang === 'en' ? 'Time ran out. Match ends in a draw.' : 'Se acabó el tiempo. El partido termina en empate.';
+          const msg = lang === 'en' ? 'Time ran out. Match ends in a draw.' : lang === 'pt' ? 'O tempo acabou. A partida termina em empate.' : 'Se acabó el tiempo. El partido termina en empate.';
           return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
         });
       }
@@ -9863,8 +10062,8 @@ function wireAuthEvents() {
     const email = document.getElementById('auth-email')?.value?.trim();
     const password = document.getElementById('auth-password')?.value;
     const username = document.getElementById('auth-username')?.value?.trim();
-    if (!email || !password) { authFormError = lang === 'en' ? 'Please fill in all fields.' : 'Completá todos los campos.'; render(); return; }
-    if (authFormMode === 'register' && !username) { authFormError = lang === 'en' ? 'Choose a username.' : 'Elegí un nombre de usuario.'; render(); return; }
+    if (!email || !password) { authFormError = lang === 'en' ? 'Please fill in all fields.' : lang === 'pt' ? 'Preencha todos os campos.' : 'Completá todos los campos.'; render(); return; }
+    if (authFormMode === 'register' && !username) { authFormError = lang === 'en' ? 'Choose a username.' : lang === 'pt' ? 'Escolha um nome de usuário.' : 'Elegí un nombre de usuario.'; render(); return; }
     authFormLoading = true;
     authFormError = '';
     render();
@@ -9903,7 +10102,7 @@ function showGoalAnimation(s) {
   const primaryColor = team?.primaryColor ? `hsl(${team.primaryColor})` : 'var(--accent)';
   const secondaryColor = team?.secondaryColor ? `hsl(${team.secondaryColor})` : '#fff';
   const teamName = team?.name || '';
-  const goalText = isOwnGoal ? (lang === 'en' ? 'OWN GOAL!' : '¡AUTOGOL!') : (lang === 'en' ? 'GOAL!' : '¡GOL!');
+  const goalText = isOwnGoal ? (lang === 'en' ? 'OWN GOAL!' : lang === 'pt' ? 'GOL CONTRA!' : '¡AUTOGOL!') : (lang === 'en' ? 'GOAL!' : lang === 'pt' ? 'GOL!' : '¡GOL!');
 
   const overlay = document.createElement('div');
   overlay.id = 'goal-overlay';
@@ -9956,10 +10155,10 @@ render();
 document.addEventListener('fullscreenchange', () => { render(); });
 checkForReconnectableSession();
 
-// Global lang toggle — handles clicks on any lang button regardless of when rendered
+// Global lang toggle — cycles ES → EN → PT → ES
 document.addEventListener('click', e => {
   const btn = e.target.closest('#lang-toggle-btn, #menu-lang-btn');
-  if (btn) setLang(lang === 'es' ? 'en' : 'es');
+  if (btn) setLang(lang === 'es' ? 'en' : lang === 'en' ? 'pt' : lang === 'pt' ? 'es' : 'es');
 });
 
 function showCommunityModal() {
@@ -9970,8 +10169,8 @@ function showCommunityModal() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">💬 ${lang === 'en' ? 'Community' : 'Comunidad'}</div>
-      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose where to connect' : 'Elegí dónde conectarte'}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">💬 ${lang === 'en' ? 'Community' : lang === 'pt' ? 'Comunidade' : 'Comunidad'}</div>
+      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose where to connect' : lang === 'pt' ? 'Escolha onde se conectar' : 'Elegí dónde conectarte'}</div>
       <a href="https://chat.whatsapp.com/DSUWimZMKPR01m09Gop2nA" target="_blank" rel="noopener"
          onclick="trackEvent('whatsapp_community_click');document.getElementById('community-modal').remove()"
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
@@ -9982,7 +10181,7 @@ function showCommunityModal() {
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
         🟠 Reddit — r/Hexagol
       </a>
-      <button onclick="document.getElementById('community-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : 'Cerrar'}</button>
+      <button onclick="document.getElementById('community-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
@@ -9996,8 +10195,8 @@ function showDonateModal() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">❤️ ${lang === 'en' ? 'Support Hexagol' : 'Apoyá Hexagol'}</div>
-      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose your currency' : 'Elegí tu moneda'}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">❤️ ${lang === 'en' ? 'Support Hexagol' : lang === 'pt' ? 'Apoie o Hexagol' : 'Apoyá Hexagol'}</div>
+      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose your currency' : lang === 'pt' ? 'Escolha sua moeda' : 'Elegí tu moneda'}</div>
       <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('cafecito_click',{source:'donate_modal'});document.getElementById('donate-modal').remove()"
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
@@ -10006,9 +10205,9 @@ function showDonateModal() {
       <a href="https://ko-fi.com/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('kofi_click',{source:'donate_modal'});document.getElementById('donate-modal').remove()"
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
-        🌍 USD / ${lang === 'en' ? 'Other currency' : 'Otra moneda'}
+        🌍 USD / ${lang === 'en' ? 'Other currency' : lang === 'pt' ? 'Outra moeda' : 'Otra moneda'}
       </a>
-      <button onclick="document.getElementById('donate-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : 'Cerrar'}</button>
+      <button onclick="document.getElementById('donate-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
