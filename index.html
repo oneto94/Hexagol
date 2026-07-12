@@ -5390,8 +5390,13 @@ function pickBotMove(s) {
   candidates.sort((a, b) => b.score - a.score);
 
   if (difficulty === 'easy') {
-    const pool = candidates.slice(Math.floor(candidates.length / 2));
-    return pool[Math.floor(Math.random() * pool.length)];
+    // Easy: always pick from relevant candidates (top half) but randomly
+    // pick 2nd or 3rd best ~40% of the time to simulate mistakes
+    const relevant = candidates.slice(0, Math.max(1, Math.ceil(candidates.length / 2)));
+    const rand = Math.random();
+    if (rand < 0.5 || relevant.length === 1) return relevant[0]; // best
+    if (rand < 0.75 && relevant.length >= 2) return relevant[1]; // 2nd best
+    return relevant[Math.min(2, relevant.length - 1)]; // 3rd best
   }
   if (difficulty === 'hard') return candidates[0];
 
