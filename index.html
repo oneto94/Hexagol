@@ -7391,13 +7391,26 @@ function renderOnlineWaiting() {
   const expiryNote = lang === 'en' ? 'Room expires in 10 minutes.' : lang === 'pt' ? 'A sala expira em 10 minutos.' : 'La sala expira en 10 minutos.';
   const connectingDesc = lang === 'en'
     ? `Room ${onlineRoomId || ''} — waiting for host to start.`
+    : lang === 'pt' ? `Sala ${onlineRoomId || ''} — aguardando o anfitrião iniciar a partida.`
     : `Sala ${onlineRoomId || ''} — esperando que el anfitrión arranque el partido.`;
+  const roomLink = `https://hexagol.com.ar?sala=${onlineRoomId || ''}`;
+  const whatsappMsg = encodeURIComponent((lang === 'en' ? `Join me in Hexagol! Click to enter the room: ${roomLink}` : lang === 'pt' ? `Me junta no Hexagol! Clica para entrar na sala: ${roomLink}` : `¡Unite a Hexagol! Entrá a la sala: ${roomLink}`));
+
   if (onlineIsHost) {
     return `
     <div class="menu-screen" style="text-align:center;">
       <h1>🏠 ${t('online.waiting.title')}</h1>
-      <div class="subtitle">${lang === 'en' ? 'Share this code with your opponent.' : lang === 'pt' ? 'Compartilhe este código com seu adversário.' : 'Compartí este código con tu rival.'}</div>
+      <div class="subtitle">${lang === 'en' ? 'Share this code or link with your opponent.' : lang === 'pt' ? 'Compartilhe este código ou link com seu adversário.' : 'Compartí este código o link con tu rival.'}</div>
       <div class="room-code-display" id="room-code-display">${onlineRoomId || '...'}</div>
+      <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 16px;flex-wrap:wrap;">
+        <button id="copy-link-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #c8d5c0;border-radius:999px;padding:8px 16px;font-size:0.8rem;color:#384032;cursor:pointer;font-family:inherit;font-weight:600;">
+          🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}
+        </button>
+        <a href="https://wa.me/?text=${whatsappMsg}" target="_blank" rel="noopener"
+          style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1.5px solid #25D366;border-radius:999px;padding:8px 16px;font-size:0.8rem;color:#fff;text-decoration:none;font-weight:600;">
+          📲 WhatsApp
+        </a>
+      </div>
       <p style="font-size:0.85rem; color:#6b7a64; margin: 0 0 20px;">${t('online.waiting.hint')}<br>${expiryNote}</p>
       <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.waiting')}</span>
       <div class="menu-grid" style="margin-top:20px;">
@@ -9040,18 +9053,18 @@ function wireEvents() {
       }
       if (target === 'tutorial') {
         currentMenuView = 'main';
-        setState(startTutorial());
+        trackEvent('tutorial_start', { type: 'full' }); setState(startTutorial());
         return;
       }
       if (target === 'quick-tutorial') {
-        currentMenuView = 'quick-tutorial';
+        trackEvent('tutorial_start', { type: 'quick' }); currentMenuView = 'quick-tutorial';
         render();
         return;
       }
       if (target === 'sandbox') {
         currentMenuView = 'main';
         sandboxDragTarget = null;
-        setState(startSandbox());
+        trackEvent('game_start', { mode: 'training' }); setState(startSandbox());
         return;
       }
       if (target === 'leaderboard') {
@@ -9098,7 +9111,7 @@ function wireEvents() {
         const sel = document.getElementById('online-home-select');
         if (sel) onlineTeamPicker.home.presetIdx = parseInt(sel.value, 10);
       }
-      onlineCreateRoom(resolvePickedTeam('home'), setupDuration, setupTargetGoals);
+      trackEvent('online_room_created', { duration: setupDuration, target_goals: setupTargetGoals }); onlineCreateRoom(resolvePickedTeam('home'), setupDuration, setupTargetGoals);
     };
   }
 
@@ -9110,7 +9123,7 @@ function wireEvents() {
         const sel = document.getElementById('online-home-select');
         if (sel) onlineTeamPicker.home.presetIdx = parseInt(sel.value, 10);
       }
-      onlineQuickMatch(resolvePickedTeam('home'), setupDuration, setupTargetGoals);
+      trackEvent('online_quick_match', { duration: setupDuration }); onlineQuickMatch(resolvePickedTeam('home'), setupDuration, setupTargetGoals);
     };
   }
 
@@ -9233,6 +9246,29 @@ function wireEvents() {
   }
 
   // Online — Cancel / leave room
+  const copyLinkBtn = document.getElementById('copy-link-btn');
+  if (copyLinkBtn) copyLinkBtn.onclick = () => {
+    const link = `https://hexagol.com.ar?sala=${onlineRoomId}`;
+    navigator.clipboard.writeText(link).then(() => {
+      copyLinkBtn.textContent = lang === 'en' ? '✓ Copied!' : lang === 'pt' ? '✓ Copiado!' : '✓ ¡Copiado!';
+      setTimeout(() => {
+        copyLinkBtn.innerHTML = `🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}`;
+      }, 2000);
+    }).catch(() => {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement('textarea');
+      el.value = link;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      copyLinkBtn.textContent = lang === 'en' ? '✓ Copied!' : lang === 'pt' ? '✓ Copiado!' : '✓ ¡Copiado!';
+      setTimeout(() => {
+        copyLinkBtn.innerHTML = `🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}`;
+      }, 2000);
+    });
+  };
+
   const onlineCancelBtn = document.getElementById('online-cancel-btn');
   if (onlineCancelBtn) {
     onlineCancelBtn.onclick = () => {
@@ -9563,7 +9599,7 @@ function wireEvents() {
       quickTutorialStep++;
       render();
     } else {
-      startQuickTutorialMatch();
+      trackEvent('tutorial_complete', { type: 'quick' }); startQuickTutorialMatch();
     }
   };
   const qtPrevBtn = document.getElementById('qt-prev-btn');
@@ -10361,9 +10397,46 @@ window.hexagolHash = () => {
   console.log('[Hexagol Debug] hash:', hashState(state), '| turn:', state.turnCount, '| phase:', state.gamePhase);
 };
 
+// ── Session tracking ──────────────────────────────────────────────────────────
+const SESSION_START = Date.now();
+window.addEventListener('beforeunload', () => {
+  const sessionMinutes = Math.round((Date.now() - SESSION_START) / 60000);
+  trackEvent('session_end', { duration_minutes: sessionMinutes, lang });
+});
+
+// ── URL parameter — auto-join room ────────────────────────────────────────────
+function checkUrlRoomParam() {
+  const params = new URLSearchParams(window.location.search);
+  const sala = params.get('sala');
+  if (!sala) return;
+  // Clean the URL without reloading
+  window.history.replaceState({}, '', window.location.pathname);
+  // Wait for auth to be ready then join
+  const tryJoin = () => {
+    if (!currentUser) { setTimeout(tryJoin, 500); return; }
+    const code = sala.toUpperCase();
+    currentMenuView = 'online-setup';
+    render();
+    // Pre-fill the join code and trigger join flow
+    setTimeout(() => {
+      const input = document.getElementById('online-join-input');
+      if (input) {
+        input.value = code;
+        const joinBtn = document.getElementById('online-join-submit');
+        if (joinBtn) joinBtn.click();
+      } else {
+        // Fallback: go directly to join
+        onlineJoinRoom(code, resolvePickedTeam('home'));
+      }
+    }, 300);
+  };
+  tryJoin();
+}
+
 render();
 document.addEventListener('fullscreenchange', () => { render(); });
 checkForReconnectableSession();
+checkUrlRoomParam();
 
 // Global lang toggle — cycles ES → EN → PT → ES
 document.addEventListener('click', e => {
