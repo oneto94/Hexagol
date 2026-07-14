@@ -1455,8 +1455,8 @@ function generateRoomCode() {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGoals = null) {
-  const fresh = getInitialState();
+function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGoals = null, gameVariant = 'classic', boardSize = 'classic') {
+  const fresh = getInitialState(boardSize);
   const useGoals = targetGoals !== null;
   return {
     ...fresh,
@@ -1468,6 +1468,8 @@ function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGo
     targetGoals: targetGoals || null,
     turnDuration: turnDur,
     timer: turnDur,
+    gameVariant,
+    boardSize,
     message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
   };
 }
@@ -2064,6 +2066,8 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
     homeUid: (currentUser && !currentUser.isAnonymous) ? currentUser.uid : null,
     duration,
     targetGoals: targetGoals || null,
+    gameVariant: setupGameVariant || 'classic',
+    boardSize: setupBoardSize || 'classic',
     gameState: null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   }).catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
@@ -2093,7 +2097,7 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
       ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
       : guestTeam;
 
-    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals);
+    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals, data.gameVariant || 'classic', data.boardSize || 'classic');
     // Fix 1: start with 30s timer for the pre-game roll phase, using wall-clock reference
     preGameRollStartedAt = Date.now();
     state = { ...initialState, timer: 30 };
@@ -2127,6 +2131,19 @@ async function onlineJoinRoom(code, awayTeam) {
   if (!snap.exists) { alert(lang === 'en' ? 'Room not found. Check the code and try again.' : lang === 'pt' ? 'Sala não encontrada. Verifique o código e tente novamente.' : 'Sala no encontrada. Revisá el código e intentá de nuevo.'); return; }
   const data = snap.data();
   if (data.status !== 'waiting') { alert(lang === 'en' ? 'That room is already in use or does not exist.' : lang === 'pt' ? 'Essa sala já está em uso ou não existe.' : 'Esa sala ya está en juego o no existe.'); return; }
+
+  // Check variant compatibility
+  const roomVariant = data.gameVariant || 'classic';
+  if (roomVariant !== (setupGameVariant || 'classic')) {
+    const variantNames = { classic: lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico', compact: lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto', quick: lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido' };
+    alert(lang === 'en' ? `This room is for ${variantNames[roomVariant]} mode. Please enter from the ${variantNames[roomVariant]} menu.` : lang === 'pt' ? `Esta sala é do modo ${variantNames[roomVariant]}. Entre pelo menu ${variantNames[roomVariant]}.` : `Esta sala es del modo ${variantNames[roomVariant]}. Entrá desde el menú ${variantNames[roomVariant]}.`);
+    return;
+  }
+
+  // Set active board size from room data
+  setupGameVariant = roomVariant;
+  setupBoardSize = data.boardSize || 'classic';
+  setActiveBoardSize(setupBoardSize);
 
   // Delete stale rooms with no activity for more than 2 hours
   const updatedAt = data.updatedAt?.toMillis?.() || data.createdAt?.toMillis?.() || 0;
@@ -2168,10 +2185,11 @@ async function onlineQuickMatch(homeTeam, duration, targetGoals = null) {
   currentMenuView = 'online-searching';
   render();
 
+  const currentVariant = setupGameVariant || 'classic';
   const snap = await db.collection('rooms')
     .where('status', '==', 'waiting')
     .orderBy('createdAt', 'asc')
-    .limit(5)
+    .limit(20)
     .get();
 
   let found = null;
@@ -2180,7 +2198,8 @@ async function onlineQuickMatch(homeTeam, duration, targetGoals = null) {
     if (!found) {
       const d = doc.data();
       const createdAt = d.createdAt && d.createdAt.toMillis ? d.createdAt.toMillis() : 0;
-      if (createdAt > cutoff) found = doc.id;
+      const roomVariant = d.gameVariant || 'classic';
+      if (createdAt > cutoff && roomVariant === currentVariant) found = doc.id;
     }
   });
 
@@ -2482,11 +2501,14 @@ function scheduleRoomDeletion() {
 // MÓDULO: CONSTANTS — Constantes del juego
 // ═══════════════════════════════════════════════════════════
 const BOARD_WIDTH = 19;
-const BOARD_HEIGHT = 25; // 23 playable rows (1-23) + 2 goal rows (0 and 24)
-// Goals are at the top (y=0 for away) and bottom (y=24 for home) edges
-// Goals are between columns H and L (x=7 to x=11).
+const BOARD_HEIGHT = 25;
+const BOARD_WIDTH_COMPACT = 17;
+const BOARD_HEIGHT_COMPACT = 23;
+
 const AWAY_GOAL_POSITIONS = Array.from({ length: 5 }, (_, i) => ({ x: 7 + i, y: 0 }));
 const HOME_GOAL_POSITIONS = Array.from({ length: 5 }, (_, i) => ({ x: 7 + i, y: BOARD_HEIGHT - 1 }));
+const AWAY_GOAL_POSITIONS_COMPACT = Array.from({ length: 5 }, (_, i) => ({ x: 6 + i, y: 0 }));
+const HOME_GOAL_POSITIONS_COMPACT = Array.from({ length: 5 }, (_, i) => ({ x: 6 + i, y: BOARD_HEIGHT_COMPACT - 1 }));
 const INITIAL_PLAYER_POSITIONS = {
     // Home team starts at the bottom (high y), attacking upwards (towards y=0)
     home: [
@@ -2518,6 +2540,37 @@ const INITIAL_PLAYER_POSITIONS = {
     ],
 };
 const INITIAL_BALL_POSITION = { x: 9, y: 12 };
+
+// ── Compact board initial positions (17×23, center y=11) ─────────────────────
+const INITIAL_PLAYER_POSITIONS_COMPACT = {
+  home: [
+    { position: { x: 8, y: 22 }, isGoalkeeper: true, playerNumber: 1 },
+    { position: { x: 10, y: 18 }, isGoalkeeper: false, playerNumber: 2 },
+    { position: { x: 2, y: 15 }, isGoalkeeper: false, playerNumber: 3 },
+    { position: { x: 14, y: 15 }, isGoalkeeper: false, playerNumber: 4 },
+    { position: { x: 8, y: 14 }, isGoalkeeper: false, playerNumber: 5 },
+    { position: { x: 6, y: 18 }, isGoalkeeper: false, playerNumber: 6 },
+    { position: { x: 15, y: 7 }, isGoalkeeper: false, playerNumber: 7 },
+    { position: { x: 10, y: 13 }, isGoalkeeper: false, playerNumber: 8 },
+    { position: { x: 8, y: 6 }, isGoalkeeper: false, playerNumber: 9 },
+    { position: { x: 6, y: 13 }, isGoalkeeper: false, playerNumber: 10 },
+    { position: { x: 1, y: 7 }, isGoalkeeper: false, playerNumber: 11 },
+  ],
+  away: [
+    { position: { x: 8, y: 0 }, isGoalkeeper: true, playerNumber: 1 },
+    { position: { x: 6, y: 4 }, isGoalkeeper: false, playerNumber: 2 },
+    { position: { x: 14, y: 7 }, isGoalkeeper: false, playerNumber: 3 },
+    { position: { x: 2, y: 7 }, isGoalkeeper: false, playerNumber: 4 },
+    { position: { x: 8, y: 8 }, isGoalkeeper: false, playerNumber: 5 },
+    { position: { x: 10, y: 4 }, isGoalkeeper: false, playerNumber: 6 },
+    { position: { x: 1, y: 15 }, isGoalkeeper: false, playerNumber: 7 },
+    { position: { x: 6, y: 9 }, isGoalkeeper: false, playerNumber: 8 },
+    { position: { x: 8, y: 16 }, isGoalkeeper: false, playerNumber: 9 },
+    { position: { x: 10, y: 9 }, isGoalkeeper: false, playerNumber: 10 },
+    { position: { x: 15, y: 15 }, isGoalkeeper: false, playerNumber: 11 },
+  ],
+};
+const INITIAL_BALL_POSITION_COMPACT = { x: 8, y: 11 };
 const TURN_DURATION = 30; // seconds
 const OFFSIDE_RESOLUTION_DURATION = 15; // seconds
 const GOALKEEPER_SWAP_DURATION = 15; // seconds
@@ -2630,14 +2683,35 @@ const LOBBY_TIMEOUT = 120000; // 2 minutes for a player to join
 // ═══════════════════════════════════════════════════════════
 // MÓDULO: GAME ENGINE — Reglas, validaciones, estado del juego
 // ═══════════════════════════════════════════════════════════
+// ── Active board dimensions (set when match starts) ──────────────────────────
+// These are module-level vars used by isBallPathOutOfBounds and rendering
+let _activeBoardWidth = BOARD_WIDTH;
+let _activeBoardHeight = BOARD_HEIGHT;
+let _activeHomeGoal = HOME_GOAL_POSITIONS;
+let _activeAwayGoal = AWAY_GOAL_POSITIONS;
+
+function setActiveBoardSize(boardSize) {
+  if (boardSize === 'compact') {
+    _activeBoardWidth = BOARD_WIDTH_COMPACT;
+    _activeBoardHeight = BOARD_HEIGHT_COMPACT;
+    _activeHomeGoal = HOME_GOAL_POSITIONS_COMPACT;
+    _activeAwayGoal = AWAY_GOAL_POSITIONS_COMPACT;
+  } else {
+    _activeBoardWidth = BOARD_WIDTH;
+    _activeBoardHeight = BOARD_HEIGHT;
+    _activeHomeGoal = HOME_GOAL_POSITIONS;
+    _activeAwayGoal = AWAY_GOAL_POSITIONS;
+  }
+}
+
 const isBallPathOutOfBounds = (pos) => {
-    if (pos.x < 0 || pos.x >= BOARD_WIDTH || pos.y < 0 || pos.y >= BOARD_HEIGHT) {
-        return true; // Strictly outside the board grid
+    if (pos.x < 0 || pos.x >= _activeBoardWidth || pos.y < 0 || pos.y >= _activeBoardHeight) {
+        return true;
     }
-    // Check for the corners that aren't goals
-    const isGoalRow = pos.y === 0 || pos.y === BOARD_HEIGHT - 1;
-    const isGoalColumn = pos.x >= 7 && pos.x <= 11;
-    // If it's in a goal row but outside the goal posts, it's out of bounds.
+    const isGoalRow = pos.y === 0 || pos.y === _activeBoardHeight - 1;
+    // Use active goal positions to determine valid goal columns
+    const activeGoal = pos.y === 0 ? _activeAwayGoal : _activeHomeGoal;
+    const isGoalColumn = activeGoal.some(g => g.x === pos.x);
     if (isGoalRow && !isGoalColumn) {
         return true;
     }
@@ -2650,7 +2724,7 @@ const isBallPathOutOfBounds = (pos) => {
  * @returns True if the position is within the team's own goal, false otherwise.
  */
 const isPosInOwnGoal = (pos, team) => {
-    const goalPositions = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+    const goalPositions = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
     return goalPositions.some(p => p.x === pos.x && p.y === pos.y);
 };
 /**
@@ -2662,7 +2736,7 @@ const isPosInOwnGoal = (pos, team) => {
 const isPosInOwnSmallArea = (pos, team) => {
     if (team === 'home') {
         // Home Small Area (y=22-23, x=5-13), EXCLUDING goal line at y=24.
-        return pos.x >= 5 && pos.x <= 13 && pos.y >= 22 && pos.y < BOARD_HEIGHT - 1;
+        return pos.x >= 5 && pos.x <= 13 && pos.y >= (_activeBoardHeight - 3) && pos.y < _activeBoardHeight - 1;
     }
     else { // away team
         // Away Small Area (y=1-2, x:5-13), EXCLUDING goal line at y=0.
@@ -2676,16 +2750,25 @@ const isPosInOwnSmallArea = (pos, team) => {
  * @param team The goalkeeper's team.
  * @returns True if the position is within the designated areas, false otherwise.
  */
+// ── Board dimension helpers ───────────────────────────────────────────────────
+function getBoardWidth(s) { return s?.boardSize === 'compact' ? BOARD_WIDTH_COMPACT : BOARD_WIDTH; }
+function getBoardHeight(s) { return s?.boardSize === 'compact' ? BOARD_HEIGHT_COMPACT : BOARD_HEIGHT; }
+function getHomeGoalPositions(s) { return s?.boardSize === 'compact' ? HOME_GOAL_POSITIONS_COMPACT : HOME_GOAL_POSITIONS; }
+function getAwayGoalPositions(s) { return s?.boardSize === 'compact' ? AWAY_GOAL_POSITIONS_COMPACT : AWAY_GOAL_POSITIONS; }
+function getInitialBallPosition(s) { return s?.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }; }
+function isWithinGoalkeeperAreaForBoard(position, team, boardSize) {
+  const { x, y } = position;
+  if (boardSize === 'compact') {
+    if (team === 'home') return x >= 2 && x <= 14 && y >= 17 && y < BOARD_HEIGHT_COMPACT;
+    else return x >= 2 && x <= 14 && y >= 0 && y <= 5;
+  }
+  if (team === 'home') return x >= 3 && x <= 15 && y >= (_activeBoardHeight - 6) && y < _activeBoardHeight;
+  else return x >= 3 && x <= 15 && y >= 0 && y <= 5;
+}
+
+
 const isWithinGoalkeeperArea = (position, team) => {
-    const { x, y } = position;
-    if (team === 'home') {
-        // Home Big Area (y=19-24, x=3-15) inclusive of goal
-        return x >= 3 && x <= 15 && y >= 19 && y < BOARD_HEIGHT;
-    }
-    else { // away team
-        // Away Big Area (y=0-5, x=3-15) inclusive of goal
-        return x >= 3 && x <= 15 && y >= 0 && y <= 5;
-    }
+  return isWithinGoalkeeperAreaForBoard(position, team, _activeBoardWidth === BOARD_WIDTH_COMPACT ? 'compact' : 'classic');
 };
 /**
  * Checks if two positions are adjacent (including diagonals).
@@ -3094,7 +3177,7 @@ const isPlayerInOffsidePosition = (player, allPlayers, ballPosition) => {
     if (defenders.length < 2) {
         return { isOffside: false, offsideLineY: null }; // Not enough defenders to create an offside line
     }
-    const midfieldY = Math.floor(BOARD_HEIGHT / 2);
+    const midfieldY = Math.floor(_activeBoardHeight / 2);
     let offsideLineY;
     if (attackingTeam === 'home') { // Attacking upwards (y decreases)
         const inOpponentHalf = player.position.y < midfieldY;
@@ -3157,7 +3240,7 @@ const checkForOffside = (currentPlayers, attackingTeam, ballPosition, playerToIg
  * @returns True if the action is considered an offside infringement.
  */
 const isActionOffside = (passer, targetPosition, allPlayers, ballPosition) => {
-    const opponentGoal = passer.team === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const opponentGoal = passer.team === 'home' ? _activeAwayGoal : _activeHomeGoal;
     const isShotOnGoal = opponentGoal.some(p => p.x === targetPosition.x && p.y === targetPosition.y);
     // A direct shot on goal is never an offside infringement in itself.
     if (isShotOnGoal) {
@@ -3217,7 +3300,7 @@ const getValidOffsideResolutionMoves = (offsidePlayer, offsideLineY, allPlayers,
     ];
     // First, try to find all valid moves in a straight line with a clear path.
     for (const dir of directions) {
-        const maxDist = Math.max(BOARD_WIDTH, BOARD_HEIGHT);
+        const maxDist = Math.max(_activeBoardWidth, _activeBoardHeight);
         for (let i = 1; i <= maxDist; i++) {
             const destPos = { x: startPos.x + dir.dx * i, y: startPos.y + dir.dy * i };
             if (isBallPathOutOfBounds(destPos)) {
@@ -3248,7 +3331,7 @@ const getValidOffsideResolutionMoves = (offsidePlayer, offsideLineY, allPlayers,
     // --- FALLBACK LOGIC ---
     // If no straight-line moves were found, find all valid landing spots on the entire offside line.
     const fallbackMoves = [];
-    for (let x = 0; x < BOARD_WIDTH; x++) {
+    for (let x = 0; x < _activeBoardWidth; x++) {
         const destPos = { x, y: offsideLineY };
         if (isBallPathOutOfBounds(destPos)) {
             continue;
@@ -3271,7 +3354,7 @@ const getValidOffsideResolutionMoves = (offsidePlayer, offsideLineY, allPlayers,
  */
 const isBallTotallyBlocked = (ballPosition, allPlayers, teamToCheck) => {
     const opponentTeam = teamToCheck === 'home' ? 'away' : 'home';
-    const opponentGoalLine = teamToCheck === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const opponentGoalLine = teamToCheck === 'home' ? _activeAwayGoal : _activeHomeGoal;
     // Create a set of "walls" which are squares occupied by opponents.
     // The ball cannot move onto or through these squares.
     const opponentPositions = new Set();
@@ -4406,17 +4489,19 @@ const tutorialScript = [
    en vainilla JS para poder jugar sin Next.js / Firebase / Auth.
    ========================================================================= */
 
-function getInitialPlayers() {
-  const home = INITIAL_PLAYER_POSITIONS.home.map((p, i) => ({ ...p, position: {...p.position}, id: i + 1, team: 'home' }));
-  const away = INITIAL_PLAYER_POSITIONS.away.map((p, i) => ({ ...p, position: {...p.position}, id: i + 1 + 11, team: 'away' }));
+function getInitialPlayers(boardSize) {
+  const positions = boardSize === 'compact' ? INITIAL_PLAYER_POSITIONS_COMPACT : INITIAL_PLAYER_POSITIONS;
+  const home = positions.home.map((p, i) => ({ ...p, position: {...p.position}, id: i + 1, team: 'home' }));
+  const away = positions.away.map((p, i) => ({ ...p, position: {...p.position}, id: i + 1 + 11, team: 'away' }));
   return [...home, ...away];
 }
 
-function movePlayersForKickoff(players, startingTeam) {
+function movePlayersForKickoff(players, startingTeam, boardSize) {
+  const ball = boardSize === 'compact' ? INITIAL_BALL_POSITION_COMPACT : INITIAL_BALL_POSITION;
   return players.map(player => {
     if (player.team === startingTeam && (player.playerNumber === 8 || player.playerNumber === 10)) {
-      const dx = Math.sign(INITIAL_BALL_POSITION.x - player.position.x);
-      const dy = Math.sign(INITIAL_BALL_POSITION.y - player.position.y);
+      const dx = Math.sign(ball.x - player.position.x);
+      const dy = Math.sign(ball.y - player.position.y);
       return { ...player, position: { x: player.position.x + dx, y: player.position.y + dy } };
     }
     return player;
@@ -4444,10 +4529,19 @@ function freshActionState(extra) {
   }, extra || {});
 }
 
-function getInitialState() {
+function getInitialState(boardSize) {
+  const bs = boardSize || 'classic';
+  setActiveBoardSize(bs);
+  const initPlayers = getInitialPlayers(bs);
+  const initBall = bs === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION };
   return {
-    players: getInitialPlayers(),
-    ballPosition: { ...INITIAL_BALL_POSITION },
+    players: initPlayers,
+    ballPosition: initBall,
+    boardSize: bs,
+    gameVariant: 'classic',
+    remainingBudget: 0,
+    usedPlayerIds: [],
+    lastActions: [], // array of {from, to} for quick mode multi-action turns
     currentPlayer: 'home',
     turnCount: 0,
     half: 1,
@@ -4584,6 +4678,8 @@ function setState(patch) {
   // No-op update (e.g. the inactive online player's clock tick returning the same
   // object because it's not their turn) — nothing changed, nothing to push or render.
   if (state === prev) return;
+  // Update active board dimensions if boardSize changed
+  if (state.boardSize !== prev.boardSize) setActiveBoardSize(state.boardSize);
   playSoundsForTransition(prev, state);
   // Push to Firebase only when it's our own action, not when applying a remote update
   if (state.gameMode === 'online' && onlineStatus === 'connected' && !onlineApplyingRemote) {
@@ -4759,9 +4855,43 @@ function maybeTriggerBot() {
 
 /* ---------------- Core turn-advance logic (ported from phase-reducers.ts) ---------------- */
 
+// Deduct movement cost from budget in quick mode and mark player as used
+function deductBudget(s, cost, playerId) {
+  if (s.gameVariant !== 'quick') return s;
+  const used = s.usedPlayerIds || [];
+  const prevActions = s.lastActions || [];
+  const newAction = s.lastAction || null;
+  return {
+    ...s,
+    remainingBudget: Math.max(0, (s.remainingBudget || 0) - cost),
+    usedPlayerIds: playerId && !used.includes(playerId) ? [...used, playerId] : used,
+    lastActions: newAction ? [...prevActions, newAction] : prevActions,
+  };
+}
+
 function advanceToNextTurn(s, opts) {
   opts = opts || {};
-  const { currentPlayer, players, ballPosition } = s;
+
+  // Quick mode: if budget remains, continue the turn instead of advancing
+  if (s.gameVariant === 'quick' && !opts.forceTurnEnd && s.remainingBudget > 0) {
+    const msg = lang === 'en'
+      ? `${s.remainingBudget} move(s) remaining. Choose another player or pass.`
+      : lang === 'pt' ? `${s.remainingBudget} movimento(s) restante(s). Escolha outro jogador ou passe.`
+      : `Quedan ${s.remainingBudget} movimiento(s). Elegí otro jugador o pasá.`;
+    return logAction({
+      ...s,
+      gamePhase: 'selecting-piece',
+      selectedPlayerId: null,
+      validMoves: [], validKickTargets: [], validDragTargets: [],
+      validLoftedPassTargets: [], validLoftedDragTargets: [],
+      validChainPassTargets: [], chainPassReceivers: [],
+      actionChoice: null,
+    }, msg, 'game-event');
+  }
+
+  // Budget exhausted or forced end — clear used players for next turn
+  const sClean = s.gameVariant === 'quick' ? { ...s, usedPlayerIds: [], remainingBudget: 0, lastActions: [] } : s;
+  const { currentPlayer, players, ballPosition } = sClean;
 
   if (!opts.skipSwapCheck) {
     const gk = players.find(p => p.team === currentPlayer && p.isGoalkeeper);
@@ -4802,10 +4932,10 @@ function advanceToNextTurn(s, opts) {
 
   if (isBallTotallyBlocked(ballPosition, players, nextPlayer)) {
     const teamCausingBlockName = getTeamName(s, currentPlayer);
-    const playersForKickoff = movePlayersForKickoff(getInitialPlayers(), nextPlayer);
+    const playersForKickoff = movePlayersForKickoff(getInitialPlayers(s.boardSize), nextPlayer, s.boardSize);
     const msg = lang === 'en' ? `Ball blocked! ${teamToKickOffName} kicks off. Roll the dice.` : lang === 'pt' ? `Bola bloqueada! ${teamToKickOffName} sai com a bola. Lance o dado.` : `¡Balón bloqueado! Saca ${teamToKickOffName}. Lanza el dado.`;
     const news = {
-      ...s, players: playersForKickoff, ballPosition: { ...INITIAL_BALL_POSITION }, currentPlayer: nextPlayer,
+      ...s, players: playersForKickoff, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, currentPlayer: nextPlayer,
       gamePhase: 'rolling', diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, offsidePlayerIds: [], validOffsideMoves: [], swapCandidates: [],
       timer: s.turnDuration, toastToShow: { title: lang === 'en' ? 'Ball blocked!' : lang === 'pt' ? 'Bola bloqueada!' : '¡Juego trabado!', description: lang === 'en' ? `${teamCausingBlockName} has blocked the ball. Resetting kickoff.` : lang === 'pt' ? `${teamCausingBlockName} bloqueou a bola. Reiniciando o saque.` : `${teamCausingBlockName} ha bloqueado el balón. Se reinicia el saque.` },
@@ -4858,9 +4988,9 @@ function handleGoal(s) {
   if (matchEnds) {
     const winMsg = lang === 'en' ? `GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL! ${scorerName} venceu a partida!` : `¡GOL! ¡${scorerName} gana el partido!`;
     // First show the goal normally (with toast and board reset), then end match after a delay
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
+    const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), scoringTeam === 'home' ? 'away' : 'home', s.boardSize);
     const goalState = logAction({
-      ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+      ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
       currentPlayer: scoringTeam === 'home' ? 'away' : 'home', diceValue: null,
       ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
       turnStartState: null, lastAction: null, matchStats: newMatchStats, assistProviderId: null,
@@ -4876,10 +5006,10 @@ function handleGoal(s) {
     return goalState;
   }
 
-  const newPlayers = movePlayersForKickoff(getInitialPlayers(), scoringTeam === 'home' ? 'away' : 'home');
+  const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), scoringTeam === 'home' ? 'away' : 'home', s.boardSize);
   const msg = lang === 'en' ? `GOAL by ${scorerName}! ${concederName} kicks off.` : lang === 'pt' ? `GOL de ${scorerName}! ${concederName} sai com a bola.` : `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
   const news = {
-    ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+    ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
     currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
     turnStartState: null, lastAction: null, isKickoffTurn: true, matchStats: newMatchStats, assistProviderId: null,
@@ -4898,13 +5028,13 @@ function handleOwnGoal(s) {
   const matchEnds = (s.targetGoals && newScore[scoringTeam] >= s.targetGoals) ||
                     (s.overtimeMode === 'golden-goal');
 
-  const newPlayers = movePlayersForKickoff(getInitialPlayers(), team);
+  const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), team, s.boardSize);
   const msg = lang === 'en' ? `OWN GOAL by ${concederName}!` : lang === 'pt' ? `GOL CONTRA de ${concederName}!` : `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
 
   if (matchEnds) {
     const winMsg = lang === 'en' ? `OWN GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL CONTRA! ${scorerName} venceu a partida!` : `¡AUTOGOL! ¡${scorerName} gana el partido!`;
     const goalState = logAction({
-      ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+      ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
       currentPlayer: team, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
       turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
@@ -4920,7 +5050,7 @@ function handleOwnGoal(s) {
   }
 
   const news = {
-    ...s, score: newScore, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+    ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
     currentPlayer: team, gamePhase: 'rolling', diceValue: null, ...freshActionState(),
     lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
     turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
@@ -4965,13 +5095,13 @@ function handleEndHalfOrMatch(s) {
 
 function goalDistanceScore(pos, team) {
   // Lower is better: vertical distance to the opponent's goal line, centered on the goal mouth.
-  const goalY = team === 'home' ? 0 : BOARD_HEIGHT - 1;
+  const goalY = team === 'home' ? 0 : _activeBoardHeight - 1;
   const centerX = 9;
   return Math.abs(pos.y - goalY) + Math.abs(pos.x - centerX) * 0.25;
 }
 
 function isDirectGoalTarget(pos, team) {
-  const goal = team === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+  const goal = team === 'home' ? _activeAwayGoal : _activeHomeGoal;
   return goal.some(g => g.x === pos.x && g.y === pos.y);
 }
 
@@ -4980,7 +5110,7 @@ function isDirectGoalTarget(pos, team) {
 // This is the "guaranteed goal next turn if rival rolls 0" check.
 function botHasDirectShotFromPos(ballPos, botTeam, allPlayers) {
   if (!ballPos) return false;
-  const oppGoal = botTeam === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+  const oppGoal = botTeam === 'home' ? _activeAwayGoal : _activeHomeGoal;
   const botAdjacentToBall = allPlayers.some(p =>
     p.team === botTeam && isAdjacent(p.position, ballPos));
   if (!botAdjacentToBall) return false;
@@ -5019,7 +5149,7 @@ function findDragThreatPlayers(s) {
     // with no blocker between them and the ball, they can drag it with the right dice.
     for (let i = 1; i <= 6; i++) {
       const pos = { x: ball.x + dir.dx * i, y: ball.y + dir.dy * i };
-      if (pos.x < 0 || pos.x >= BOARD_WIDTH || pos.y < 0 || pos.y >= BOARD_HEIGHT) break;
+      if (pos.x < 0 || pos.x >= _activeBoardWidth || pos.y < 0 || pos.y >= _activeBoardHeight) break;
       const player = s.players.find(p => p.position.x === pos.x && p.position.y === pos.y);
       if (player) {
         if (player.team === attackingTeam) threatPlayers.push(player);
@@ -5037,7 +5167,7 @@ function findShotThreatSquares(s) {
   if (!s.ballPosition) return [];
   const defendingTeam = s.currentPlayer;
   const attackingTeam = defendingTeam === 'home' ? 'away' : 'home';
-  const ownGoal = defendingTeam === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const ownGoal = defendingTeam === 'home' ? _activeHomeGoal : _activeAwayGoal;
 
   const attackerAdjacent = s.players.some(p => p.team === attackingTeam && isAdjacent(p.position, s.ballPosition));
   if (!attackerAdjacent) return [];
@@ -5050,7 +5180,7 @@ function findShotThreatSquares(s) {
   directions.forEach(dir => {
     const path = [];
     let blocked = false;
-    for (let i = 1; i <= Math.max(BOARD_WIDTH, BOARD_HEIGHT); i++) {
+    for (let i = 1; i <= Math.max(_activeBoardWidth, _activeBoardHeight); i++) {
       const pos = { x: s.ballPosition.x + dir.dx * i, y: s.ballPosition.y + dir.dy * i };
       if (isBallPathOutOfBounds(pos)) break;
       const occupied = s.players.some(p => p.position.x === pos.x && p.position.y === pos.y);
@@ -5070,7 +5200,7 @@ function humanHasDirectShotThreat(s) {
   if (!s.ballPosition) return false;
   const botTeam = s.currentPlayer;
   const humanTeam = botTeam === 'home' ? 'away' : 'home';
-  const ownGoal = botTeam === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const ownGoal = botTeam === 'home' ? _activeHomeGoal : _activeAwayGoal;
   return s.players.some(p => {
     if (p.team !== humanTeam || !isAdjacent(p.position, s.ballPosition)) return false;
     // Check each goal position for a clear line from ball
@@ -5095,14 +5225,14 @@ function humanHasDirectShotThreat(s) {
 // tagged with the resulting ball position, exactly like handlePlayerSelection computes for a human.
 function collectBallActionsForPlayer(s, player) {
   const actions = [];
-  if (!s.diceValue || !s.ballPosition) return actions;
+  const activeDv = s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue;
+  if (!activeDv || !s.ballPosition) return actions;
 
-  // Gap crítico 2: arquero dentro de su área usa dado×2 (igual que las reglas del juego)
   const effectiveDice = (player.isGoalkeeper &&
     isWithinGoalkeeperArea(player.position, player.team) &&
     isWithinGoalkeeperArea(s.ballPosition, player.team))
-    ? s.diceValue * 2
-    : s.diceValue;
+    ? activeDv * 2
+    : activeDv;
 
   if (isAdjacent(player.position, s.ballPosition)) {
     const kickRes = getValidKickTargets(player, s.ballPosition, effectiveDice, s.players);
@@ -5155,7 +5285,7 @@ function clampScore(score) {
 function scoreBallAction(s, player, action) {
   const team = player.team;
   const oppTeam = team === 'home' ? 'away' : 'home';
-  const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const ownGoal = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
   let score = 0;
 
   // ── 1. Direct goal ───────────────────────────────────────────────────────
@@ -5273,7 +5403,7 @@ function scoreBallAction(s, player, action) {
   dirs8.forEach(dir => {
     for (let i = 1; i <= 6; i++) {
       const px = action.target.x + dir.dx * i, py = action.target.y + dir.dy * i;
-      if (px < 0 || px >= BOARD_WIDTH || py < 0 || py >= BOARD_HEIGHT) break;
+      if (px < 0 || px >= _activeBoardWidth || py < 0 || py >= _activeBoardHeight) break;
       const pl = s.players.find(p => p.position.x === px && p.position.y === py);
       if (pl) {
         if (pl.team === oppTeam) score -= Math.round(40 * (1 - (i - 1) / 6));
@@ -5292,8 +5422,8 @@ function scoreBallAction(s, player, action) {
 function scoreMoveAction(s, player, target) {
   const team = player.team;
   const oppTeam = team === 'home' ? 'away' : 'home';
-  const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
-  const oppGoal = team === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+  const ownGoal = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
+  const oppGoal = team === 'home' ? _activeAwayGoal : _activeHomeGoal;
   let score = 0;
 
   const ball = s.ballPosition;
@@ -5313,14 +5443,14 @@ function scoreMoveAction(s, player, target) {
 
   // ── Goalkeeper discipline ─────────────────────────────────────────────────
   if (player.isGoalkeeper) {
-    const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+    const ownGoalY = team === 'home' ? _activeBoardHeight - 1 : 0;
     const inOwnArea = Math.abs(player.position.y - ownGoalY) <= 3;
     const targetInOwnArea = Math.abs(target.y - ownGoalY) <= 3;
     const wouldBeAdjacentBall = ball && isAdjacent(target, ball);
     if (ball && !targetInOwnArea && wouldBeAdjacentBall) {
       const otherCanReach = s.players.some(p => {
         if (p.team !== team || p.id === player.id || p.isGoalkeeper) return false;
-        return Math.max(Math.abs(p.position.x - ball.x), Math.abs(p.position.y - ball.y)) <= (s.diceValue || 0);
+        return Math.max(Math.abs(p.position.x - ball.x), Math.abs(p.position.y - ball.y)) <= (s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue || 0);
       });
       if (otherCanReach) score -= 120;
     }
@@ -5363,9 +5493,9 @@ function scoreMoveAction(s, player, target) {
 
   // ── Defensive movement ────────────────────────────────────────────────────
   if (oppHasTacticalPossession && ball) {
-    const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+    const ownGoalY = team === 'home' ? _activeBoardHeight - 1 : 0;
     const ballDistToOwnGoal = Math.abs(ball.y - ownGoalY);
-    const ballInOppHalf = team === 'home' ? ball.y < BOARD_HEIGHT * 0.5 : ball.y > BOARD_HEIGHT * 0.5;
+    const ballInOppHalf = team === 'home' ? ball.y < _activeBoardHeight * 0.5 : ball.y > _activeBoardHeight * 0.5;
 
     const distBefore = Math.abs(player.position.x - ball.x) + Math.abs(player.position.y - ball.y);
     const distAfter = Math.abs(target.x - ball.x) + Math.abs(target.y - ball.y);
@@ -5436,7 +5566,7 @@ function evaluateChainSequence(s, ballPos, chainTeam, depth, maxDepth) {
 
   const teamPlayers = s.players.filter(p => p.team === chainTeam);
   const oppTeam = chainTeam === 'home' ? 'away' : 'home';
-  const ownGoalPositions = chainTeam === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const ownGoalPositions = chainTeam === 'home' ? _activeHomeGoal : _activeAwayGoal;
 
   // Find all valid chain pass targets from this ball position
   // A chain pass can go to any adjacent player of the same team
@@ -5503,7 +5633,7 @@ function pickBotMove(s) {
   const difficulty = s.aiDifficulty || 'normal';
   const myPlayers = s.players.filter(p => p.team === team);
   const candidates = [];
-  const ownGoal = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+  const ownGoal = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
   const ball = s.ballPosition;
 
   // Only compute danger squares when there's a real threat —
@@ -5552,7 +5682,7 @@ function pickBotMove(s) {
         const newDragThreats = directions.some(dir => {
           for (let i = 1; i <= 6; i++) {
             const pos = { x: a.target.x + dir.dx * i, y: a.target.y + dir.dy * i };
-            if (pos.x < 0 || pos.x >= BOARD_WIDTH || pos.y < 0 || pos.y >= BOARD_HEIGHT) break;
+            if (pos.x < 0 || pos.x >= _activeBoardWidth || pos.y < 0 || pos.y >= _activeBoardHeight) break;
             const blocker = s.players.find(p => p.position.x === pos.x && p.position.y === pos.y);
             if (blocker) {
               if (dragThreatKeys.has(`${blocker.position.x},${blocker.position.y}`)) return true;
@@ -5569,7 +5699,8 @@ function pickBotMove(s) {
     });
 
     if (s.diceValue) {
-      const moves = getValidMoves(player, s.diceValue, s.players, s.ballPosition);
+      const effectiveDv = s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue;
+      const moves = getValidMoves(player, effectiveDv, s.players, s.ballPosition);
       moves.forEach(target => {
         let score = scoreMoveAction(s, player, target);
 
@@ -5587,7 +5718,7 @@ function pickBotMove(s) {
           // Problem 1: goalkeeper should not leave area just to block a danger square
           // unless the ball is very close (already filtered by ballNearOwnGoal but add extra check)
           if (player.isGoalkeeper) {
-            const ownGoalY = team === 'home' ? BOARD_HEIGHT - 1 : 0;
+            const ownGoalY = team === 'home' ? _activeBoardHeight - 1 : 0;
             const targetInOwnArea = Math.abs(target.y - ownGoalY) <= 3;
             if (!targetInOwnArea) blockBonus = Math.min(blockBonus, 50); // keeper stays back
           }
@@ -5642,7 +5773,7 @@ function pickBotChainContinuation(s) {
   const startDistToGoal = goalDistanceScore(startBallPos, team);
 
   const scored = targets.map(t => {
-    const ownGoalPos = team === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+    const ownGoalPos = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
     if (ownGoalPos.some(g => g.x === t.x && g.y === t.y)) return { target: t, score: -9999 };
 
     // Direct goal — always worth it
@@ -5682,7 +5813,7 @@ function pickBotChainContinuation(s) {
     directions8.forEach(dir => {
       for (let i = 1; i <= 4; i++) {
         const px = t.x + dir.dx * i, py = t.y + dir.dy * i;
-        if (px < 0 || px >= BOARD_WIDTH || py < 0 || py >= BOARD_HEIGHT) break;
+        if (px < 0 || px >= _activeBoardWidth || py < 0 || py >= _activeBoardHeight) break;
         const pl = s.players.find(p => p.position.x === px && p.position.y === py);
         if (pl) {
           if (pl.team === oppTeam) score -= Math.round(20 * (1 - (i-1)/4));
@@ -5753,7 +5884,7 @@ function shouldBotSwapGoalkeeper(s) {
   if (!gk) return null;
   const candidates = s.swapCandidates.filter(id => id !== gk.id);
   if (candidates.length === 0) return null;
-  const ownGoalY = s.currentPlayer === 'home' ? BOARD_HEIGHT - 1 : 0;
+  const ownGoalY = s.currentPlayer === 'home' ? _activeBoardHeight - 1 : 0;
   const best = candidates
     .map(id => s.players.find(p => p.id === id))
     .sort((a, b) => Math.abs(a.position.y - ownGoalY) - Math.abs(b.position.y - ownGoalY))[0];
@@ -5940,8 +6071,8 @@ let sandboxDragTarget = null; // kept for future use, not used in training mode
 function startSandbox() {
   const homeTeam = TEAMS.find(t => t.id === 'estudiantes') || TEAMS[0];
   const awayTeam = TEAMS.find(t => t.id === 'colegiales') || TEAMS[1];
-  const fresh = getInitialState();
-  const playersForKickoff = movePlayersForKickoff(fresh.players, 'home');
+  const fresh = getInitialState(setupBoardSize);
+  const playersForKickoff = movePlayersForKickoff(fresh.players, 'home', setupBoardSize);
   return {
     ...fresh,
     gameMode: 'training',
@@ -5952,6 +6083,8 @@ function startSandbox() {
     turnCount: 1,
     isClockRunning: false,
     isKickoffTurn: true,
+    gameVariant: setupGameVariant,
+    boardSize: setupBoardSize,
     message: lang === 'en' ? 'Training — choose the dice value to start.' : lang === 'pt' ? 'Treino — escolha o valor do dado para começar.' : 'Entrenamiento — elegí el valor del dado para empezar.',
   };
 }
@@ -5981,6 +6114,9 @@ function handleTrainingDiceSelect(value) {
     return {
       ...withLog,
       gamePhase: 'selecting-piece',
+      remainingBudget: s.gameVariant === 'quick' ? value : 0,
+      usedPlayerIds: [],
+      lastActions: [],
       turnStartState: {
         players: s.players,
         ballPosition: s.ballPosition,
@@ -6247,21 +6383,26 @@ function handlePlayerSelection(s, playerId) {
     if (!s.diceValue || !s.ballPosition) {
       return { ...s, toastToShow: { title: lang === 'en' ? 'Roll the dice' : lang === 'pt' ? 'Lance o dado' : 'Lanza el dado', description: lang === 'en' ? 'You must roll before selecting a player.' : lang === 'pt' ? 'Você deve lançar o dado antes de selecionar um jogador.' : 'Debes lanzar el dado antes de seleccionar un jugador.', variant: 'destructive' } };
     }
+    // Quick mode: block players that already acted this turn (except chain pass receivers)
+    if (s.gameVariant === 'quick' && (s.usedPlayerIds || []).includes(clickedPlayer.id)) {
+      return { ...s, toastToShow: { title: lang === 'en' ? 'Already moved' : lang === 'pt' ? 'Já jogou' : 'Ya actuó', description: lang === 'en' ? 'This player already acted this turn.' : lang === 'pt' ? 'Este jogador já atuou neste turno.' : 'Este jugador ya actuó en este turno.', variant: 'destructive' } };
+    }
 
-    const newValidMoves = getValidMoves(clickedPlayer, s.diceValue, s.players, s.ballPosition);
+    const effectiveDvQ = s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue;
+    const newValidMoves = getValidMoves(clickedPlayer, effectiveDvQ, s.players, s.ballPosition);
     let kickResult = { validTargets: [], invalidOffsideTargets: [] };
     let loftedPassTargets = [];
     let dragResult = { validTargets: [], invalidOffsideTargets: [] };
     let loftedDragResult = { validTargets: [], invalidOffsideTargets: [] };
 
     if (isAdjacent(clickedPlayer.position, s.ballPosition)) {
-      kickResult = getValidKickTargets(clickedPlayer, s.ballPosition, s.diceValue, s.players);
-      const rawLofted = getValidLoftedPassTargets(clickedPlayer, s.ballPosition, s.diceValue, s.players);
+      kickResult = getValidKickTargets(clickedPlayer, s.ballPosition, effectiveDvQ, s.players);
+      const rawLofted = getValidLoftedPassTargets(clickedPlayer, s.ballPosition, effectiveDvQ, s.players);
       const kickSet = new Set(kickResult.validTargets.map(p => `${p.x},${p.y}`));
       loftedPassTargets = rawLofted.filter(p => !kickSet.has(`${p.x},${p.y}`));
     } else {
-      dragResult = getValidDragTargets(clickedPlayer, s.diceValue, s.players, s.ballPosition);
-      loftedDragResult = getValidLoftedDragTargets(clickedPlayer, s.diceValue, s.players, s.ballPosition);
+      dragResult = getValidDragTargets(clickedPlayer, effectiveDvQ, s.players, s.ballPosition);
+      loftedDragResult = getValidLoftedDragTargets(clickedPlayer, effectiveDvQ, s.players, s.ballPosition);
     }
 
     if (s.isKickoffTurn) {
@@ -6363,7 +6504,7 @@ function handleSquareSelection(s, position) {
 
   const targetPlayer = players.find(p => p.position.x === position.x && p.position.y === position.y);
   if (possibleActions.includes('kick') && targetPlayer && targetPlayer.team === currentPlayer) {
-    const ownGoal = currentPlayer === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+    const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
     if (!ownGoal.some(p => p.x === position.x && p.y === position.y)) {
       return handleActionExecution({ ...s, actionChoice: null }, 'kick', position);
     }
@@ -6407,13 +6548,13 @@ function handleActionExecution(s, executedAction, position) {
       return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : lang === 'pt' ? 'Jogada inválida' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     }
 
-    const opponentGoal = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const opponentGoal = currentPlayer === 'home' ? _activeAwayGoal : _activeHomeGoal;
     if (opponentGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) {
       const goalLog = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} drags toward goal!` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} arrasta em direção ao gol!` : `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
       const withStat = { ...goalLog, stats: { ...goalLog.stats, shotsOnGoal: { ...goalLog.stats.shotsOnGoal, [currentPlayer]: goalLog.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
-    const ownGoal = currentPlayer === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+    const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
     if (ownGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) return handleOwnGoal(s);
 
     const receivingTeammate = players.find(p => p.position.x === finalBallPos.x && p.position.y === finalBallPos.y && p.team === currentPlayer && p.id !== selectedPlayerId);
@@ -6437,14 +6578,18 @@ function handleActionExecution(s, executedAction, position) {
       };
     }
 
-    const nextChange = { ...logState, players: newPlayers, ballPosition: finalBallPos, lastPlayerToTouchBallId: lastTouchedId, lastAction: { from: ballPosition, to: finalBallPos } };
+    // Drag cost = distance from player to ball + distance dragged
+    const dragCost = Math.max(Math.abs(ballPosition.x - actingPlayer.position.x), Math.abs(ballPosition.y - actingPlayer.position.y))
+                   + Math.max(Math.abs(finalBallPos.x - ballPosition.x), Math.abs(finalBallPos.y - ballPosition.y));
+    const nextChange = deductBudget({ ...logState, players: newPlayers, ballPosition: finalBallPos, lastPlayerToTouchBallId: lastTouchedId, lastAction: { from: ballPosition, to: finalBallPos } }, dragCost, selectedPlayerId);
     return advanceToNextTurn(nextChange);
   }
 
   if (executedAction === 'move') {
     const logState = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} moves to (${position.x}, ${position.y}).` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} move para (${position.x}, ${position.y}).` : `Jugador #${actingPlayer.playerNumber} se mueve a (${position.x}, ${position.y}).`, 'move');
     const newPlayers = players.map(p => p.id === selectedPlayerId ? { ...p, position } : p);
-    const nextChange = { ...logState, players: newPlayers, lastAction: { from: actingPlayer.position, to: position } };
+    const moveCost = Math.max(Math.abs(position.x - actingPlayer.position.x), Math.abs(position.y - actingPlayer.position.y));
+    const nextChange = deductBudget({ ...logState, players: newPlayers, lastAction: { from: actingPlayer.position, to: position } }, moveCost, selectedPlayerId);
     return advanceToNextTurn(nextChange);
   }
 
@@ -6456,14 +6601,14 @@ function handleActionExecution(s, executedAction, position) {
       return { ...s, toastToShow: { title: lang === 'en' ? 'Invalid play' : lang === 'pt' ? 'Jogada inválida' : 'Jugada inválida', description: lang === 'en' ? 'You cannot perform this action due to an offside position.' : lang === 'pt' ? 'Você não pode realizar esta ação devido a uma posição de impedimento.' : 'No puedes realizar esta acción debido a una posición de fuera de juego.', variant: 'destructive' } };
     }
 
-    const opponentGoal = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const opponentGoal = currentPlayer === 'home' ? _activeAwayGoal : _activeHomeGoal;
     if (opponentGoal.some(p => p.x === position.x && p.y === position.y)) {
       const shooter = executedAction === 'chain-pass' ? s.players.find(p => p.id === s.chainPassInitiatorId) : actingPlayer;
       const logState = logAction(s, lang === 'en' ? `Player #${shooter.playerNumber} shoots!` : lang === 'pt' ? `Jogador #${shooter.playerNumber} chuta!` : `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
       const withStat = { ...logState, stats: { ...logState.stats, shotsOnGoal: { ...logState.stats.shotsOnGoal, [currentPlayer]: logState.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
-    const ownGoal = currentPlayer === 'home' ? HOME_GOAL_POSITIONS : AWAY_GOAL_POSITIONS;
+    const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
     if (ownGoal.some(p => p.x === position.x && p.y === position.y)) return handleOwnGoal(s);
 
     const playersOnTarget = players.filter(p => p.position.x === position.x && p.position.y === position.y);
@@ -6472,7 +6617,8 @@ function handleActionExecution(s, executedAction, position) {
       const logState = logAction(s, lang === 'en' ? `Ball blocked by opponent #${opponentOnTarget.playerNumber}.` : lang === 'pt' ? `Bola bloqueada pelo adversário #${opponentOnTarget.playerNumber}.` : `El balón es bloqueado por #${opponentOnTarget.playerNumber} rival.`, 'kick');
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
-      const nextChange = { ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } };
+      const kickCost1 = Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y));
+      const nextChange = deductBudget({ ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } }, kickCost1, selectedPlayerId);
       return advanceToNextTurn(nextChange);
     }
 
@@ -6503,7 +6649,7 @@ function handleActionExecution(s, executedAction, position) {
 
     // Count shot on goal if there's a clear line to opponent goal within 6 squares
     const logState = logAction(s, lang === 'en' ? `Pass to (${position.x}, ${position.y}).` : lang === 'pt' ? `Passe para (${position.x}, ${position.y}).` : `Pase a (${position.x}, ${position.y}).`, 'kick');
-    const oppGoalForShot = currentPlayer === 'home' ? AWAY_GOAL_POSITIONS : HOME_GOAL_POSITIONS;
+    const oppGoalForShot = currentPlayer === 'home' ? _activeAwayGoal : _activeHomeGoal;
     const distToGoal = Math.min(...oppGoalForShot.map(g => Math.abs(g.x - position.x) + Math.abs(g.y - position.y)));
     const hasClearLineToGoal = distToGoal <= 6 && botHasDirectShotFromPos(position, currentPlayer, players);
     const hasTeammateAdjacent = players.some(p => p.team === currentPlayer && p.id !== selectedPlayerId && isAdjacent(p.position, position));
@@ -6517,7 +6663,9 @@ function handleActionExecution(s, executedAction, position) {
     const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
     const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
     const lastTouchId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
-    const nextChange = { ...withShotStat, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } };
+    const kickCost2 = Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y));
+    const kickPlayerId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
+    const nextChange = deductBudget({ ...withShotStat, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } }, kickCost2, kickPlayerId);
     return advanceToNextTurn(nextChange);
   }
 
@@ -6528,8 +6676,9 @@ function handleActionExecution(s, executedAction, position) {
    ========================================================================= */
 
 const CELL = 28;
-const SVG_W = BOARD_WIDTH * CELL;
-const SVG_H = BOARD_HEIGHT * CELL;
+// SVG dimensions are dynamic — use _activeBoardWidth/_activeBoardHeight
+function getSVGW() { return _activeBoardWidth * CELL; }
+function getSVGH() { return _activeBoardHeight * CELL; }
 
 // ═══════════════════════════════════════════════════════════
 // MÓDULO: UI — Render, wireEvents, helpers visuales
@@ -6645,7 +6794,7 @@ function renderBoardSVG(s) {
   // player always attacks "upward" from their own point of view. Player number
   // labels get an inner counter-rotation further down so they stay readable.
   const flipBoard = s.gameMode === 'online' && onlineMyTeam === 'away';
-  let svg = `<svg id="board" viewBox="0 0 ${SVG_W} ${SVG_H}" xmlns="http://www.w3.org/2000/svg">`;
+  let svg = `<svg id="board" viewBox="0 0 ${getSVGW()} ${getSVGH()}" xmlns="http://www.w3.org/2000/svg">`;
   let jerseyDefsCollected = '';
   const jerseyDefsSeen = new Set();
   function collectJerseyDefs(team, key) {
@@ -6663,13 +6812,13 @@ function renderBoardSVG(s) {
   </defs>`;
 
   if (flipBoard) {
-    svg += `<g transform="rotate(180, ${SVG_W / 2}, ${SVG_H / 2})">`;
+    svg += `<g transform="rotate(180, ${getSVGW() / 2}, ${getSVGH() / 2})">`;
   }
 
   // Checkerboard tiles per cell (areas stay visually uniform with the rest of the pitch).
-  for (let y = 0; y < BOARD_HEIGHT; y++) {
-    for (let x = 0; x < BOARD_WIDTH; x++) {
-      if (isBallPathOutOfBounds({ x, y }) && (y === 0 || y === BOARD_HEIGHT - 1)) continue;
+  for (let y = 0; y < _activeBoardHeight; y++) {
+    for (let x = 0; x < _activeBoardWidth; x++) {
+      if (isBallPathOutOfBounds({ x, y }) && (y === 0 || y === _activeBoardHeight - 1)) continue;
       const cls = (x + y) % 2 === 0 ? 'tile' : 'tile dark';
       svg += `<rect class="${cls} tile-hit" x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" data-x="${x}" data-y="${y}" />`;
       if (isPosInOwnGoal({ x, y }, 'home')) {
@@ -6681,32 +6830,53 @@ function renderBoardSVG(s) {
   }
 
   // Subtle vignette overlay for depth (realistic turf lighting, not flat color)
-  svg += `<rect x="0" y="0" width="${SVG_W}" height="${SVG_H}" fill="url(#turf-vignette)" pointer-events="none" />`;
+  svg += `<rect x="0" y="0" width="${getSVGW()}" height="${getSVGH()}" fill="url(#turf-vignette)" pointer-events="none" />`;
 
-  // Field markings (coordinates match the original GameBoard.tsx exactly, minus its +1 offset)
-  const midY = (BOARD_HEIGHT / 2) * CELL; // passes through the middle of the ball's starting row
-  const centerX = (BOARD_WIDTH / 2) * CELL;
-  svg += `<line class="center-line" x1="0" y1="${midY}" x2="${SVG_W}" y2="${midY}" />`;
-  svg += `<circle class="center-circle" cx="${centerX}" cy="${midY}" r="${CELL*2}" />`;
-  // Big areas outline (x:3-15 => 13 cols, y:19-24 / y:0-5 => 6 rows, inclusive of goal line)
-  svg += `<rect class="goal-rect" x="${3*CELL}" y="${19*CELL}" width="${13*CELL}" height="${6*CELL}" />`;
-  svg += `<rect class="goal-rect" x="${3*CELL}" y="0" width="${13*CELL}" height="${6*CELL}" />`;
-  // Small areas outline (x:5-13 => 9 cols, y:22-23 / y:1-2 => 2 rows, excluding goal line)
-  svg += `<rect class="goal-rect" x="${5*CELL}" y="${22*CELL}" width="${9*CELL}" height="${2*CELL}" />`;
-  svg += `<rect class="goal-rect" x="${5*CELL}" y="${1*CELL}" width="${9*CELL}" height="${2*CELL}" />`;
-  // Goal mouth (5 cells wide, x:7-11, sitting on the goal line)
-  svg += `<rect class="goal-net" x="${7*CELL}" y="${24*CELL + CELL*0.55}" width="${5*CELL}" height="${CELL*0.5}" />`;
-  svg += `<rect class="goal-net" x="${7*CELL}" y="${-CELL*1.05}" width="${5*CELL}" height="${CELL*0.5}" />`;
-  // Penalty arcs, centered on x=9.5 (board center), sitting on the edge of each big area (y=6 / y=19)
-  const arcR = 2.915 * CELL;
-  svg += `<path d="M ${7*CELL} ${6*CELL} A ${arcR} ${arcR} 0 0 0 ${12*CELL} ${6*CELL}" class="goal-rect" />`;
-  svg += `<path d="M ${7*CELL} ${19*CELL} A ${arcR} ${arcR} 0 0 1 ${12*CELL} ${19*CELL}" class="goal-rect" />`;
+  // Field markings — dynamic based on active board size
+  const bw = _activeBoardWidth;
+  const bh = _activeBoardHeight;
+  const midY = (bh / 2) * CELL;
+  const centerX = (bw / 2) * CELL;
+  // Goal x positions (centered, 5 wide)
+  const goalX = Math.floor((bw - 5) / 2); // left edge of goal
+  // Big area: 6 deep from each end, full width minus 3 on each side
+  const bigAreaX = Math.max(2, Math.floor(bw * 3 / 19));
+  const bigAreaW = bw - bigAreaX * 2;
+  const bigAreaH = 6;
+  // Small area: 2 deep, goal width + 2 on each side
+  const smallAreaX = goalX - 1;
+  const smallAreaW = 7;
   // Penalty spots
-  svg += `<circle cx="${centerX}" cy="${4.5*CELL}" r="1.6" fill="#fff" opacity="0.85" />`;
-  svg += `<circle cx="${centerX}" cy="${20.5*CELL}" r="1.6" fill="#fff" opacity="0.85" />`;
+  const penSpotY = 4.5;
+  const arcR = 2.915 * CELL;
 
-  // last action arrow
-  if (s.lastAction) {
+  svg += `<line class="center-line" x1="0" y1="${midY}" x2="${getSVGW()}" y2="${midY}" />`;
+  svg += `<circle class="center-circle" cx="${centerX}" cy="${midY}" r="${CELL*2}" />`;
+  // Big areas
+  svg += `<rect class="goal-rect" x="${bigAreaX*CELL}" y="${(bh-bigAreaH)*CELL}" width="${bigAreaW*CELL}" height="${bigAreaH*CELL}" />`;
+  svg += `<rect class="goal-rect" x="${bigAreaX*CELL}" y="0" width="${bigAreaW*CELL}" height="${bigAreaH*CELL}" />`;
+  // Small areas
+  svg += `<rect class="goal-rect" x="${smallAreaX*CELL}" y="${(bh-3)*CELL}" width="${smallAreaW*CELL}" height="${2*CELL}" />`;
+  svg += `<rect class="goal-rect" x="${smallAreaX*CELL}" y="${1*CELL}" width="${smallAreaW*CELL}" height="${2*CELL}" />`;
+  // Goal nets
+  svg += `<rect class="goal-net" x="${goalX*CELL}" y="${bh*CELL + CELL*0.55}" width="${5*CELL}" height="${CELL*0.5}" />`;
+  svg += `<rect class="goal-net" x="${goalX*CELL}" y="${-CELL*1.05}" width="${5*CELL}" height="${CELL*0.5}" />`;
+  // Penalty arcs
+  svg += `<path d="M ${goalX*CELL} ${bigAreaH*CELL} A ${arcR} ${arcR} 0 0 0 ${(goalX+5)*CELL} ${bigAreaH*CELL}" class="goal-rect" />`;
+  svg += `<path d="M ${goalX*CELL} ${(bh-bigAreaH)*CELL} A ${arcR} ${arcR} 0 0 1 ${(goalX+5)*CELL} ${(bh-bigAreaH)*CELL}" class="goal-rect" />`;
+  // Penalty spots
+  svg += `<circle cx="${centerX}" cy="${penSpotY*CELL}" r="1.6" fill="#fff" opacity="0.85" />`;
+  svg += `<circle cx="${centerX}" cy="${(bh-penSpotY)*CELL}" r="1.6" fill="#fff" opacity="0.85" />`;
+
+  // last action arrow(s) — in quick mode show all actions of the turn
+  if (s.gameVariant === 'quick' && s.lastActions && s.lastActions.length > 0) {
+    s.lastActions.forEach(a => {
+      svg += `<line class="last-action-arrow" x1="${cx(a.from.x)}" y1="${cy(a.from.y)}" x2="${cx(a.to.x)}" y2="${cy(a.to.y)}" />`;
+    });
+    if (s.lastAction) {
+      svg += `<line class="last-action-arrow" x1="${cx(s.lastAction.from.x)}" y1="${cy(s.lastAction.from.y)}" x2="${cx(s.lastAction.to.x)}" y2="${cy(s.lastAction.to.y)}" />`;
+    }
+  } else if (s.lastAction) {
     svg += `<line class="last-action-arrow" x1="${cx(s.lastAction.from.x)}" y1="${cy(s.lastAction.from.y)}" x2="${cx(s.lastAction.to.x)}" y2="${cy(s.lastAction.to.y)}" />`;
   }
 
@@ -7181,7 +7351,43 @@ function renderPlayMenu() {
   return `
   <div class="menu-screen">
     <h1>🎮 ${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</h1>
-    <div class="subtitle">${lang === 'en' ? 'Choose a game mode.' : lang === 'pt' ? 'Escolha um modo de jogo.' : 'Elegí un modo de juego.'}</div>
+    <div class="subtitle">${lang === 'en' ? 'Choose a game variant.' : lang === 'pt' ? 'Escolha uma variante do jogo.' : 'Elegí una variante de juego.'}</div>
+    <div class="menu-grid">
+      <button class="menu-btn" data-menu="variant-classic" style="border-color:var(--accent);background:#f0f4ff;">
+        <div class="t">🏟 ${lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico'}</div>
+        <div class="d">${lang === 'en' ? 'The original game. 11vs11, full board, all rules.' : lang === 'pt' ? 'O jogo original. 11vs11, campo completo, todas as regras.' : 'El juego original. 11vs11, cancha completa, todas las reglas.'}</div>
+      </button>
+      <button class="menu-btn" data-menu="variant-compact">
+        <div class="t">⚡ ${lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto'}</div>
+        <div class="d">${lang === 'en' ? 'Smaller board (17×23). Faster, more dynamic matches.' : lang === 'pt' ? 'Campo menor (17×23). Partidas mais rápidas e dinâmicas.' : 'Cancha más chica (17×23). Partidos más rápidos y dinámicos.'}</div>
+      </button>
+      <button class="menu-btn" data-menu="variant-quick">
+        <div class="t">🎯 ${lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido'}</div>
+        <div class="d">${lang === 'en' ? 'Split the dice between multiple players in one turn.' : lang === 'pt' ? 'Divida o dado entre vários jogadores em um turno.' : 'Dividí el dado entre varios jugadores en un turno.'}</div>
+      </button>
+      <button class="menu-btn" data-menu="back">
+        <div class="t">${t('setup.back')}</div>
+      </button>
+    </div>
+  </div>`;
+}
+
+function renderVariantMenu(variant) {
+  setupGameVariant = variant;
+  setupBoardSize = variant === 'compact' ? 'compact' : 'classic';
+
+  const names = {
+    classic: { es: '🏟 Clásico', en: '🏟 Classic', pt: '🏟 Clássico' },
+    compact: { es: '⚡ Compacto', en: '⚡ Compact', pt: '⚡ Compacto' },
+    quick:   { es: '🎯 Rápido',  en: '🎯 Quick',   pt: '🎯 Rápido'   },
+  };
+  const name = names[variant][lang] || names[variant].es;
+  const isClassic = variant === 'classic';
+  const isQuick = variant === 'quick';
+
+  return `
+  <div class="menu-screen">
+    <h1>${name}</h1>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:#f0f4ff;">
         <div class="t">${t('menu.online')}</div>
@@ -7195,10 +7401,11 @@ function renderPlayMenu() {
         <div class="t">${t('menu.ai')}</div>
         <div class="d">${t('menu.ai.desc')}</div>
       </button>
+      ${isClassic ? `
       <button class="menu-btn" data-menu="league-entry">
         <div class="t">${t('menu.league')}</div>
         <div class="d">${t('menu.league.desc')}</div>
-      </button>
+      </button>` : ''}
       <button class="menu-btn" data-menu="sandbox">
         <div class="t">${t('menu.training')}</div>
         <div class="d">${t('menu.training.desc')}</div>
@@ -8006,7 +8213,7 @@ function checkContextTooltips(prev, next) {
 
   // Tip: ball in goalkeeper area
   if (!localStorage.getItem('hx_tip_area') && ball) {
-    const homeGoalY = BOARD_HEIGHT - 1;
+    const homeGoalY = _activeBoardHeight - 1;
     const awayGoalY = 0;
     const inArea = (ball.y >= homeGoalY - 3 && ball.y <= homeGoalY) || (ball.y >= awayGoalY && ball.y <= awayGoalY + 3);
     if (inArea && prev.ballPosition && !((prev.ballPosition.y >= homeGoalY - 3) || (prev.ballPosition.y <= awayGoalY + 3))) {
@@ -8261,9 +8468,10 @@ function renderSetup() {
       <div>
         <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : 'O: primero en marcar N goles'}</span>
         <div class="duration-row" id="goals-row">
-          ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
+          ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : lang === 'pt' ? (g === 1 ? 'gol' : 'gols') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
       </div>
+
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
@@ -8344,6 +8552,8 @@ function renderAiSetup() {
 
 let setupDuration = 5;
 let setupTargetGoals = null;
+let setupBoardSize = 'classic';
+let setupGameVariant = 'classic';
 let leagueNumTeams = 4;
 let leagueSelectedTeams = Array(4).fill(null);
 let leagueDuration = 20;
@@ -8921,6 +9131,15 @@ function renderDicePanel(s) {
       ${isOpponentOnlineTurn && s.gamePhase === 'rolling' ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> ${opponentLabel}</div>` : ''}
     </div>
     ${isZero ? `<div class="zero-note">${zeroNote}</div>` : ''}
+    ${s.gameVariant === 'quick' && s.gamePhase === 'selecting-piece' && !blockControls ? `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+      <span style="font-size:0.78rem;color:#6b7a64;">
+        ${lang === 'en' ? `Budget: <b>${s.remainingBudget}</b>` : lang === 'pt' ? `Movimentos: <b>${s.remainingBudget}</b>` : `Movimientos: <b>${s.remainingBudget}</b>`}
+      </span>
+      <button class="btn ghost" id="pass-budget-btn" style="padding:3px 10px;font-size:0.75rem;">
+        ${lang === 'en' ? 'Pass →' : lang === 'pt' ? 'Passar →' : 'Pasar →'}
+      </button>
+    </div>` : ''}
     ${s.gamePhase === 'goalkeeper-swap' && !blockControls ? `
     <div class="turn-timer-row" style="margin-top:4px;">
       <div class="turn-timer-bar"><div class="turn-timer-fill ${s.swapTimer <= 5 ? 'low' : ''}" id="swap-timer-fill" style="width:${Math.round((s.swapTimer / 15) * 100)}%;"></div></div>
@@ -8974,6 +9193,9 @@ function render() {
     else if (currentMenuView === 'quick-tutorial') app.innerHTML = renderQuickTutorial();
     else if (currentMenuView === 'match-history') { renderMatchHistory(); }
     else if (currentMenuView === 'play') app.innerHTML = renderPlayMenu();
+    else if (currentMenuView === 'variant-classic') app.innerHTML = renderVariantMenu('classic');
+    else if (currentMenuView === 'variant-compact') app.innerHTML = renderVariantMenu('compact');
+    else if (currentMenuView === 'variant-quick') app.innerHTML = renderVariantMenu('quick');
     else if (currentMenuView === 'setup') app.innerHTML = renderSetup();
     else if (currentMenuView === 'ai-setup') app.innerHTML = renderAiSetup();
     else if (currentMenuView === 'league-entry') app.innerHTML = renderLeagueSetup();
@@ -9075,9 +9297,18 @@ function wireEvents() {
         return;
       }
       if (target === 'back') {
-        const playSubViews = ['setup','ai-setup','online-setup','tutorial','league-entry','sandbox'];
-        if (playSubViews.includes(currentMenuView)) currentMenuView = 'play';
-        else currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
+        const variantViews = ['variant-classic', 'variant-compact', 'variant-quick'];
+        const playSubViews = ['setup', 'ai-setup', 'online-setup', 'tutorial', 'league-entry', 'sandbox'];
+        if (playSubViews.includes(currentMenuView)) {
+          // Go back to whichever variant was active
+          if (setupGameVariant === 'compact') currentMenuView = 'variant-compact';
+          else if (setupGameVariant === 'quick') currentMenuView = 'variant-quick';
+          else currentMenuView = 'variant-classic';
+        } else if (variantViews.includes(currentMenuView)) {
+          currentMenuView = 'play';
+        } else {
+          currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
+        }
       }
       else currentMenuView = target;
       render();
@@ -9342,7 +9573,7 @@ function wireEvents() {
       let homeTeam = TEAMS[homeIdx], awayTeam = TEAMS[awayIdx];
       if (homeIdx === awayIdx) { awayTeam = TEAMS[(awayIdx + 1) % TEAMS.length]; }
       const { finalHomeTeam, finalAwayTeam, clashResolved } = resolveKitClash(homeTeam, awayTeam);
-      const fresh = getInitialState();
+      const fresh = getInitialState(setupBoardSize);
       const noTurnTimer = document.getElementById('no-turn-timer-check')?.checked;
       const turnDur = noTurnTimer ? 9999 : setupDuration <= 2 ? 10 : setupDuration <= 5 ? 20 : TURN_DURATION;
       const useGoals = setupTargetGoals !== null;
@@ -9352,6 +9583,8 @@ function wireEvents() {
         gamePhase: 'pre-game-roll', halfDurationMinutes: useGoals ? 0 : setupDuration,
         gameClock: useGoals ? 0 : setupDuration * 60,
         targetGoals: setupTargetGoals,
+        boardSize: setupBoardSize,
+        gameVariant: setupGameVariant,
         turnDuration: finalTurnDur, timer: finalTurnDur,
         message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
         toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : lang === 'pt' ? `${awayTeam.name} usará uma cor alternativa.` : `${awayTeam.name} usará un color alternativo.` } : null,
@@ -9373,7 +9606,7 @@ function wireEvents() {
       let homeTeam = TEAMS[homeIdx], awayTeam = TEAMS[awayIdx];
       if (homeIdx === awayIdx) { awayTeam = TEAMS[(awayIdx + 1) % TEAMS.length]; }
       const { finalHomeTeam, finalAwayTeam, clashResolved } = resolveKitClash(homeTeam, awayTeam);
-      const fresh = getInitialState();
+      const fresh = getInitialState(setupBoardSize);
       const turnDur = document.getElementById('no-turn-timer-check')?.checked ? 9999 : setupDuration <= 2 ? 10 : setupDuration <= 5 ? 20 : TURN_DURATION;
       const useGoalsAi = setupTargetGoals !== null;
       const finalTurnDurAi = useGoalsAi ? TURN_DURATION : turnDur;
@@ -9383,12 +9616,22 @@ function wireEvents() {
         aiTeam, aiDifficulty: aiDifficultyChoice,
         gamePhase: 'pre-game-roll', halfDurationMinutes: useGoalsAi ? 0 : setupDuration, gameClock: useGoalsAi ? 0 : setupDuration * 60,
         targetGoals: setupTargetGoals, turnDuration: finalTurnDurAi, timer: finalTurnDurAi,
-        turnDuration: turnDur, timer: turnDur,
+        boardSize: setupBoardSize,
+        gameVariant: setupGameVariant,
         message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : 'Tiren los dados para decidir quién empieza.',
         toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : lang === 'pt' ? `${awayTeam.name} usará uma cor alternativa.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
     };
   }
+  document.querySelectorAll('[data-board-size]').forEach(btn => {
+    btn.onclick = () => {
+      setupBoardSize = btn.getAttribute('data-board-size') === 'quick' ? 'classic' : btn.getAttribute('data-board-size');
+      setupGameVariant = btn.getAttribute('data-board-size');
+      document.querySelectorAll('[data-board-size]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
   document.querySelectorAll('[data-goals]').forEach(btn => {
     btn.onclick = () => {
       setupTargetGoals = parseInt(btn.getAttribute('data-goals'), 10);
@@ -9515,11 +9758,11 @@ function wireEvents() {
     if (btn) btn.onclick = () => {
       if (state.gameMode === 'online' && !onlineIsHost) return;
       setState(s => {
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(), s.score.home > s.score.away ? 'away' : 'home');
+        const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), s.score.home > s.score.away ? 'away' : 'home', s.boardSize);
         const kickoffTeam = s.score.home <= s.score.away ? 'home' : 'away';
         const kickoffName = getTeamName(s, kickoffTeam);
         const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : lang === 'pt' ? `Prorrogação! ${kickoffName} sai com a bola.` : `¡Prórroga! Saca ${kickoffName}.`;
-        return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+        return logAction({ ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', half: 2, gameClock: s.halfDurationMinutes * 60,
           overtimeMode: 'extra-time', isClockRunning: false, diceValue: null, homeRoll: null, awayRoll: null,
           prevTurnSnapshot: null,
@@ -9532,9 +9775,9 @@ function wireEvents() {
     if (btn) btn.onclick = () => {
       if (state.gameMode === 'online' && !onlineIsHost) return;
       setState(s => {
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(), 'home');
+        const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), 'home', s.boardSize);
         const msg = lang === 'en' ? 'Golden goal! First to score wins.' : lang === 'pt' ? 'Gol de ouro! O primeiro a marcar vence.' : '¡Gol de oro! El primero en marcar gana.';
-        return logAction({ ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION },
+        return logAction({ ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
           diceValue: null, homeRoll: null, awayRoll: null, prevTurnSnapshot: null,
         }, msg, 'game-event');
@@ -9609,6 +9852,11 @@ function wireEvents() {
   const qtSkipBtn = document.getElementById('qt-skip-btn');
   if (qtSkipBtn) qtSkipBtn.onclick = () => { quickTutorialStep = 0; currentMenuView = 'play'; render(); };
 
+  const passBudgetBtn = document.getElementById('pass-budget-btn');
+  if (passBudgetBtn) passBudgetBtn.onclick = () => {
+    setState(s => advanceToNextTurn({ ...s, remainingBudget: 0 }, { forceTurnEnd: true }));
+  };
+
   const rollBtn = document.getElementById('roll-dice-btn');
   if (rollBtn) rollBtn.onclick = () => {
     if (state.gameMode === 'tutorial') { handleTutorialAction({ type: 'click_element', payload: { elementId: 'dice-roll-button' } }); return; }
@@ -9637,10 +9885,10 @@ function wireEvents() {
     if (state.gameMode === 'online' && !onlineIsHost) return;
     setState(s => {
       const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
-      const newPlayers = movePlayersForKickoff(getInitialPlayers(), secondHalfKickoff);
+      const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), secondHalfKickoff, s.boardSize);
       const kickoffTeamName = getTeamName(s, secondHalfKickoff);
       const news = {
-        ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
+        ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
         currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
         lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
         isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
@@ -9963,7 +10211,7 @@ function resolveKickoffWinner(s) {
     const winnerName = getTeamName(s, startingTeam);
     const rollVal = startingTeam === 'home' ? s.homeRoll : s.awayRoll;
     const msg = lang === 'en' ? `${winnerName} rolls ${rollVal} and wins the kickoff! Roll the dice to start.` : lang === 'pt' ? `${winnerName} tira ${rollVal} e vence o sorteio! Lance o dado para começar.` : `¡${winnerName} saca un ${rollVal} y gana el saque! Lanza el dado para empezar.`;
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(), startingTeam);
+    const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), startingTeam, s.boardSize);
     startClock();
     startTurnTimer();
     preGameRollStartedAt = null;
@@ -10013,8 +10261,12 @@ function doDiceRoll() {
     }
     const teamName = getTeamName(s, s.currentPlayer);
     const withLog = logAction(updated, t('msg.rolled', { value: roll, team: teamName }), 'roll');
+    const isQuick = s.gameVariant === 'quick';
     return {
       ...withLog, gamePhase: 'selecting-piece',
+      remainingBudget: isQuick ? roll : 0,
+      usedPlayerIds: [],
+      lastActions: [],
       turnStartState: { players: s.players, ballPosition: s.ballPosition, lastPlayerToTouchBallId: s.lastPlayerToTouchBallId },
       prevTurnSnapshot: {
         players: s.players.map(p => ({ ...p, position: { ...p.position } })),
@@ -10275,10 +10527,10 @@ function startSecondHalfOnlineAuto() {
   setState(s => {
     if (s.gamePhase !== 'half-time') return s; // already started
     const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(), secondHalfKickoff);
+    const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), secondHalfKickoff, s.boardSize);
     const kickoffTeamName = getTeamName(s, secondHalfKickoff);
     const news = {
-      ...s, players: newPlayers, ballPosition: { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
+      ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
       currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
       isClockRunning: true, isKickoffTurn: true, assistProviderId: null, prevTurnSnapshot: null,
@@ -10411,26 +10663,34 @@ function checkUrlRoomParam() {
   const params = new URLSearchParams(window.location.search);
   const sala = params.get('sala');
   if (!sala) return;
-  // Clean the URL without reloading
   window.history.replaceState({}, '', window.location.pathname);
-  // Wait for auth to be ready then join
   const tryJoin = () => {
     if (!currentUser) { setTimeout(tryJoin, 500); return; }
     const code = sala.toUpperCase();
-    currentMenuView = 'online-setup';
-    render();
-    // Pre-fill the join code and trigger join flow
-    setTimeout(() => {
-      const input = document.getElementById('online-join-input');
-      if (input) {
-        input.value = code;
-        const joinBtn = document.getElementById('online-join-submit');
-        if (joinBtn) joinBtn.click();
-      } else {
-        // Fallback: go directly to join
-        onlineJoinRoom(code, resolvePickedTeam('home'));
+    // Fetch room first to get variant
+    db.collection('rooms').doc(code).get().then(snap => {
+      if (snap.exists) {
+        const d = snap.data();
+        setupGameVariant = d.gameVariant || 'classic';
+        setupBoardSize = d.boardSize || 'classic';
+        setActiveBoardSize(setupBoardSize);
       }
-    }, 300);
+      currentMenuView = 'online-setup';
+      render();
+      setTimeout(() => {
+        const input = document.getElementById('online-join-input');
+        if (input) {
+          input.value = code;
+          const joinBtn = document.getElementById('online-join-submit');
+          if (joinBtn) joinBtn.click();
+        } else {
+          onlineJoinRoom(code, resolvePickedTeam('home'));
+        }
+      }, 300);
+    }).catch(() => {
+      currentMenuView = 'online-setup';
+      render();
+    });
   };
   tryJoin();
 }
