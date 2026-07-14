@@ -6637,7 +6637,8 @@ function handleActionExecution(s, executedAction, position) {
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
       const kickCost1 = Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y));
-      const nextChange = deductBudget({ ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } }, kickCost1, selectedPlayerId);
+      const effectiveKickCost1 = (s.gameVariant === 'quick' && s.chainPassInitiatorId) ? 0 : kickCost1;
+      const nextChange = deductBudget({ ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } }, effectiveKickCost1, selectedPlayerId);
       return advanceToNextTurn(nextChange);
     }
 
@@ -6689,7 +6690,9 @@ function handleActionExecution(s, executedAction, position) {
     const lastTouchId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
     const kickCost2 = Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y));
     const kickPlayerId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
-    const nextChange = deductBudget({ ...withShotStat, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } }, kickCost2, kickPlayerId);
+    // In quick mode, kicks during a chain pass are free (only the initial kick costs budget)
+    const effectiveKickCost = (s.gameVariant === 'quick' && s.chainPassInitiatorId) ? 0 : kickCost2;
+    const nextChange = deductBudget({ ...withShotStat, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } }, effectiveKickCost, kickPlayerId);
     return advanceToNextTurn(nextChange);
   }
 
