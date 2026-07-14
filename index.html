@@ -5632,7 +5632,6 @@ function pickBotMove(s) {
   const oppTeam = team === 'home' ? 'away' : 'home';
   const difficulty = s.aiDifficulty || 'normal';
   const usedIds = new Set(s.gameVariant === 'quick' ? (s.usedPlayerIds || []) : []);
-  const effectiveBudget = s.gameVariant === 'quick' ? (s.remainingBudget || 0) : s.diceValue;
   const myPlayers = s.players.filter(p => p.team === team && !usedIds.has(p.id));
   const candidates = [];
   const ownGoal = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
@@ -5899,7 +5898,10 @@ function runBotTurn() {
   if (s.currentPlayer !== s.aiTeam || s.isAiThinking) return;
   setState({ isAiThinking: true });
 
+  let stepCount = 0;
   const step = () => {
+    stepCount++;
+    if (stepCount > 30) { setState({ isAiThinking: false }); return; } // safety limit
     const cur = state;
     if (cur.currentPlayer !== cur.aiTeam || cur.gameMode !== 'vs-ai') { setState({ isAiThinking: false }); return; }
 
@@ -5960,9 +5962,9 @@ function runBotTurn() {
         setTimeout(step, 300);
         return;
       }
-      const move = pickBotMove(cur);
+      // Use latest state so usedPlayerIds is current after previous quick-mode actions
+      const move = pickBotMove(state);
       if (!move) {
-        // Quick mode: pass remaining budget; classic: skip turn
         setState(s2 => cur.gameVariant === 'quick'
           ? advanceToNextTurn(s2, { forceTurnEnd: true })
           : advanceToNextTurn(s2, { skipSwapCheck: true }));
@@ -5973,11 +5975,13 @@ function runBotTurn() {
         // Select the player — this updates validKickTargets/validDragTargets/validMoves in state
         setState(s2 => handlePlayerSelection(s2, move.playerId));
         setTimeout(() => {
-          // Verify the target is actually valid in the post-selection state.
-          // For the goalkeeper (effectiveDice×2), the game engine computes the real
-          // valid targets after selection — the bot's pre-computed target may differ.
-          // If the target isn't valid, fall back to the best valid target of the same kind.
           setState(s2 => {
+            // Safety: if player wasn't selected (blocked by usedPlayerIds or other reason), skip
+            if (s2.selectedPlayerId !== move.playerId) {
+              return s2.gameVariant === 'quick'
+                ? advanceToNextTurn(s2, { forceTurnEnd: true })
+                : advanceToNextTurn(s2, { skipSwapCheck: true });
+            }
             const botTeam = s2.currentPlayer;
             const selectedPlayer = s2.players.find(p => p.id === s2.selectedPlayerId);
             if (!selectedPlayer) return advanceToNextTurn(s2, { skipSwapCheck: true });
@@ -6644,6 +6648,11 @@ function handleActionExecution(s, executedAction, position) {
       const logState = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : lang === 'pt' ? `Passe para #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
       // Count pass stat
       const withPassStat = { ...logState, stats: { ...logState.stats, passes: { ...logState.stats.passes, [currentPlayer]: (logState.stats.passes?.[currentPlayer] || 0) + 1 } } };
+      // Deduct budget for the initial kick (chain pass itself is free)
+      const chainKickCost = executedAction !== 'chain-pass'
+        ? Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y))
+        : 0; // chain-pass continuations are free
+      const withBudget = deductBudget(withPassStat, chainKickCost, executedAction !== 'chain-pass' ? selectedPlayerId : null);
       const chainResult = getValidChainPassTargets(receivingTeammate, newPlayers);
       const nextReceivers = [];
       chainResult.validTargets.forEach(pos => {
@@ -6651,7 +6660,7 @@ function handleActionExecution(s, executedAction, position) {
         if (receiverOnTile && !isActionOffside(receivingTeammate, pos, newPlayers, position)) nextReceivers.push(pos);
       });
       return {
-        ...withPassStat, gamePhase: 'chain-pass', players: newPlayers, ballPosition: position,
+        ...withBudget, gamePhase: 'chain-pass', players: newPlayers, ballPosition: position,
         lastPlayerToTouchBallId: currentPasser.id, chainPassInitiatorId: receivingTeammate.id,
         assistProviderId: currentPasser.id, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
@@ -7303,6 +7312,7 @@ function renderMainMenu() {
       </div>
       <button data-menu="match-history" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">📋</button>
       <button data-menu="achievements" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">🏅</button>
+      <button id="view-my-profile-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">👤</button>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
     <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
@@ -8340,7 +8350,7 @@ function renderLeaderboard() {
           ? Math.round((u.wins / u.gamesPlayed) * 100) : 0;
         const wLabel = lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V';
         const lLabel = lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D';
-        return `<div class="lb-row ${isMe ? 'lb-me' : ''}">
+        return `<div class="lb-row ${isMe ? 'lb-me' : ''}" data-profile="${escapeHtml(u.username)}" style="cursor:pointer;">
           <span class="lb-rank">${medal}</span>
           <span class="lb-name">${escapeHtml(u.username || playerLabel)}</span>
           <span class="lb-elo">⚡ ${u.elo || 1200}</span>
@@ -8366,6 +8376,116 @@ function renderLeaderboard() {
     </div>
   </div>`;
 }
+
+let publicProfileData = null;
+let publicProfileLoading = false;
+let publicProfileError = null;
+
+async function loadPublicProfile(username) {
+  publicProfileLoading = true;
+  publicProfileData = null;
+  publicProfileError = null;
+  currentMenuView = 'public-profile';
+  render();
+  try {
+    const snap = await db.collection('users').where('username', '==', username).limit(1).get();
+    if (snap.empty) {
+      publicProfileError = lang === 'en' ? 'User not found.' : lang === 'pt' ? 'Usuário não encontrado.' : 'Usuario no encontrado.';
+    } else {
+      const doc = snap.docs[0];
+      publicProfileData = { uid: doc.id, ...doc.data() };
+      // Load recent matches
+      try {
+        const matchSnap = await db.collection('users').doc(doc.id).collection('matches')
+          .orderBy('playedAt', 'desc').limit(5).get();
+        publicProfileData.recentMatches = matchSnap.docs.map(d => d.data());
+      } catch (e) {
+        publicProfileData.recentMatches = [];
+      }
+    }
+  } catch (e) {
+    publicProfileError = lang === 'en' ? 'Error loading profile.' : lang === 'pt' ? 'Erro ao carregar perfil.' : 'Error al cargar el perfil.';
+  }
+  publicProfileLoading = false;
+  render();
+}
+
+function renderPublicProfile() {
+  if (publicProfileLoading) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:#6b7a64;">${t('lb.loading')}</div></div>`;
+  if (publicProfileError) return `<div class="menu-screen" style="text-align:center;">
+    <div style="padding:40px;color:#dc2626;">${publicProfileError}</div>
+    <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
+  </div>`;
+
+  const u = publicProfileData;
+  const winRate = u.gamesPlayed > 0 ? Math.round((u.wins / u.gamesPlayed) * 100) : 0;
+  const wLabel = lang === 'en' ? 'W' : 'V';
+  const lLabel = lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D';
+  const dLabel = lang === 'en' ? 'D' : lang === 'pt' ? 'E' : 'E';
+
+  // Achievements
+  const achRows = ACHIEVEMENTS.map(a => {
+    const unlocked = u.achievements && u.achievements[a.id];
+    return `<span style="font-size:1.4rem;opacity:${unlocked ? '1' : '0.25'};" title="${getAchievementText(a, 'title')}">${a.icon}</span>`;
+  }).join('');
+
+  // Recent matches
+  const matchRows = (u.recentMatches || []).map(m => {
+    const result = m.result === 'win' ? (lang === 'en' ? '🏆 Win' : lang === 'pt' ? '🏆 Vitória' : '🏆 Victoria')
+      : m.result === 'loss' ? (lang === 'en' ? '😔 Loss' : lang === 'pt' ? '😔 Derrota' : '😔 Derrota')
+      : (lang === 'en' ? '🤝 Draw' : lang === 'pt' ? '🤝 Empate' : '🤝 Empate');
+    const score = `${m.homeScore ?? '-'} - ${m.awayScore ?? '-'}`;
+    const eloChange = m.eloChange > 0 ? `+${m.eloChange}` : m.eloChange;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e1e8db;font-size:0.8rem;">
+      <span>${result}</span>
+      <span style="color:#6b7a64;">${score}</span>
+      <span style="color:${m.eloChange > 0 ? '#2a6e3f' : m.eloChange < 0 ? '#9a2f24' : '#6b7a64'};">${eloChange} ELO</span>
+    </div>`;
+  }).join('') || `<div style="color:#6b7a64;font-size:0.8rem;padding:8px 0;">${lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda não há partidas.' : 'Sin partidas aún.'}</div>`;
+
+  // Share URL
+  const profileUrl = `https://hexagol.com.ar?perfil=${encodeURIComponent(u.username)}`;
+
+  return `
+  <div class="menu-screen" style="max-width:520px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:2.5rem;margin-bottom:8px;">👤</div>
+      <h1 style="margin:0 0 4px;">${escapeHtml(u.username)}</h1>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--accent);">⚡ ${u.elo || 1200} ELO</div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;text-align:center;">
+      <div style="background:#f0f4ee;border-radius:10px;padding:12px;">
+        <div style="font-size:1.3rem;font-weight:700;color:#2a6e3f;">${u.wins || 0}</div>
+        <div style="font-size:0.7rem;color:#6b7a64;">${wLabel}</div>
+      </div>
+      <div style="background:#f0f4ee;border-radius:10px;padding:12px;">
+        <div style="font-size:1.3rem;font-weight:700;color:#9a2f24;">${u.losses || 0}</div>
+        <div style="font-size:0.7rem;color:#6b7a64;">${lLabel}</div>
+      </div>
+      <div style="background:#f0f4ee;border-radius:10px;padding:12px;">
+        <div style="font-size:1.3rem;font-weight:700;">${u.draws || 0}</div>
+        <div style="font-size:0.7rem;color:#6b7a64;">${dLabel}</div>
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">🏅 ${lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros'}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">${achRows}</div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">⚽ ${lang === 'en' ? 'Recent matches' : lang === 'pt' ? 'Partidas recentes' : 'Últimas partidas'}</div>
+      ${matchRows}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="copy-profile-btn" style="flex:1;background:#f0f4ee;border:1.5px solid #c8d5c0;border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+        🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}
+      </button>
+    </div>
+    <div class="menu-grid">
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
+    </div>
+  </div>`;
+}
+
 
 function renderRules() {
   if (lang === 'en') return `
@@ -9203,6 +9323,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'public-profile') app.innerHTML = renderPublicProfile();
     else if (currentMenuView === 'achievements') app.innerHTML = renderAchievementsScreen();
     else if (currentMenuView === 'choose-username') app.innerHTML = renderChooseUsername();
     else if (currentMenuView === 'quick-tutorial') app.innerHTML = renderQuickTutorial();
@@ -9810,8 +9931,28 @@ function wireEvents() {
     };
   });
 
+  const viewMyProfileBtn = document.getElementById('view-my-profile-btn');
+  if (viewMyProfileBtn && userProfile) viewMyProfileBtn.onclick = () => loadPublicProfile(userProfile.username);
+
+  // Leaderboard row → public profile
+  document.querySelectorAll('[data-profile]').forEach(row => {
+    row.onclick = () => loadPublicProfile(row.getAttribute('data-profile'));
+  });
+
   const achievementsBackBtn = document.getElementById('achievements-back-btn');
   if (achievementsBackBtn) achievementsBackBtn.onclick = () => { currentMenuView = 'main'; render(); };
+
+  // Copy profile link
+  const copyProfileBtn = document.getElementById('copy-profile-btn');
+  if (copyProfileBtn && publicProfileData) {
+    copyProfileBtn.onclick = () => {
+      const url = `https://hexagol.com.ar?perfil=${encodeURIComponent(publicProfileData.username)}`;
+      navigator.clipboard.writeText(url).then(() => {
+        copyProfileBtn.textContent = lang === 'en' ? '✓ Copied!' : lang === 'pt' ? '✓ Copiado!' : '✓ ¡Copiado!';
+        setTimeout(() => { copyProfileBtn.innerHTML = `🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}`; }, 2000);
+      }).catch(() => {});
+    };
+  }
 
   const chooseUsernameBtn = document.getElementById('choose-username-btn');
   if (chooseUsernameBtn) chooseUsernameBtn.onclick = async () => {
@@ -10673,6 +10814,20 @@ window.addEventListener('beforeunload', () => {
   trackEvent('session_end', { duration_minutes: sessionMinutes, lang });
 });
 
+// ── URL parameter — public profile ───────────────────────────────────────────
+function checkUrlProfileParam() {
+  const params = new URLSearchParams(window.location.search);
+  const perfil = params.get('perfil');
+  if (!perfil) return;
+  window.history.replaceState({}, '', window.location.pathname);
+  // Wait for auth then load profile
+  const tryLoad = () => {
+    if (!currentUser) { setTimeout(tryLoad, 500); return; }
+    loadPublicProfile(decodeURIComponent(perfil));
+  };
+  tryLoad();
+}
+
 // ── URL parameter — auto-join room ────────────────────────────────────────────
 function checkUrlRoomParam() {
   const params = new URLSearchParams(window.location.search);
@@ -10714,6 +10869,7 @@ render();
 document.addEventListener('fullscreenchange', () => { render(); });
 checkForReconnectableSession();
 checkUrlRoomParam();
+checkUrlProfileParam();
 
 // Global lang toggle — cycles ES → EN → PT → ES
 document.addEventListener('click', e => {
