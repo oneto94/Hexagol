@@ -5631,7 +5631,9 @@ function pickBotMove(s) {
   const team = s.currentPlayer;
   const oppTeam = team === 'home' ? 'away' : 'home';
   const difficulty = s.aiDifficulty || 'normal';
-  const myPlayers = s.players.filter(p => p.team === team);
+  const usedIds = new Set(s.gameVariant === 'quick' ? (s.usedPlayerIds || []) : []);
+  const effectiveBudget = s.gameVariant === 'quick' ? (s.remainingBudget || 0) : s.diceValue;
+  const myPlayers = s.players.filter(p => p.team === team && !usedIds.has(p.id));
   const candidates = [];
   const ownGoal = team === 'home' ? _activeHomeGoal : _activeAwayGoal;
   const ball = s.ballPosition;
@@ -5698,7 +5700,7 @@ function pickBotMove(s) {
       candidates.push({ playerId: player.id, kind: a.kind, target: a.target, score });
     });
 
-    if (s.diceValue) {
+    if (s.diceValue || (s.gameVariant === 'quick' && s.remainingBudget > 0)) {
       const effectiveDv = s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue;
       const moves = getValidMoves(player, effectiveDv, s.players, s.ballPosition);
       moves.forEach(target => {
@@ -5952,8 +5954,21 @@ function runBotTurn() {
       return;
     }
     if (cur.gamePhase === 'selecting-piece' || cur.gamePhase === 'moving-piece') {
+      // Quick mode: if no budget left, force end turn
+      if (cur.gameVariant === 'quick' && cur.remainingBudget <= 0) {
+        setState(s2 => advanceToNextTurn(s2, { forceTurnEnd: true }));
+        setTimeout(step, 300);
+        return;
+      }
       const move = pickBotMove(cur);
-      if (!move) { setState(s2 => advanceToNextTurn(s2, { skipSwapCheck: true })); setTimeout(step, 300); return; }
+      if (!move) {
+        // Quick mode: pass remaining budget; classic: skip turn
+        setState(s2 => cur.gameVariant === 'quick'
+          ? advanceToNextTurn(s2, { forceTurnEnd: true })
+          : advanceToNextTurn(s2, { skipSwapCheck: true }));
+        setTimeout(step, 300);
+        return;
+      }
       setTimeout(() => {
         // Select the player — this updates validKickTargets/validDragTargets/validMoves in state
         setState(s2 => handlePlayerSelection(s2, move.playerId));
