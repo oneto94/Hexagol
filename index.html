@@ -1849,8 +1849,12 @@ auth.onAuthStateChanged(async user => {
   currentUser = user;
   if (user && !user.isAnonymous) {
     await loadOrCreateUserProfile(user);
+    loadFriends();
+    listenForChallenges();
   } else {
     userProfile = null;
+    friendsData = [];
+    if (friendsChallengeUnsub) { friendsChallengeUnsub(); friendsChallengeUnsub = null; }
   }
   authReady = true;
   // If we're still on the landing screen, re-render it with the new auth state
@@ -6578,6 +6582,10 @@ function handleActionExecution(s, executedAction, position) {
 
     const receivingTeammate = players.find(p => p.position.x === finalBallPos.x && p.position.y === finalBallPos.y && p.team === currentPlayer && p.id !== selectedPlayerId);
     if (receivingTeammate) {
+      // Deduct drag cost before entering chain-pass
+      const dragCostChain = Math.max(Math.abs(ballPosition.x - actingPlayer.position.x), Math.abs(ballPosition.y - actingPlayer.position.y))
+                          + Math.max(Math.abs(finalBallPos.x - ballPosition.x), Math.abs(finalBallPos.y - ballPosition.y));
+      const logWithBudget = deductBudget(logState, dragCostChain, selectedPlayerId);
       const chainResult = getValidChainPassTargets(receivingTeammate, newPlayers);
       const nextReceivers = [];
       chainResult.validTargets.forEach(pos => {
@@ -6585,7 +6593,7 @@ function handleActionExecution(s, executedAction, position) {
         if (receiverOnTile && !isActionOffside(receivingTeammate, pos, newPlayers, finalBallPos)) nextReceivers.push(pos);
       });
       return {
-        ...logState, gamePhase: 'chain-pass', players: newPlayers, ballPosition: finalBallPos,
+        ...logWithBudget, gamePhase: 'chain-pass', players: newPlayers, ballPosition: finalBallPos,
         lastPlayerToTouchBallId: selectedPlayerId, chainPassInitiatorId: receivingTeammate.id,
         assistProviderId: selectedPlayerId, validChainPassTargets: chainResult.validTargets,
         invalidOffsideChainPassTargets: chainResult.invalidOffsideTargets, chainPassReceivers: nextReceivers,
@@ -7316,6 +7324,7 @@ function renderMainMenu() {
       <button data-menu="match-history" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">📋</button>
       <button data-menu="achievements" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">🏅</button>
       <button id="view-my-profile-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">👤</button>
+      <button id="friends-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;position:relative;">👥<span id="friends-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;border-radius:999px;font-size:0.6rem;padding:1px 4px;min-width:14px;text-align:center;"></span></button>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
     <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
@@ -8337,6 +8346,437 @@ async function renderMatchHistory() {
   }
 }
 
+// ── Friends System ──────────────────────────────────────────────────────────
+let friendsData = [];
+let friendsChallengeUnsub = null;
+
+async function loadFriends() {
+  if (!currentUser || currentUser.isAnonymous) return;
+  try {
+    const snap = await db.collection('users').doc(currentUser.uid).collection('friends').get();
+    const friends = [];
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      try {
+        const profileSnap = await db.collection('users').doc(doc.id).get();
+        if (profileSnap.exists) {
+          friends.push({
+            uid: doc.id,
+            username: profileSnap.data().username,
+            elo: profileSnap.data().elo || 1200,
+            status: data.status,
+            requestedBy: data.requestedBy,
+          });
+        }
+      } catch (e) {}
+    }
+    friendsData = friends;
+  } catch (e) {}
+  updateFriendsBadge();
+}
+
+function updateFriendsBadge() {
+  const pending = friendsData.filter(f => f.status === 'pending' && f.requestedBy !== currentUser?.uid).length;
+  const badge = document.getElementById('friends-badge');
+  if (badge) { badge.textContent = pending; badge.style.display = pending > 0 ? 'block' : 'none'; }
+}
+
+async function sendFriendRequest(targetUid) {
+  if (!currentUser || !targetUid) return;
+  const data = { status: 'pending', requestedBy: currentUser.uid, since: firebase.firestore.FieldValue.serverTimestamp() };
+  await db.collection('users').doc(currentUser.uid).collection('friends').doc(targetUid).set(data);
+  await db.collection('users').doc(targetUid).collection('friends').doc(currentUser.uid).set(data);
+  await loadFriends();
+  showFriendsModal();
+}
+
+async function acceptFriendRequest(friendUid) {
+  if (!currentUser) return;
+  const update = { status: 'accepted' };
+  await db.collection('users').doc(currentUser.uid).collection('friends').doc(friendUid).update(update);
+  await db.collection('users').doc(friendUid).collection('friends').doc(currentUser.uid).update(update);
+  await loadFriends();
+  showFriendsModal();
+}
+
+async function declineFriendRequest(friendUid) {
+  if (!currentUser) return;
+  await db.collection('users').doc(currentUser.uid).collection('friends').doc(friendUid).delete();
+  await db.collection('users').doc(friendUid).collection('friends').doc(currentUser.uid).delete();
+  await loadFriends();
+  showFriendsModal();
+}
+
+async function removeFriend(friendUid) {
+  if (!currentUser) return;
+  await db.collection('users').doc(currentUser.uid).collection('friends').doc(friendUid).delete();
+  await db.collection('users').doc(friendUid).collection('friends').doc(currentUser.uid).delete();
+  await loadFriends();
+  showFriendsModal();
+}
+
+let challengeTargetUid = null;
+let challengeSetupDuration = 5;
+let challengeSetupTargetGoals = null;
+let challengeSetupVariant = 'classic';
+let challengeSetupBoardSize = 'classic';
+let challengeSetupHomeTeamIdx = 0;
+
+function challengeFriend(friendUid) {
+  challengeTargetUid = friendUid;
+  challengeSetupDuration = 5;
+  challengeSetupTargetGoals = null;
+  challengeSetupVariant = 'classic';
+  challengeSetupBoardSize = 'classic';
+  challengeSetupHomeTeamIdx = 0;
+  onlineKitEditorReturnView = 'challenge-setup';
+  const modal = document.getElementById('friends-modal');
+  if (modal) modal.remove();
+  currentMenuView = 'challenge-setup';
+  render();
+}
+
+async function sendChallenge() {
+  if (!currentUser || !challengeTargetUid) return;
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const homeTeam = resolvePickedTeam('home');
+  setupGameVariant = challengeSetupVariant;
+  setupBoardSize = challengeSetupBoardSize;
+  setActiveBoardSize(challengeSetupBoardSize);
+  onlineRoomId = code;
+  onlineIsHost = true;
+  onlineMyTeam = 'home';
+  onlineRoomRef = db.collection('rooms').doc(code);
+  await onlineRoomRef.set({
+    status: 'waiting',
+    homeTeam: sanitizeForFirestore(homeTeam),
+    homeUid: currentUser.uid,
+    duration: challengeSetupDuration,
+    targetGoals: challengeSetupTargetGoals || null,
+    gameVariant: challengeSetupVariant,
+    boardSize: challengeSetupBoardSize,
+    gameState: null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  await db.collection('users').doc(challengeTargetUid).collection('challenges').doc(code).set({
+    from: currentUser.uid,
+    fromUsername: userProfile?.username || '?',
+    roomCode: code,
+    gameVariant: challengeSetupVariant,
+    duration: challengeSetupDuration,
+    targetGoals: challengeSetupTargetGoals || null,
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+
+  onlineStatus = 'waiting';
+  currentMenuView = 'online-waiting';
+  render();
+
+  const duration = challengeSetupDuration;
+  const targetGoals = challengeSetupTargetGoals;
+  const useGoals = targetGoals !== null;
+  const turnDur = useGoals ? TURN_DURATION : (duration <= 5 ? (duration <= 2 ? 10 : 20) : TURN_DURATION);
+
+  // Watch for guest joining — same logic as onlineCreateRoom
+  onlineStatusUnsub = onlineRoomRef.onSnapshot(async snap => {
+    if (!snap.exists) {
+      // Room was deleted (guest declined or expired)
+      if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; }
+      onlineStatus = 'idle';
+      currentMenuView = 'main';
+      render();
+      return;
+    }
+    const data = snap.data();
+    if (data.status !== 'playing') return;
+    if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; }
+
+    onlineStatus = 'connected';
+    onlineOpponentUid = data.awayUid || null;
+
+    const guestTeam = data.awayTeam || TEAMS[1];
+    const conflict = customKitsClash(
+      { primaryColor: homeTeam.primaryColor, secondaryColor: homeTeam.secondaryColor },
+      { primaryColor: guestTeam.primaryColor, secondaryColor: guestTeam.secondaryColor }
+    );
+    const finalAwayTeam = conflict
+      ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
+      : guestTeam;
+
+    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals, challengeSetupVariant, challengeSetupBoardSize);
+    preGameRollStartedAt = Date.now();
+    state = { ...initialState, timer: 30 };
+    window.state = state;
+
+    attachOnlineStateListener();
+    attachOnlineRematchListener(startOnlineRematch);
+    attachOnlineUndoListener();
+    attachOnlinePresence();
+    attachOnlineChat();
+    saveOnlineSession();
+
+    await onlineRoomRef.update({ gameState: sanitizeForFirestore(initialState) })
+      .catch(err => console.error('[Hexagol Online] Host challenge: error escribiendo gameState:', err));
+
+    currentMenuView = 'main';
+    render();
+    startClock();
+    startTurnTimer();
+  });
+}
+
+function renderChallengeSetup() {
+  const variants = [
+    { id: 'classic', label: lang === 'en' ? '🏟 Classic' : lang === 'pt' ? '🏟 Clássico' : '🏟 Clásico' },
+    { id: 'compact', label: lang === 'en' ? '⚡ Compact' : lang === 'pt' ? '⚡ Compacto' : '⚡ Compacto' },
+    { id: 'quick', label: lang === 'en' ? '🎯 Quick' : lang === 'pt' ? '🎯 Rápido' : '🎯 Rápido' },
+  ];
+  const teamOptions = TEAMS.map((t, i) => `<option value="${i}" ${i === challengeSetupHomeTeamIdx ? 'selected' : ''}>${t.name}</option>`).join('');
+  const durationBtns = [2, 5, 10, 20, 30, 45].map(m =>
+    `<button data-ch-duration="${m}" class="duration-btn ${m === challengeSetupDuration && !challengeSetupTargetGoals ? 'active' : ''}">${m} min</button>`).join('');
+  const goalsBtns = [1, 3, 5].map(g =>
+    `<button data-ch-goals="${g}" class="duration-btn ${g === challengeSetupTargetGoals ? 'active' : ''}">${g} ${g === 1 ? (lang === 'en' ? 'goal' : 'gol') : (lang === 'en' ? 'goals' : 'goles')}</button>`).join('');
+
+  return `
+  <div class="menu-screen" style="max-width:480px;">
+    <h1>⚔️ ${lang === 'en' ? 'Challenge setup' : lang === 'pt' ? 'Configurar desafio' : 'Configurar desafío'}</h1>
+    <div class="setup-fields">
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Game variant' : lang === 'pt' ? 'Variante' : 'Variante'}</span>
+        <div class="duration-row" id="ch-variant-row">
+          ${variants.map(v => `<button data-ch-variant="${v.id}" class="${v.id === challengeSetupVariant ? 'active' : ''}">${v.label}</button>`).join('')}
+        </div>
+      </div>
+      ${renderTeamPickerCard('home')}
+      <div>
+        <span class="field-label">${t('setup.duration')}</span>
+        <div class="duration-row" id="ch-duration-row">${durationBtns}</div>
+      </div>
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : 'O: primero en marcar N goles'}</span>
+        <div class="duration-row" id="ch-goals-row">${goalsBtns}</div>
+      </div>
+    </div>
+    <div class="menu-grid" style="margin-top:20px;">
+      <button class="menu-btn" id="send-challenge-btn" style="border-color:var(--accent);background:#f0f4ff;">
+        <div class="t">⚔️ ${lang === 'en' ? 'Send challenge' : lang === 'pt' ? 'Enviar desafio' : 'Enviar desafío'}</div>
+      </button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
+    </div>
+  </div>`;
+}
+
+let challengeGuestData = null; // { roomCode, gameVariant, duration, targetGoals, fromUsername }
+
+function renderChallengeGuestSetup() {
+  if (!challengeGuestData) return `<div class="menu-screen"><div class="subtitle">Error</div></div>`;
+  const d = challengeGuestData;
+  const variantNames = {
+    classic: lang === 'en' ? '🏟 Classic' : lang === 'pt' ? '🏟 Clássico' : '🏟 Clásico',
+    compact: lang === 'en' ? '⚡ Compact' : lang === 'pt' ? '⚡ Compacto' : '⚡ Compacto',
+    quick: lang === 'en' ? '🎯 Quick' : lang === 'pt' ? '🎯 Rápido' : '🎯 Rápido',
+  };
+  const modeLabel = d.targetGoals
+    ? `${lang === 'en' ? 'First to' : lang === 'pt' ? 'Primeiro a' : 'Primero en'} ${d.targetGoals} ${lang === 'en' ? 'goals' : 'goles'}`
+    : `${d.duration} min`;
+  const teamOptions = TEAMS.map((t, i) => `<option value="${i}" ${i === 1 ? 'selected' : ''}>${t.name}</option>`).join('');
+
+  return `
+  <div class="menu-screen" style="max-width:480px;">
+    <h1>⚔️ ${lang === 'en' ? 'Accept challenge' : lang === 'pt' ? 'Aceitar desafio' : 'Aceptar desafío'}</h1>
+    <div style="background:#f0f4ee;border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:0.85rem;">
+      <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(d.fromUsername)} ${lang === 'en' ? 'challenged you' : lang === 'pt' ? 'te desafiou' : 'te desafió'}</div>
+      <div style="color:#6b7a64;">${variantNames[d.gameVariant] || 'Clásico'} · ${modeLabel}</div>
+    </div>
+    <div class="setup-fields">
+      ${renderTeamPickerCard('away')}
+    </div>
+    <div class="menu-grid" style="margin-top:20px;">
+      <button class="menu-btn" id="accept-challenge-btn" style="border-color:var(--accent);background:#f0f4ff;">
+        <div class="t">✓ ${lang === 'en' ? 'Join match' : lang === 'pt' ? 'Entrar na partida' : 'Entrar a la partida'}</div>
+      </button>
+      <button class="menu-btn" id="decline-challenge-btn">
+        <div class="t">✕ ${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</div>
+      </button>
+    </div>
+  </div>`;
+}
+
+function showFriendsModal() {
+  const existing = document.getElementById('friends-modal');
+  if (existing) existing.remove();
+
+  const pending = friendsData.filter(f => f.status === 'pending' && f.requestedBy !== currentUser?.uid);
+  const accepted = friendsData.filter(f => f.status === 'accepted');
+  const sent = friendsData.filter(f => f.status === 'pending' && f.requestedBy === currentUser?.uid);
+  const title = lang === 'en' ? 'Friends' : lang === 'pt' ? 'Amigos' : 'Amigos';
+
+  const sectionTitle = (text) => `<div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin:12px 0 6px;">${text}</div>`;
+  const row = (content) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e1e8db;">${content}</div>`;
+  const btnGreen = (onclick, text) => `<button onclick="${onclick}" style="background:#2a6e3f;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
+  const btnGhost = (onclick, text) => `<button onclick="${onclick}" style="background:#f0f4ee;border:1px solid #c8d5c0;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
+  const btnAccent = (onclick, text) => `<button onclick="${onclick}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
+
+  const pendingHtml = pending.length > 0 ? sectionTitle(`${lang === 'en' ? 'Requests' : lang === 'pt' ? 'Solicitações' : 'Solicitudes'} (${pending.length})`) +
+    pending.map(f => row(`<span style="flex:1;font-weight:600;font-size:0.85rem;">${escapeHtml(f.username)}</span>${btnGreen(`acceptFriendRequest('${f.uid}')`, '✓')}${btnGhost(`declineFriendRequest('${f.uid}')`, '✕')}`)).join('') : '';
+
+  const acceptedHtml = accepted.length > 0 ? sectionTitle(`${title} (${accepted.length})`) +
+    accepted.map(f => row(`<div style="flex:1;"><div style="font-weight:600;font-size:0.85rem;">${escapeHtml(f.username)}</div><div style="font-size:0.72rem;color:#6b7a64;">⚡ ${f.elo} ELO</div></div>${btnAccent(`challengeFriend('${f.uid}')`, `⚔️ ${lang === 'en' ? 'Challenge' : lang === 'pt' ? 'Desafiar' : 'Desafiar'}`)}${btnGhost(`removeFriend('${f.uid}')`, '✕')}`)).join('') : '';
+
+  const sentHtml = sent.length > 0 ? sectionTitle(lang === 'en' ? 'Sent' : lang === 'pt' ? 'Enviadas' : 'Enviadas') +
+    sent.map(f => row(`<span style="flex:1;font-size:0.85rem;">${escapeHtml(f.username)}</span><span style="font-size:0.72rem;color:#9aa593;">⏳</span>`)).join('') : '';
+
+  const emptyHtml = !pending.length && !accepted.length && !sent.length
+    ? `<div style="text-align:center;padding:24px;color:#9aa593;font-size:0.85rem;">${lang === 'en' ? 'No friends yet. Search for players to add them.' : lang === 'pt' ? 'Nenhum amigo ainda. Busque jogadores para adicioná-los.' : 'Sin amigos aún. Buscá jugadores para agregarlos.'}</div>` : '';
+
+  const modal = document.createElement('div');
+  modal.id = 'friends-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:#fff;border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h2 style="margin:0;font-size:1.1rem;">👥 ${title}</h2>
+        <button id="friends-modal-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7a64;">✕</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <input id="friends-search-input" type="text" placeholder="${lang === 'en' ? 'Search by username...' : lang === 'pt' ? 'Buscar por nome...' : 'Buscar por nombre...'}"
+          style="flex:1;padding:8px 12px;border:1.5px solid #c8d5c0;border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;">
+        <button id="friends-search-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">
+          ${lang === 'en' ? 'Search' : lang === 'pt' ? 'Buscar' : 'Buscar'}
+        </button>
+      </div>
+      <div id="friends-search-result"></div>
+      ${pendingHtml}${acceptedHtml}${sentHtml}${emptyHtml}
+    </div>`;
+  document.body.appendChild(modal);
+
+  modal.querySelector('#friends-modal-close').onclick = () => modal.remove();
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  const searchBtn = modal.querySelector('#friends-search-btn');
+  const searchInput = modal.querySelector('#friends-search-input');
+  const resultDiv = modal.querySelector('#friends-search-result');
+
+  const doSearch = async () => {
+    const q = searchInput.value.trim();
+    if (!q) return;
+    resultDiv.innerHTML = `<div style="padding:8px;color:#6b7a64;font-size:0.8rem;">...</div>`;
+    try {
+      const snap = await db.collection('users').where('username', '==', q).limit(1).get();
+      if (snap.empty) {
+        resultDiv.innerHTML = `<div style="padding:8px;color:#9a2f24;font-size:0.8rem;">${lang === 'en' ? 'User not found.' : lang === 'pt' ? 'Usuário não encontrado.' : 'Usuario no encontrado.'}</div>`;
+        return;
+      }
+      const doc = snap.docs[0];
+      if (doc.id === currentUser.uid) {
+        resultDiv.innerHTML = `<div style="padding:8px;color:#9aa593;font-size:0.8rem;">${lang === 'en' ? "That's you!" : lang === 'pt' ? 'Esse é você!' : '¡Eso sos vos!'}</div>`;
+        return;
+      }
+      const alreadyFriend = friendsData.some(f => f.uid === doc.id);
+      const u = doc.data();
+      const addBtn = alreadyFriend
+        ? `<span style="font-size:0.75rem;color:#2a6e3f;">✓ ${lang === 'en' ? 'Already friends' : lang === 'pt' ? 'Já são amigos' : 'Ya son amigos'}</span>`
+        : `<button id="add-friend-search-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.75rem;cursor:pointer;">+ ${lang === 'en' ? 'Add' : lang === 'pt' ? 'Adicionar' : 'Agregar'}</button>`;
+      resultDiv.innerHTML = `
+        <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f0f4ee;border-radius:8px;margin-bottom:8px;">
+          <div style="flex:1;">
+            <div style="font-weight:600;font-size:0.85rem;">${escapeHtml(u.username)}</div>
+            <div style="font-size:0.72rem;color:#6b7a64;">⚡ ${u.elo || 1200} ELO</div>
+          </div>
+          ${addBtn}
+        </div>`;
+      const addBtnEl = resultDiv.querySelector('#add-friend-search-btn');
+      if (addBtnEl) addBtnEl.onclick = async () => {
+        addBtnEl.disabled = true;
+        addBtnEl.textContent = '...';
+        try {
+          await sendFriendRequest(doc.id);
+        } catch (e) {
+          console.error('sendFriendRequest error:', e);
+          addBtnEl.textContent = 'Error';
+          addBtnEl.disabled = false;
+        }
+      };
+    } catch (e) {
+      resultDiv.innerHTML = `<div style="padding:8px;color:#9a2f24;font-size:0.8rem;">Error</div>`;
+    }
+  };
+
+  searchBtn.onclick = doSearch;
+  searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+}
+
+function listenForChallenges() {
+  if (!currentUser || currentUser.isAnonymous) return;
+  if (friendsChallengeUnsub) friendsChallengeUnsub();
+  friendsChallengeUnsub = db.collection('users').doc(currentUser.uid)
+    .collection('challenges')
+    .onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          if (data.expiresAt && data.expiresAt.toDate && data.expiresAt.toDate() < new Date()) return;
+          showChallengePopup(data, change.doc.id);
+        }
+      });
+    });
+}
+
+function showChallengePopup(data, docId) {
+  const existing = document.getElementById('challenge-popup');
+  if (existing) existing.remove();
+  const variantNames = {
+    classic: lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico',
+    compact: lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto',
+    quick: lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido',
+  };
+  const el = document.createElement('div');
+  el.id = 'challenge-popup';
+  el.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1c2b22;color:#fff;border-radius:14px;padding:16px 20px;max-width:320px;width:90%;z-index:9500;box-shadow:0 4px 24px rgba(0,0,0,0.4);animation:tooltipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);text-align:center;border:1.5px solid #3a5a3a;`;
+  el.innerHTML = `
+    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⚔️ ${lang === 'en' ? 'Challenge!' : lang === 'pt' ? 'Desafio!' : '¡Desafío!'}</div>
+    <div style="font-weight:700;font-size:0.95rem;margin-bottom:2px;">${escapeHtml(data.fromUsername || '?')} ${lang === 'en' ? 'challenged you' : lang === 'pt' ? 'te desafiou' : 'te desafió'}</div>
+    <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;">${variantNames[data.gameVariant] || 'Clásico'}</div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button id="challenge-accept-btn" style="background:#2a6e3f;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✓ ${lang === 'en' ? 'Accept' : lang === 'pt' ? 'Aceitar' : 'Aceptar'}</button>
+      <button id="challenge-decline-btn" style="background:#3a3a3a;color:#ccc;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✕ ${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#challenge-accept-btn').onclick = async () => {
+    el.remove();
+    await db.collection('users').doc(currentUser.uid).collection('challenges').doc(docId).delete();
+    challengeGuestData = {
+      roomCode: data.roomCode,
+      gameVariant: data.gameVariant || 'classic',
+      duration: data.duration || 5,
+      targetGoals: data.targetGoals || null,
+      fromUsername: data.fromUsername || '?',
+      docId,
+    };
+    setupGameVariant = data.gameVariant || 'classic';
+    setupBoardSize = data.gameVariant === 'compact' ? 'compact' : 'classic';
+    setActiveBoardSize(setupBoardSize);
+    onlineKitEditorReturnView = 'challenge-guest-setup';
+    // Preload user's saved custom team into away picker
+    if (userProfile?.customTeam) {
+      onlineTeamPicker.away = {
+        mode: 'custom',
+        presetIdx: 1,
+        customName: userProfile.customTeam.name || (lang === 'en' ? 'My Team' : lang === 'pt' ? 'Meu Time' : 'Mi Equipo'),
+        customKit: userProfile.customTeam.kit || defaultAwayKit(),
+      };
+    }
+    currentMenuView = 'challenge-guest-setup';
+    render();
+  };
+  el.querySelector('#challenge-decline-btn').onclick = async () => {
+    el.remove();
+    await db.collection('users').doc(currentUser.uid).collection('challenges').doc(docId).delete();
+  };
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 60000);
+}
+
 function renderLeaderboard() {
   const myUid = currentUser?.uid;
   const playerLabel = lang === 'en' ? 'Player' : lang === 'pt' ? 'Jogador' : 'Jugador';
@@ -8478,10 +8918,14 @@ function renderPublicProfile() {
       <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">⚽ ${lang === 'en' ? 'Recent matches' : lang === 'pt' ? 'Partidas recentes' : 'Últimas partidas'}</div>
       ${matchRows}
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
       <button id="copy-profile-btn" style="flex:1;background:#f0f4ee;border:1.5px solid #c8d5c0;border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
         🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}
       </button>
+      ${currentUser && !currentUser.isAnonymous && publicProfileData && currentUser.uid !== publicProfileData.uid && !friendsData.some(f => f.uid === publicProfileData?.uid) ? `
+      <button id="add-friend-profile-btn" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+        👥 ${lang === 'en' ? 'Add friend' : lang === 'pt' ? 'Adicionar amigo' : 'Agregar amigo'}
+      </button>` : ''}
     </div>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -9327,6 +9771,8 @@ function render() {
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
     else if (currentMenuView === 'public-profile') app.innerHTML = renderPublicProfile();
+    else if (currentMenuView === 'challenge-setup') app.innerHTML = renderChallengeSetup();
+    else if (currentMenuView === 'challenge-guest-setup') app.innerHTML = renderChallengeGuestSetup();
     else if (currentMenuView === 'achievements') app.innerHTML = renderAchievementsScreen();
     else if (currentMenuView === 'choose-username') app.innerHTML = renderChooseUsername();
     else if (currentMenuView === 'quick-tutorial') app.innerHTML = renderQuickTutorial();
@@ -9438,7 +9884,9 @@ function wireEvents() {
       if (target === 'back') {
         const variantViews = ['variant-classic', 'variant-compact', 'variant-quick'];
         const playSubViews = ['setup', 'ai-setup', 'online-setup', 'tutorial', 'league-entry', 'sandbox'];
-        if (playSubViews.includes(currentMenuView)) {
+        if (['public-profile', 'challenge-setup', 'challenge-guest-setup'].includes(currentMenuView)) {
+          currentMenuView = 'main';
+        } else if (playSubViews.includes(currentMenuView)) {
           // Go back to whichever variant was active
           if (setupGameVariant === 'compact') currentMenuView = 'variant-compact';
           else if (setupGameVariant === 'quick') currentMenuView = 'variant-quick';
@@ -9937,9 +10385,66 @@ function wireEvents() {
   const viewMyProfileBtn = document.getElementById('view-my-profile-btn');
   if (viewMyProfileBtn && userProfile) viewMyProfileBtn.onclick = () => loadPublicProfile(userProfile.username);
 
+  const friendsBtn = document.getElementById('friends-btn');
+  if (friendsBtn) friendsBtn.onclick = () => { loadFriends().then(() => showFriendsModal()); };
+
+  // Challenge host setup
+  document.querySelectorAll('[data-ch-variant]').forEach(btn => {
+    btn.onclick = () => {
+      challengeSetupVariant = btn.getAttribute('data-ch-variant');
+      challengeSetupBoardSize = challengeSetupVariant === 'compact' ? 'compact' : 'classic';
+      document.querySelectorAll('[data-ch-variant]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+  document.querySelectorAll('[data-ch-duration]').forEach(btn => {
+    btn.onclick = () => {
+      challengeSetupDuration = parseInt(btn.getAttribute('data-ch-duration'));
+      challengeSetupTargetGoals = null;
+      document.querySelectorAll('[data-ch-duration],[data-ch-goals]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+  document.querySelectorAll('[data-ch-goals]').forEach(btn => {
+    btn.onclick = () => {
+      challengeSetupTargetGoals = parseInt(btn.getAttribute('data-ch-goals'));
+      document.querySelectorAll('[data-ch-duration],[data-ch-goals]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+  const sendChallengeBtn = document.getElementById('send-challenge-btn');
+  if (sendChallengeBtn) sendChallengeBtn.onclick = async () => {
+    sendChallengeBtn.disabled = true;
+    sendChallengeBtn.querySelector('.t').textContent = lang === 'en' ? 'Sending...' : 'Enviando...';
+    await sendChallenge();
+  };
+
+  // Challenge guest setup
+  const acceptChallengeBtn = document.getElementById('accept-challenge-btn');
+  if (acceptChallengeBtn) acceptChallengeBtn.onclick = () => {
+    const awayTeam = resolvePickedTeam('away');
+    currentMenuView = 'main';
+    onlineJoinRoom(challengeGuestData.roomCode, awayTeam);
+  };
+  const declineChallengeBtn = document.getElementById('decline-challenge-btn');
+  if (declineChallengeBtn) declineChallengeBtn.onclick = async () => {
+    if (challengeGuestData?.roomCode) {
+      try { await db.collection('rooms').doc(challengeGuestData.roomCode).delete(); } catch (e) {}
+    }
+    challengeGuestData = null;
+    currentMenuView = 'main';
+    render();
+  };
+
+  // Add friend from public profile
+  const addFriendProfileBtn = document.getElementById('add-friend-profile-btn');
+  if (addFriendProfileBtn && publicProfileData) {
+    addFriendProfileBtn.onclick = () => sendFriendRequest(publicProfileData.uid);
+  }
+
   // Leaderboard row → public profile
   document.querySelectorAll('[data-profile]').forEach(row => {
-    row.onclick = () => loadPublicProfile(row.getAttribute('data-profile'));
+    if (row.getAttribute('data-profile')) row.onclick = () => loadPublicProfile(row.getAttribute('data-profile'));
   });
 
   const achievementsBackBtn = document.getElementById('achievements-back-btn');
