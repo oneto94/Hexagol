@@ -2412,6 +2412,8 @@ function onUndoAccepted() {
       turnCount: snap.turnCount,
       gamePhase: 'selecting-piece',
       diceValue: snap.diceValue,
+      remainingBudget: snap.remainingBudget ?? 0,
+      usedPlayerIds: snap.usedPlayerIds ?? [],
       timer: s.turnDuration,
       selectedPlayerId: null,
       validMoves: [], validKickTargets: [], validDragTargets: [],
@@ -6337,6 +6339,8 @@ function handleLocalUndo() {
       turnCount: snap.turnCount,
       gamePhase: 'selecting-piece',
       diceValue: snap.diceValue,
+      remainingBudget: snap.remainingBudget ?? 0,
+      usedPlayerIds: snap.usedPlayerIds ?? [],
       selectedPlayerId: null,
       validMoves: [], validKickTargets: [], validDragTargets: [],
       validLoftedPassTargets: [], validLoftedDragTargets: [],
@@ -10939,6 +10943,8 @@ function doDiceRoll() {
         currentPlayer: s.currentPlayer,
         turnCount: s.turnCount,
         diceValue: roll,
+        remainingBudget: s.gameVariant === 'quick' ? roll : 0,
+        usedPlayerIds: [],
       },
     };
   });
