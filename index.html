@@ -570,7 +570,7 @@
   .menu-grid { display: grid; gap: 10px; }
   .menu-btn {
     appearance: none; border: 1.5px solid #e1e8db; background: #fbfcf9;
-    border-radius: 14px; padding: 16px 20px; text-align: left;
+    border-radius: 10px; padding: 16px 20px; text-align: left;
     cursor: pointer; transition: all 0.15s ease;
     font-family: inherit;
   }
@@ -750,7 +750,7 @@
     padding: 24px 16px; text-align: center; gap: 0;
   }
   .landing-logo {
-    font-size: 3.5rem; margin-bottom: 4px; line-height: 1;
+    width: 72px; height: 72px; margin: 0 auto 4px; display: block;
   }
   .landing-title {
     font-size: 2.2rem; font-weight: 900; color: #1c2b22; margin: 0 0 6px;
@@ -779,7 +779,7 @@
   .landing-divider::before, .landing-divider::after { content:''; flex:1; height:1px; background:#e1e8db; }
   .landing-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; width: min(380px, 92vw); }
   .landing-feature { background: rgba(255,255,255,0.7); border-radius: 12px; padding: 12px 8px; }
-  .landing-feature-icon { font-size: 1.4rem; margin-bottom: 4px; }
+  .landing-feature-icon { display: flex; align-items: center; justify-content: center; color: var(--accent-dark); margin-bottom: 4px; }
   .landing-feature-label { font-size: 0.72rem; font-weight: 700; color: #384032; line-height: 1.3; }
 
   /* ── Auth forms ── */
@@ -953,28 +953,28 @@ const i18n = {
     'auth.switch.login': 'Entrar',
     'auth.back': '← Voltar',
     // Menu
-    'menu.title': '⚽ Hexagol',
+    'menu.title': 'Hexagol',
     'menu.subtitle': 'Futebol de dados — estratégia por turnos',
-    'menu.online': '🌐 Jogar online',
+    'menu.online': 'Jogar online',
     'menu.online.desc': 'Jogue contra outra pessoa em qualquer parte do mundo.',
     'menu.local': '1 vs 1 local',
     'menu.local.desc': 'Dois jogadores compartilham o mesmo dispositivo e se alternam.',
-    'menu.ai': '🤖 Vs. Computador',
+    'menu.ai': 'Vs. Computador',
     'menu.ai.desc': 'Jogue sozinho contra um rival controlado pela máquina.',
-    'menu.tutorial': '🎓 Tutorial',
+    'menu.tutorial': 'Tutorial',
     'menu.tutorial.desc': 'Aprenda as regras passo a passo com uma partida guiada.',
-    'menu.quicktutorial': '🚀 Primeira partida',
+    'menu.quicktutorial': 'Primeira partida',
     'menu.quicktutorial.desc': 'Aprenda o básico e jogue sua primeira partida.',
-    'menu.league': '🏆 Liga / Torneio',
+    'menu.league': 'Liga / Torneio',
     'menu.league.desc': 'Monte um fixture de ida e volta entre vários times.',
     'menu.rules': 'Como jogar',
     'menu.rules.desc': 'Regras rápidas antes de começar sua primeira partida.',
-    'menu.leaderboard': '🏅 Ranking',
+    'menu.leaderboard': 'Ranking',
     'menu.leaderboard.desc': 'Os melhores jogadores por ELO no ranking global.',
-    'menu.training': '🧪 Treino livre',
+    'menu.training': 'Treino livre',
     'menu.training.desc': 'Mova jogadores e a bola livremente, sem turnos ou regras.',
-    'menu.donate': '❤️ Doações',
-    'menu.community': '💬 Comunidade',
+    'menu.donate': '️ Doações',
+    'menu.community': 'Comunidade',
     'menu.bug': '🐛 Reportar bug',
     // User chip
     'user.guest': 'Convidado',
@@ -1115,28 +1115,28 @@ const i18n = {
     'auth.switch.login': 'Iniciar sesión',
     'auth.back': '← Volver',
     // Menu
-    'menu.title': '⚽ Hexagol',
+    'menu.title': 'Hexagol',
     'menu.subtitle': 'Fútbol de dados — estrategia por turnos',
-    'menu.online': '🌐 Jugar online',
+    'menu.online': 'Jugar online',
     'menu.online.desc': 'Jugá contra otra persona en cualquier parte del mundo.',
     'menu.local': '1 vs 1 local',
     'menu.local.desc': 'Dos jugadores comparten el mismo dispositivo y se turnan.',
-    'menu.ai': '🤖 Vs. Computadora',
+    'menu.ai': 'Vs. Computadora',
     'menu.ai.desc': 'Jugá solo contra un rival manejado por la máquina.',
-    'menu.tutorial': '🎓 Tutorial',
+    'menu.tutorial': 'Tutorial',
     'menu.tutorial.desc': 'Aprendé las reglas paso a paso con un partido guiado.',
-    'menu.quicktutorial': '🚀 Primera partida',
+    'menu.quicktutorial': 'Primera partida',
     'menu.quicktutorial.desc': 'Aprendé lo básico y jugá tu primera partida.',
-    'menu.league': '🏆 Liga / Torneo',
+    'menu.league': 'Liga / Torneo',
     'menu.league.desc': 'Armá un fixture de ida y vuelta entre varios equipos.',
     'menu.rules': 'Cómo se juega',
     'menu.rules.desc': 'Reglas rápidas antes de empezar tu primer partido.',
-    'menu.leaderboard': '🏅 Tabla de líderes',
+    'menu.leaderboard': 'Tabla de líderes',
     'menu.leaderboard.desc': 'Los mejores jugadores por ELO a nivel global.',
-    'menu.training': '🧪 Entrenamiento libre',
+    'menu.training': 'Entrenamiento libre',
     'menu.training.desc': 'Mové jugadores y la pelota libremente, sin turnos ni reglas.',
-    'menu.donate': '❤️ Donaciones',
-    'menu.community': '💬 Comunidad',
+    'menu.donate': '️ Donaciones',
+    'menu.community': 'Comunidad',
     'menu.bug': '🐛 Reportar bug',
     // User chip
     'user.guest': 'Invitado',
@@ -1275,28 +1275,28 @@ const i18n = {
     'auth.switch.login': 'Log in',
     'auth.back': '← Back',
     // Menu
-    'menu.title': '⚽ Hexagol',
+    'menu.title': 'Hexagol',
     'menu.subtitle': 'Dice football — turn-based strategy',
-    'menu.online': '🌐 Play online',
+    'menu.online': 'Play online',
     'menu.online.desc': 'Play against someone anywhere in the world.',
     'menu.local': '1 vs 1 local',
     'menu.local.desc': 'Two players share the same device and take turns.',
-    'menu.ai': '🤖 vs Computer',
+    'menu.ai': 'vs Computer',
     'menu.ai.desc': 'Play alone against a machine-controlled opponent.',
-    'menu.tutorial': '🎓 Tutorial',
+    'menu.tutorial': 'Tutorial',
     'menu.tutorial.desc': 'Learn the rules step by step with a guided match.',
-    'menu.quicktutorial': '🚀 First match',
+    'menu.quicktutorial': 'First match',
     'menu.quicktutorial.desc': 'Learn the basics and play your first match.',
-    'menu.league': '🏆 League / Tournament',
+    'menu.league': 'League / Tournament',
     'menu.league.desc': 'Set up a home-and-away fixture between teams.',
     'menu.rules': 'How to play',
     'menu.rules.desc': 'Quick rules before your first match.',
-    'menu.leaderboard': '🏅 Leaderboard',
+    'menu.leaderboard': 'Leaderboard',
     'menu.leaderboard.desc': 'Top players by global ELO rating.',
-    'menu.training': '🧪 Free training',
+    'menu.training': 'Free training',
     'menu.training.desc': 'Move players and the ball freely, no turns or rules.',
-    'menu.donate': '❤️ Donate',
-    'menu.community': '💬 Community',
+    'menu.donate': '️ Donate',
+    'menu.community': 'Community',
     'menu.bug': '🐛 Report bug',
     // User chip
     'user.guest': 'Guest',
@@ -7242,7 +7242,7 @@ function renderLanding() {
 
   return `
   <div class="landing-screen">
-    <div class="landing-logo">⚽</div>
+    <img class="landing-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAgAAAAIACAYAAAD0eNT6AAAYfUlEQVR4nO3dLa8tx5UG4Lbln2FkGsXUijIKnZEuGF0DgzsgkUJMDKIBQUbGo4CQkAATQ98ZYBApGhBpgFEkS6ZG/h8ZcHxyvvZH9+6uqrVqPQ9LZF/vs7tqvW9X733usgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMB174x+AcB+7//sg3/0/m/++P0P5gckZgNDUCNCvRVlAeKxKWGQmQJ+LwUB+rPpoDFBfzvFANqxueBAwr49pQCOYSPBjYR9HEoBbGfTwEoCPw+FAK6zSeAMgT8PhQBesingJwK/DoUAFACKE/ooA1Rl4VOO0OccZYBKLHZKEPpspQwwOwucaQl9jqIMMCOLmqkIfVpTBpiFhUx6Qp9RlAEys3hJS/AThSJARhYtqQh9olMGyMJCJQXBTzaKANFZoIQl9JmFMkBEFiXhCH5mpQgQicVIGIKfKhQBIrAIGU7wU5UiwEgWH8MIfrijCDCCRUd3gh9OUwToyWKjG8EP6ygC9GCR0Zzgh9soArRkcdGM4IdjKAK0YFFxOMEPbSgCHMli4jCCH/pQBDiCRcRugh/GUATY493RL4DchD+MY/+xh/bITQweiMVpAFtZMGwi+CE2RYC1PAJgNeEP8dmnrKUpcpWBAjk5DeASi4OzBD/MQRHgFI8AOEn4wzzsZ07RCnnCoIC5OQ3gnhMA/kn4w/zsc+5pghgIUJTTgNqcABQn/KEu+782BaAwmx8wB+py/FOQDQ+c4pFALU4AihH+wDnmQy0KQCE2N3CNOVGH454CbGjgFh4JzM0JwOSEP3Ar82NuCsDEbF5gL3NkXo53JmTDAi14JDAXJwCTEf5AK+bLXBSAidicQGvmzDwUgEnYlEAv5s0cPM9JzkYERvK5gLxcuMSEP499+Pqjbv+t795+2+2/RXxKQE4uWlLCv5ae4X4UJaEWJSAfFywh4T+njCF/K+VgTkpALi5WMsJ/DpXCfi2lYA5KQB4uVCLCPy+Bv51CkJcSkIOLlITwz0PYt6MU5KEExOcCBSf4cxD6/SkDOSgCcbkwgQn/uAR+PApBXEpATC5KUMI/HqGfhzIQjxIQjwsSkPCPQ+jnpwzEoQTE4mIEI/xjEPzzUQRiUALicCECEf5jCf06lIGxlIAYXIQghP8YQh9lYAwlYDwXIADh35/g5zlFoD8lYCxv/mDCvy/BzzWKQF9KwDje+IGEfx9Cn1spA30oAWN40wcR/u0Jfo6iCLSnBPTnDR9A+Lcl+GlFEWhLCejLm92Z8G9H8NOLItCOEtCPN7oj4d+G4GcURaANJaCP90a/ALiV4Ge0+zWoCJCRltWJu//jCH6iUgSO4xSgvXdHv4AKhP9xhD+RWZ/HMTfb07Aas4iPYbCSjdOAYzgJaMcb25Dw30/wk50isJ8S0IZHAI0I//2EPzOwjvczT9vQqhqwWPcxMJmV04B9nAQcywnAwYT/PsKfmVnf+5ivx/J7AAjBYKQKvzuAKBynHEg73U7wU50isJ1HAcfwCOAgwn874Q/2wS3M22MoAAewGLcz9OCB/bCdubufY5SdLMJtDDq4zCOBbTwOuJ0TALoR/nCdfUIvCsAO7v7XM9RgPftlPXP4do5ObmTRrWOQwT4eCazjUcB2TgBuIPzXEf6wn320jrm8nQJAE4YWHMd+ogVHJhtpmZcZVNCWRwKXeRSwnhOADYT/ZcIf2rPPLjOn11MAVrKoLjOUoB/77TLzeh0FgN0MI+jPvmMvBWAFbfI8QwjGsf/OM7evUwCusIjOM3xgPPvwPPP7Mp+WvMDiOc3AgZh8Q+A03ww4zQkAmwh/iMv+ZAsF4Ax3/y8ZLhCfffqSeX6aAnCCxfKSoQJ52K8vmesvKQBcZZhAPvYt1ygAz2iJTxkikJf9+5T5/pQC8IjF8ZThAfnZx0+Z8w8UAE4yNGAe9jOnKAA/0QofGBYwH/v6gXl/RwHgCUMC5mV/85gCsGiD9wwHmJ99fsfcVwAsgp8YClCH/X6n+vwvXwAwDKAi+57SBaB6+wOornIOlC4AuAuAyuz/2soWgMqt757ND5gDdfOgZAGoerEfs+mBe+ZBzVwoWQCqs9mB58yFesoVgIot7zGbHDin+nyolg/lCkBl1Tc3cJ05UUepAlCt3QGwTaWcKFUAKtPqgbXMixrKFIBKre45mxnYqvLcqJIXZQpAVZU3MbCP+TG3EgWgSpsD4BgVcuO90S+AdrT3ur754qvXR/+Zrz5/8/boP5P4Pnz90fLd229HvwwaeGf0C2itQos7RfjPr0XI30o5mF/VEvDj9z9Mm5PT/mD3KhYA4T+fSGG/llIwn4olQAFIqmL4L4sCMIOMgX+NQpBfxQKwLPOWgCl/qHsVC4Dwz2vG0D9HGcirYglQAJIR/kRXKfCvUQhyUQLmMN0PdK9aARD+eQj+8xSBPKqVAAUgiWrhvywKQHRCfztlILZqBWBZ5isBU/0w96oVAOEf18jgPzJAZ/k5OFa1EqAABFct/JdFAYioV2BGCMdKPytPVSsAyzJXCZjmB7lXrQAI/zhaB2GmAPRe1FGtBCgAQQl/RmgVdjOFnPdobkpATlP8EPcUAHo7OtgqBJr3bD4KQE5T/BDLIvzp68gQqxxg3sd5KAH5pP8B7lUqAMJ/nKMCS1i95L3Nr1IJUAACUQBoSTj1473OSwHIJf0PsCzCn7b2BpIgup33Ph8lII/UL/6eAkALwicO1yIPBSCP1C9+WYQ/bewJHGHTjuuSgxKQQ9oXfq9KARD+/dwaMgKmH9coviolQAEYSAHgKEIlH9csLgUgvrQvfFmEP8c5ESS/WZbl3we8FI735bIs//38/1QC2lMCYnt39AuA0fxVvTW57lSXsrUsi7t/9rsSAL9ZnADM4uQJwGNOA9pxChCXEwBKcvfHY9YDFSkAgbn7b8Ow5xTrog1zLK6UBaDK8T/HM+S5xPrgVhlzKWUBqEBrPp7hXtOf//LVr7f889bJ8cyzmBQAStg61L/+v298AHAiWz/kpwRQQboCkPGYZStt+Vhbhvmrz9+89YnwOW29tkrAsSrMtWz5lK4AwBZbw7/layEGJQDuKADBVGjJvQh/zlECxjDfYklVALIdrzCO8OcaJYAWMuVUqgIAawh/1lICqOy90S+AB47H9hsZ/n/4+k/LX//+tyP/SJ751c9/sfz+k88O/TNfff7m7dp1880XX71WGvf58PVHZX49cHRpTgAyHaswhjt/buUkgCNlyas0BWB27v73Ef7spQT0Y97FoACQnvDnKEoAlaQoAFmOU26lDfch/FnDOulj9rmXIbdSFAA4Z+1dmKHOFmvXi1MAMlMASEv405ISwOzCF4AMxyh7zH4M1orwpwcloK3Z51/0/ApfAOBWwp8jWEfMSgEgHXdbRGRdko0CMNDsx18tOPpnBI8C2jEHxwldAKI/P6Ev4c9ISgC3iJxjoQvAzLTeNoQ/LVlfbZiHYygApOCuikysVzJQAAjP0T+ReBTALMIWgMjPTfZy3HU84U9P1tvxZp6LUfMsbAGAZVl3F2UYM8KadecUgMgUAAAoSAHobOZjrqO5+yc6pwDHMh/7ClkAoj4vAYBbRMy1kAUA3P2ThVMAslIACEf4k40SQEYKQEeebwFcZk72owAQirt/snIKQDbhCkDED0oAwF7R8i1cAZiVY61juPsnMuvzGOZlHwoAYTgepQLrnCgUANJwd0UG1ilZKACE4K6ISqx3IghVAKJ9QII43FWRifXKOZFyLlQBmJUPtFzmboiKrPvLzM32FAAAKEgBIDzHqWRk3RKdAsBQjkGpzPpnJAWgMc+x9nEXRWbW7z7mZ1thCkCkT0bSh7sfsA8qipJ3YQoAANCPAkBYjk+ZgXVMVAoAABSkADTkAyznee4JD+yH88zRdhQAQnJsykysZyJSAACgIAWA7hx3wkv2Bb2FKABRvhNJDI5LmZF1zWMRci9EAQAA+lIAAKAgBaARX105zXNOOM/+OM08bUMBIBTPSZmZ9U0kCgAAFKQAAEBBCgAAFKQA0I0POMF19gm9KACE4QNSVGCdE4UCAAAFDS8AEX4dIgD0Njr/hheAGfmlFQDHMlePpwAAQEEKAAAUpADQha82wXr2Cz0oAITgq1FUYr0TgQIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAIAAAUpAABQkAJACN988dXr0a8BerHeiUABoItXn795O/o1QBb2Cz0oAABQkAIAAAUpAA189/bb0S8BYCrm6vGGF4Afv//hndGvAQB6G51/wwsAANCfAkAYvhpFBdY5USgAdOOrTXCdfUIvCgAAFKQAAEBBCgAAFKQAEIoPSDEz65tIFIBG/NKK03zACc6zP04zT9tQAACgIAUAAAoKUQBG/zpEYvGclBlZ1zwWIfdCFABq8ZwTXrIv6E0BAICCFABCclzKTKxnIlIAGvLVlfMcd8ID++E8c7QdBQAAClIACMuxKTOwjolKAQCAgsIUgAjfiaQvzz3BPqgoSt6FKQCz8gGWfRyfkpn1u4/52ZYCwFDufqjM+mckBYDw3EWRkXVLdAoAABSkAHTgOdZljkGpyLq/zNxsL1QBiPLJSOJxnEom1ivnRMq5UAWAutwNUYn1TgQKAGm4qyID65QsFADCcFdEBdY5USgAnfhAyzHcXRGZ9XkM87KPcAUg0gckAOAo0fItXAGgtjXHo+6yiGjNunT8TyQKQEeOtQAuMyf7UQAIxykA2bj7JyMFgJCUALIQ/mQVsgBE+6AEAOwRMddCFoCZeb61nlMAonP3fyzzsS8FAAAKUgAIzSkAUbn7J7uwBSDi85KjOOY6nhJAT9bb8Waei1HzLGwBgHtr76IMZXpYu87c/ROdAkAKhimZWK9koAAMMvNx10hOAWjJ+mrDPBwjdAGI+tyEMTwKYCRH/9wico6FLgCz03q3UwIYQfi3Yw6OowCQjiFLRNYl2SgATMspAEewjphV+AIQ+fnJERx/3cajAHpw9N/W7PMven6FLwBwjhJAS8Kf2SkApKYE0ILwp4IUBSD6Mcpesx+DRaEEsIZ10sfscy9DbqUoAHDJlrsww51LtqwPd/9kpwAEMXsbbk0JYC/h3495F0OaApDhOIWxlABuJfw5Upa8SlMAKtCK91MC2Er492XOxaEAMB0lgLWEP5WlKgBZjlUYTwngGuFPC5lyKlUBqMDx2HGUAM4R/mOYb7EoAExNCeA54Q930hWATMcrt9KSj7W1BCgCc9p6bYX/sSrMtWz5lK4AwC22DvOPf/nqf1q9FvrbWuqEPxUoAEFVaMu9Geo1/fZf33y55Z+3To5nnsWUsgBkO2YhDsOdS6wPbpUxl1IWgCq05jYMeU6xLtowx+JSACjJsOcx64GK3hv9Am714/c/vPP+zz74x+jX0dp3b79dPnz90eiXMaX7oe9T/3UJ/raq3P1nPP5fFicAIASKct2pLnUByNq6tqrSokcSBrW43u1VmVuZcyjtIwA4mkcC8xP88CD1CUAlVdp0BLeGxO8+/vSPykNbv//ks/+69d8V/v2YVzmkPbp4rMKHAe/5QGAfv/23/1g+/uWrrf/aH5dl+d/7/yFwjvOoWP3Lsiz/ufFf//LV529+ffBL4oxK4Z/5+H9ZPAKAZu5DSxG43REnKn/+y1fCH06YogBU+UrgsvhaYEaPQ0wZuM5jlLzc/ecyRQGALJwKnCf4oS8FICGnAPk5Fbgj9OdR6e5/FtMUgEqPAZZFCZhJtTIg9OdTLfxnOP5flokKAMxg1jIg9CGeqQqAUwBm8jw0MxUCgV+Hu/+8pioAFSkBcfzh6z999te//+2zZWkTgKf+zAiloFfYv/r8zdtf/fwXy+8/+azHf44VqoX/bKYrANVOAYip168VvvTnH1kORt7RRyg5sCxz3f0vy4QFoCKnAHGN/PsFsh/DC/7Y3P3nN2UBcApANI/DLHswtyT0iWq2u/9lmbQAVOQUIA9/6+BLgj8Xd/9zmLYAVDwFUAJyeR56lQqBwM+rYvjPePe/LBMXgKqUgLxmf0wg9POrGP4zm7oAVDwFYA4znA4IfGYw693/skxeAKpyCjCfU2EaqRQI+/m5+5/P9AWg6imAEjC/S6HbohwI+bqqhv/Md//LUqAAVKYE1CWsOUrV8K/g3dEvoIfZWxwAx6qQGyUKQGXaO3Ar82NuZQpAhTZ3jk0MbFV5blTJizIFoLrKmxnYxryooVQBqNLqALhNpZzwLYBCfCugrd99/Onyu48/Hf0yYBd3/3WUOgFYllrt7hSbGzin+nyolg/lCgA2OfCSuVBPyQJQreWdYrMD98yDmrlQsgAsS82L/ZxND5gDdfOgbAHgjs0Pddn/tZUuAFVbHwB3KudA6QLAHXcBUI99T/kCULn9PWYYQB32+53q8798AVgWi+CeoQDzs8/vmPsKAM8YDjAv+5vHFICfaIMPDAmYj339wLy/owBwkmEB87CfOUULeub9n33wj9GvIRJ/eRDkJvyfcvf/wAnAMxbHU4YH5GX/PmW+P6UAcJUhAvnYt1yjAJygJb5kmEAe9utL5vpLCsAZFstLhgrEZ5++ZJ6fpgCwieECcdmfbKEVXeFbAef5hgDEIPjPc/d/nhOAKyye8wwdGM8+PM/8vkwBWMEiOs/wgXHsv/PM7esUAHYzhKA/+469FICVtMnLDCPox367zLxeRwHYwKK6zFCC9uyzy8zp9bxRN/DNgOt8QwCOJfivE/7bOAGgCcMKjmM/0YICcAMtcx1DC/azj9Yxl7fzhu3gUcB6HgnANoJ/PeF/GycAO1h06xlmsJ79sp45fDsFgG4MNbjOPqEXzekAHgVs55EAPCX4t3P3v48TgANYhNsZdvDAftjO3N1PATiIxbidoQf2wS3M22N4Ew/mccBtPBKgGsF/G+F/nPdGvwBYlodhqAgwO8FPFB4BHEw73cdwZGbW9z7m67G8mY14FLCf0wBmIfj3E/7HcwLQiMW6n6HJDKzj/czTNrypjTkJOIbTALIR/McQ/u14YztQAo6jCBCd4D+O8G/LI4AOLOLjGK5EZn0ex9xszxvckZOAYzkNIArBfyzh34ffA0BafncAowl+MtOyOnMK0I4iQC+Cvx13//14owdQAtpSBGhF8Lcl/PvyZg+iBLSnCHAUwd+e8O/PGz6QEtCHIsCtBH8fwn8Mb/pgSkBfygDXCP2+hP843vgAlID+FAGeE/z9Cf+xvPlBKAFjKAII/jGE/3guQCBKwFjKQB1CfyzhH4OLEIwSEIMyMB+hH4Pwj8OFCEgJiEMRyE/wxyH8Y3ExglIC4lEG8hD68Qj/eFyQwJSAuJSBeIR+XMI/JhclOCUgB4WgP4Gfg/CPy4VJQhHIQxloR+jnIfjjc4ESUQLyUgq2E/Z5Cf8cXKRklIA5KAQvCfw5CP88XKiElIA5VSoFwn5Owj8XFyspJaCWjOVAyNci/PNxwRJTAnisZ0kQ7jwm/HNy0ZJTAoCRhH9eLtwkFAGgJ8Gf37ujXwDHsBmBXsybOSgAE7EpgdbMmXkoAJOxOYFWzJe5uJgT87kA4AiCf05OACZm0wJ7mSPzUgAmZ/MCtzI/5ubiFuKRALCG4K/BCUAhNjVwjTlRhwJQjM0NnGM+1OJiF+aRALAsgr8qJwCF2fSAOVCXAlCczQ912f+1ufj8k0cCUIPgZ1mcAPCIoQDzs8+5ZyFwktMAmIvg5zknAJxkWMA87GdOsSi4ymkA5CT4ucTiYDVFAHIQ/KzhEQCrGSoQn33KWhYKN3EaALEIfrayYNhFEYCxBD+38giAXQwfGMf+Yw+Lh8M4DYA+BD9HsIg4nCIAbQh+jmQx0YwiAMcQ/LRgUdGcIgC3Efy0ZHHRjSIA6wh+erDI6E4RgNMEPz1ZbAyjCMAdwc8IFh3DKQJUJfgZyeIjDEWAKgQ/EViEhKMIMCvBTyQWI2EpAsxC8BORRUkKygDZCH2is0BJRREgOsFPFhYqaSkDRCH0yciiJT1FgFEEP5lZvExFGaA1oc8sLGSmpQxwFKHPjCxqSlAG2EroMzsLnHKUAc4R+lRisVOaMoDQpyoLH36iDNQh9EEBgLMUgnkIfHjJpoCVFII8BD5cZ5PAjRSCOAQ+bGfTwIGUgvaEPRzDRoLGlILbCXtox+aCQRSDB4Ie+rPpIKiZCoKAh3hsSpjAiLIg1AEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAyvl/O6qYN21O56QAAAAASUVORK5CYII=" alt="Hexagol" />
     <h1 class="landing-title">Hexagol</h1>
     <p class="landing-subtitle">${t('landing.subtitle')}</p>
     <div class="landing-preview">${previewSvg}</div>
@@ -7261,20 +7261,20 @@ function renderLanding() {
     </div>
     <div class="landing-features">
       <div class="landing-feature">
-        <div class="landing-feature-icon">🌐</div>
+        <div class="landing-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg></div>
         <div class="landing-feature-label">${t('landing.feature.online')}</div>
       </div>
       <div class="landing-feature">
-        <div class="landing-feature-icon">🤖</div>
+        <div class="landing-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="11" rx="2"/><circle cx="8.5" cy="14.5" r="1.5"/><circle cx="15.5" cy="14.5" r="1.5"/><path d="M12 9V5"/><circle cx="12" cy="3.5" r="1.5"/></svg></div>
         <div class="landing-feature-label">${t('landing.feature.ai')}</div>
       </div>
       <div class="landing-feature">
-        <div class="landing-feature-icon">🏆</div>
+        <div class="landing-feature-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h3a2 2 0 0 1-2 4h-1"/><path d="M7 4H4a2 2 0 0 0 2 4h1"/></svg></div>
         <div class="landing-feature-label">${t('landing.feature.league')}</div>
       </div>
     </div>
     <button id="lang-toggle-btn" style="margin-top:16px;background:none;border:1px solid #c8d4c0;border-radius:999px;padding:5px 14px;font-size:0.8rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
-      🌐 ${t('landing.lang')}
+      ${t('landing.lang')}
     </button>
     <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
       ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : lang === 'pt' ? '© 2026 Hexagol. Todos os direitos reservados.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
@@ -7332,24 +7332,36 @@ function renderMainMenu() {
         <div class="user-chip-name">${userProfile.username}</div>
         <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D'}</div>
       </div>
-      <button data-menu="match-history" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">📋</button>
-      <button data-menu="achievements" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">🏅</button>
-      <button id="view-my-profile-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;">👤</button>
-      <button id="friends-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:4px 10px;font-size:0.72rem;color:#6b7a64;cursor:pointer;font-family:inherit;position:relative;">👥<span id="friends-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;border-radius:999px;font-size:0.6rem;padding:1px 4px;min-width:14px;text-align:center;"></span></button>
+      <button data-menu="match-history" title="${lang === 'en' ? 'History' : lang === 'pt' ? 'Histórico' : 'Historial'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
+      </button>
+      <button data-menu="achievements" title="${lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h3a2 2 0 0 1-2 4h-1"/><path d="M7 4H4a2 2 0 0 0 2 4h1"/></svg>
+      </button>
+      <button id="view-my-profile-btn" title="${lang === 'en' ? 'Profile' : 'Perfil'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
+      </button>
+      <button id="friends-btn" title="${lang === 'en' ? 'Friends' : 'Amigos'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;position:relative;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3-5 7-5s7 1.7 7 5"/><circle cx="17" cy="8" r="2.5"/><path d="M17 13c2.8.3 5 1.8 5 5"/></svg>
+        <span id="friends-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;border-radius:999px;font-size:0.6rem;padding:1px 4px;min-width:14px;text-align:center;"></span>
+      </button>
       <button class="user-chip-logout" id="logout-btn" title="${t('user.logout')}">${t('user.logout')}</button>
     </div>` : isGuest ? `
     <div class="user-chip" style="cursor:pointer;" id="guest-upgrade-btn">
-      <div class="user-chip-avatar" style="background:#9aa593;">👤</div>
+      <div class="user-chip-avatar" style="background:#9aa593;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg></div>
       <div>
         <div class="user-chip-name">${t('user.guest')}</div>
         <div class="user-chip-elo">${t('user.guest.desc')}</div>
       </div>
     </div>` : ''}
-    <h1>${t('menu.title')}</h1>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:2px;">
+      <img src="data:image/png;base64,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" alt="Hexagol" style="width:36px;height:36px;" />
+      <h1 style="margin:0;">${t('menu.title')}</h1>
+    </div>
     <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:#f0f4ff;">
-        <div class="t">🎮 ${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</div>
+        <div class="t">${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</div>
         <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : lang === 'pt' ? 'Online, local, vs IA, liga e mais.' : 'Online, local, vs IA, liga y más.'}</div>
       </button>
       <button class="menu-btn" data-menu="quick-tutorial" style="border-color:#e8a020;background:#fffbf0;">
@@ -7371,20 +7383,20 @@ function renderMainMenu() {
     </div>
     <div style="margin-top:14px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
       <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#384032;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        ❤️ ${lang === 'en' ? 'Donate' : lang === 'pt' ? 'Doações' : 'Donaciones'}
+         style="display:inline-flex;align-items:center;gap:6px;background:#d9a441;border:1px solid #d9a441;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
+        ${lang === 'en' ? 'Donate' : lang === 'pt' ? 'Doações' : 'Donaciones'}
       </a>
       <a href="javascript:void(0)" onclick="showCommunityModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        💬 ${t('menu.community')}
+         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
+        ${t('menu.community')}
       </a>
       <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
          onclick="trackEvent('feedback_click')"
-         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        📝 Feedback
+         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        Feedback
       </a>
-      <button id="menu-lang-btn" style="background:none;border:1px solid #e1e8db;border-radius:999px;padding:6px 14px;font-size:0.78rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
-        🌐 ${t('landing.lang')}
+      <button id="menu-lang-btn" style="background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        ${t('landing.lang')}
       </button>
     </div>
     <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
@@ -7398,19 +7410,19 @@ function renderMainMenu() {
 function renderPlayMenu() {
   return `
   <div class="menu-screen">
-    <h1>🎮 ${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</h1>
+    <h1>${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</h1>
     <div class="subtitle">${lang === 'en' ? 'Choose a game variant.' : lang === 'pt' ? 'Escolha uma variante do jogo.' : 'Elegí una variante de juego.'}</div>
     <div class="menu-grid">
       <button class="menu-btn" data-menu="variant-classic" style="border-color:var(--accent);background:#f0f4ff;">
-        <div class="t">🏟 ${lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico'}</div>
+        <div class="t">${lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico'}</div>
         <div class="d">${lang === 'en' ? 'The original game. 11vs11, full board, all rules.' : lang === 'pt' ? 'O jogo original. 11vs11, campo completo, todas as regras.' : 'El juego original. 11vs11, cancha completa, todas las reglas.'}</div>
       </button>
       <button class="menu-btn" data-menu="variant-compact">
-        <div class="t">⚡ ${lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto'}</div>
+        <div class="t">${lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto'}</div>
         <div class="d">${lang === 'en' ? 'Smaller board (17×23). Faster, more dynamic matches.' : lang === 'pt' ? 'Campo menor (17×23). Partidas mais rápidas e dinâmicas.' : 'Cancha más chica (17×23). Partidos más rápidos y dinámicos.'}</div>
       </button>
       <button class="menu-btn" data-menu="variant-quick">
-        <div class="t">🎯 ${lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido'}</div>
+        <div class="t">${lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido'}</div>
         <div class="d">${lang === 'en' ? 'Split the dice between multiple players in one turn.' : lang === 'pt' ? 'Divida o dado entre vários jogadores em um turno.' : 'Dividí el dado entre varios jugadores en un turno.'}</div>
       </button>
       <button class="menu-btn" data-menu="back">
@@ -7425,9 +7437,9 @@ function renderVariantMenu(variant) {
   setupBoardSize = variant === 'compact' ? 'compact' : 'classic';
 
   const names = {
-    classic: { es: '🏟 Clásico', en: '🏟 Classic', pt: '🏟 Clássico' },
-    compact: { es: '⚡ Compacto', en: '⚡ Compact', pt: '⚡ Compacto' },
-    quick:   { es: '🎯 Rápido',  en: '🎯 Quick',   pt: '🎯 Rápido'   },
+    classic: { es: 'Clásico', en: 'Classic', pt: 'Clássico' },
+    compact: { es: 'Compacto', en: 'Compact', pt: 'Compacto' },
+    quick:   { es: 'Rápido',  en: 'Quick',   pt: 'Rápido'   },
   };
   const name = names[variant][lang] || names[variant].es;
   const isClassic = variant === 'classic';
@@ -7533,7 +7545,7 @@ function renderCustomKitEditor() {
 
   return `
   <div class="menu-screen">
-    <h1>🎨 ${jerseyTitle}</h1>
+    <h1>${jerseyTitle}</h1>
     <div class="subtitle">${subtitle}</div>
     <div class="kit-editor-preview">
       ${jerseyDot(previewTeam, 64)}
@@ -7610,15 +7622,15 @@ function renderOnlineSetup() {
     </div>
     <div class="menu-grid">
       <button class="menu-btn" id="online-create-btn" style="background:var(--accent); border-color:var(--accent);">
-        <div class="t" style="color:#fff;">🏠 ${t('online.create')}</div>
+        <div class="t" style="color:#fff;">${t('online.create')}</div>
         <div class="d" style="color:rgba(255,255,255,0.75);">${createDesc}</div>
       </button>
       <button class="menu-btn" id="online-quick-btn">
-        <div class="t">⚡ ${t('online.quick')}</div>
+        <div class="t">${t('online.quick')}</div>
         <div class="d">${quickDesc}</div>
       </button>
       <button class="menu-btn" data-menu="online-join">
-        <div class="t">🔑 ${t('online.join')}</div>
+        <div class="t">${t('online.join')}</div>
         <div class="d">${joinDesc}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -7656,7 +7668,7 @@ function renderOnlineWaiting() {
   if (onlineIsHost) {
     return `
     <div class="menu-screen" style="text-align:center;">
-      <h1>🏠 ${t('online.waiting.title')}</h1>
+      <h1>${t('online.waiting.title')}</h1>
       <div class="subtitle">${lang === 'en' ? 'Share this code or link with your opponent.' : lang === 'pt' ? 'Compartilhe este código ou link com seu adversário.' : 'Compartí este código o link con tu rival.'}</div>
       <div class="room-code-display" id="room-code-display">${onlineRoomId || '...'}</div>
       <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 16px;flex-wrap:wrap;">
@@ -7677,7 +7689,7 @@ function renderOnlineWaiting() {
   }
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>🔗 ${lang === 'en' ? 'Connecting...' : lang === 'pt' ? 'Conectando...' : 'Conectando...'}</h1>
+    <h1>${lang === 'en' ? 'Connecting...' : lang === 'pt' ? 'Conectando...' : 'Conectando...'}</h1>
     <div class="subtitle">${connectingDesc}</div>
     <div style="margin: 30px 0;">
       <span class="online-badge waiting"><span class="online-dot"></span> ${lang === 'en' ? 'Connecting...' : lang === 'pt' ? 'Conectando...' : 'Conectando...'}</span>
@@ -7691,7 +7703,7 @@ function renderOnlineWaiting() {
 function renderOnlineSearching() {
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>⚡ ${lang === 'en' ? 'Finding opponent' : lang === 'pt' ? 'Procurando adversário' : 'Buscando rival'}</h1>
+    <h1>${lang === 'en' ? 'Finding opponent' : lang === 'pt' ? 'Procurando adversário' : 'Buscando rival'}</h1>
     <div class="subtitle">${lang === 'en' ? 'Connecting you with someone available...' : lang === 'pt' ? 'Conectando você com alguém disponível...' : 'Conectándote con alguien disponible...'}</div>
     <div style="margin: 30px 0;">
       <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.searching')}</span>
@@ -7707,7 +7719,7 @@ function renderOnlineReconnect() {
   const declineDesc = lang === 'en' ? 'That match will be forfeited for your opponent.' : lang === 'pt' ? 'Essa partida será dada como abandono para seu adversário.' : 'Esa partida queda abandonada para tu rival.';
   return `
   <div class="menu-screen" style="text-align:center;">
-    <h1>🔄 ${t('reconnect.title')}</h1>
+    <h1>${t('reconnect.title')}</h1>
     <div class="subtitle">${t('reconnect.desc')}</div>
     <div class="menu-grid" style="margin-top:18px;">
       <button class="menu-btn" id="reconnect-accept-btn" style="background:var(--accent); border-color:var(--accent);">
@@ -8109,7 +8121,7 @@ function renderAchievementsScreen() {
 
   return `
   <div class="menu-screen" style="max-width:520px;">
-    <h1>🏅 ${title}</h1>
+    <h1>${title}</h1>
     <div style="font-size:0.78rem;color:#6b7a64;margin-bottom:16px;text-align:center;">${progress}</div>
     <div>${rows}</div>
     <div class="menu-grid" style="margin-top:16px;">
@@ -8302,10 +8314,10 @@ function renderChooseUsername() {
 
 async function renderMatchHistory() {
   const app = document.getElementById('app');
-  app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : lang === 'pt' ? 'Carregando...' : 'Cargando...'}</div></div>`;
+  app.innerHTML = `<div class="menu-screen"><h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : lang === 'pt' ? 'Carregando...' : 'Cargando...'}</div></div>`;
 
   if (!currentUser || currentUser.isAnonymous) {
-    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
+    app.innerHTML = `<div class="menu-screen"><h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
       <p style="color:#6b7a64;text-align:center;">${lang === 'en' ? 'You need an account to see your match history.' : lang === 'pt' ? 'Você precisa de uma conta para ver seu histórico.' : 'Necesitás una cuenta para ver tu historial.'}</p>
       <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
     document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
@@ -8339,7 +8351,7 @@ async function renderMatchHistory() {
 
     app.innerHTML = `
     <div class="menu-screen" style="max-width:560px;">
-      <h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
+      <h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
       <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;text-align:center;">${lang === 'en' ? 'Last 20 matches' : lang === 'pt' ? 'Últimas 20 partidas' : 'Últimas 20 partidas'}</div>
       <div>${rows}</div>
       <div class="menu-grid" style="margin-top:16px;">
@@ -8350,7 +8362,7 @@ async function renderMatchHistory() {
       currentMenuView = 'main'; render();
     });
   } catch (e) {
-    app.innerHTML = `<div class="menu-screen"><h1>📋 ${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
+    app.innerHTML = `<div class="menu-screen"><h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
       <p style="color:#9a2f24;text-align:center;">${lang === 'en' ? 'Could not load history.' : lang === 'pt' ? 'Não foi possível carregar o histórico.' : 'No se pudo cargar el historial.'}</p>
       <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
     document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
@@ -8539,9 +8551,9 @@ async function sendChallenge() {
 
 function renderChallengeSetup() {
   const variants = [
-    { id: 'classic', label: lang === 'en' ? '🏟 Classic' : lang === 'pt' ? '🏟 Clássico' : '🏟 Clásico' },
-    { id: 'compact', label: lang === 'en' ? '⚡ Compact' : lang === 'pt' ? '⚡ Compacto' : '⚡ Compacto' },
-    { id: 'quick', label: lang === 'en' ? '🎯 Quick' : lang === 'pt' ? '🎯 Rápido' : '🎯 Rápido' },
+    { id: 'classic', label: lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico' },
+    { id: 'compact', label: lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto' },
+    { id: 'quick', label: lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido' },
   ];
   const teamOptions = TEAMS.map((t, i) => `<option value="${i}" ${i === challengeSetupHomeTeamIdx ? 'selected' : ''}>${t.name}</option>`).join('');
   const durationBtns = [2, 5, 10, 20, 30, 45].map(m =>
@@ -8551,7 +8563,7 @@ function renderChallengeSetup() {
 
   return `
   <div class="menu-screen" style="max-width:480px;">
-    <h1>⚔️ ${lang === 'en' ? 'Challenge setup' : lang === 'pt' ? 'Configurar desafio' : 'Configurar desafío'}</h1>
+    <h1>️ ${lang === 'en' ? 'Challenge setup' : lang === 'pt' ? 'Configurar desafio' : 'Configurar desafío'}</h1>
     <div class="setup-fields">
       <div>
         <span class="field-label">${lang === 'en' ? 'Game variant' : lang === 'pt' ? 'Variante' : 'Variante'}</span>
@@ -8571,7 +8583,7 @@ function renderChallengeSetup() {
     </div>
     <div class="menu-grid" style="margin-top:20px;">
       <button class="menu-btn" id="send-challenge-btn" style="border-color:var(--accent);background:#f0f4ff;">
-        <div class="t">⚔️ ${lang === 'en' ? 'Send challenge' : lang === 'pt' ? 'Enviar desafio' : 'Enviar desafío'}</div>
+        <div class="t">️ ${lang === 'en' ? 'Send challenge' : lang === 'pt' ? 'Enviar desafio' : 'Enviar desafío'}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
@@ -8584,9 +8596,9 @@ function renderChallengeGuestSetup() {
   if (!challengeGuestData) return `<div class="menu-screen"><div class="subtitle">Error</div></div>`;
   const d = challengeGuestData;
   const variantNames = {
-    classic: lang === 'en' ? '🏟 Classic' : lang === 'pt' ? '🏟 Clássico' : '🏟 Clásico',
-    compact: lang === 'en' ? '⚡ Compact' : lang === 'pt' ? '⚡ Compacto' : '⚡ Compacto',
-    quick: lang === 'en' ? '🎯 Quick' : lang === 'pt' ? '🎯 Rápido' : '🎯 Rápido',
+    classic: lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico',
+    compact: lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto',
+    quick: lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido',
   };
   const modeLabel = d.targetGoals
     ? `${lang === 'en' ? 'First to' : lang === 'pt' ? 'Primeiro a' : 'Primero en'} ${d.targetGoals} ${lang === 'en' ? 'goals' : 'goles'}`
@@ -8595,7 +8607,7 @@ function renderChallengeGuestSetup() {
 
   return `
   <div class="menu-screen" style="max-width:480px;">
-    <h1>⚔️ ${lang === 'en' ? 'Accept challenge' : lang === 'pt' ? 'Aceitar desafio' : 'Aceptar desafío'}</h1>
+    <h1>️ ${lang === 'en' ? 'Accept challenge' : lang === 'pt' ? 'Aceitar desafio' : 'Aceptar desafío'}</h1>
     <div style="background:#f0f4ee;border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:0.85rem;">
       <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(d.fromUsername)} ${lang === 'en' ? 'challenged you' : lang === 'pt' ? 'te desafiou' : 'te desafió'}</div>
       <div style="color:#6b7a64;">${variantNames[d.gameVariant] || 'Clásico'} · ${modeLabel}</div>
@@ -8605,10 +8617,10 @@ function renderChallengeGuestSetup() {
     </div>
     <div class="menu-grid" style="margin-top:20px;">
       <button class="menu-btn" id="accept-challenge-btn" style="border-color:var(--accent);background:#f0f4ff;">
-        <div class="t">✓ ${lang === 'en' ? 'Join match' : lang === 'pt' ? 'Entrar na partida' : 'Entrar a la partida'}</div>
+        <div class="t">${lang === 'en' ? 'Join match' : lang === 'pt' ? 'Entrar na partida' : 'Entrar a la partida'}</div>
       </button>
       <button class="menu-btn" id="decline-challenge-btn">
-        <div class="t">✕ ${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</div>
+        <div class="t">${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</div>
       </button>
     </div>
   </div>`;
@@ -9217,7 +9229,7 @@ function renderLeagueSetup() {
 
   return `
   <div class="menu-screen" style="max-width:680px;">
-    <h1>🏆 ${lang === 'en' ? 'League setup' : lang === 'pt' ? 'Configurar Liga' : 'Configurar Liga'}</h1>
+    <h1>${lang === 'en' ? 'League setup' : lang === 'pt' ? 'Configurar Liga' : 'Configurar Liga'}</h1>
     <div class="subtitle">${lang === 'en' ? 'Choose teams and match duration. Home and away format.' : lang === 'pt' ? 'Escolha os times e a duração das partidas. Formato ida e volta.' : 'Elige los equipos y la duración de cada partido. Se juega ida y vuelta.'}</div>
     <div class="setup-row">
       <div>
@@ -9239,7 +9251,7 @@ function renderLeagueSetup() {
     ${hasDuplicates ? `<p style="color:#9a2f24; font-size:0.8rem; text-align:center; margin-top:8px;">${dupMsg}</p>` : ''}
     <div class="menu-grid" style="margin-top:16px;">
       <button class="menu-btn" id="start-league-btn" style="background:var(--accent); border-color:var(--accent); ${(!allSelected || hasDuplicates) ? 'opacity:0.5; pointer-events:none;' : ''}">
-        <div class="t" style="color:#fff;">🏆 ${lang === 'en' ? 'Start league →' : lang === 'pt' ? 'Começar liga →' : 'Comenzar liga →'}</div>
+        <div class="t" style="color:#fff;">${lang === 'en' ? 'Start league →' : lang === 'pt' ? 'Começar liga →' : 'Comenzar liga →'}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
     </div>
@@ -11431,22 +11443,22 @@ function showCommunityModal() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">💬 ${lang === 'en' ? 'Community' : lang === 'pt' ? 'Comunidade' : 'Comunidad'}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">${lang === 'en' ? 'Community' : lang === 'pt' ? 'Comunidade' : 'Comunidad'}</div>
       <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose where to connect' : lang === 'pt' ? 'Escolha onde se conectar' : 'Elegí dónde conectarte'}</div>
       <a href="https://discord.gg/ndFWh5QVU8" target="_blank" rel="noopener"
          onclick="trackEvent('discord_community_click');document.getElementById('community-modal').remove()"
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
-        🎮 Discord
+        Discord
       </a>
       <a href="https://chat.whatsapp.com/DSUWimZMKPR01m09Gop2nA" target="_blank" rel="noopener"
          onclick="trackEvent('whatsapp_community_click');document.getElementById('community-modal').remove()"
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
-        💬 WhatsApp
+        WhatsApp
       </a>
       <a href="https://www.reddit.com/r/Hexagol/" target="_blank" rel="noopener"
          onclick="trackEvent('reddit_community_click');document.getElementById('community-modal').remove()"
          style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
-        🟠 Reddit — r/Hexagol
+        Reddit — r/Hexagol
       </a>
       <button onclick="document.getElementById('community-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
     </div>`;
@@ -11462,7 +11474,7 @@ function showDonateModal() {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
     <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">❤️ ${lang === 'en' ? 'Support Hexagol' : lang === 'pt' ? 'Apoie o Hexagol' : 'Apoyá Hexagol'}</div>
+      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">${lang === 'en' ? 'Support Hexagol' : lang === 'pt' ? 'Apoie o Hexagol' : 'Apoyá Hexagol'}</div>
       <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose your currency' : lang === 'pt' ? 'Escolha sua moeda' : 'Elegí tu moneda'}</div>
       <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('cafecito_click',{source:'donate_modal'});document.getElementById('donate-modal').remove()"
