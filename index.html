@@ -6443,13 +6443,15 @@ function handleTutorialAction(userAction) {
       currentMenuView = 'main';
       setState(getInitialState());
       setState({ toastToShow: { title: lang === 'en' ? 'Tutorial complete!' : lang === 'pt' ? 'Tutorial concluído!' : '¡Tutorial completado!', description: lang === 'en' ? 'You are ready to play. Choose a game mode.' : lang === 'pt' ? 'Você está pronto para jogar. Escolha um modo de jogo.' : 'Ya estás listo para jugar. Elige un modo de juego.' } });
-      // Notify via Discord webhook
-      const username = userProfile?.username || (currentUser?.isAnonymous ? 'Invitado' : currentUser?.email || 'Desconocido');
-      fetch('https://discord.com/api/webhooks/1527085809487057048/i87E-iXVuId4qGMCS_WNTSrwQMc1sMmvGw5gEUj3omG6O67myw49xoqx_nVBFGzsElQh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `🎓 **Tutorial completado** — ${username} terminó el tutorial. ¡Buen momento para desafiarlo!` }),
-      }).catch(() => {});
+      // Notify via Discord webhook — only for registered users (guests can't be challenged)
+      if (currentUser && !currentUser.isAnonymous) {
+        const username = userProfile?.username || currentUser?.email || 'Desconocido';
+        fetch('https://discord.com/api/webhooks/1527085809487057048/i87E-iXVuId4qGMCS_WNTSrwQMc1sMmvGw5gEUj3omG6O67myw49xoqx_nVBFGzsElQh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: `🎓 **Tutorial completado** — ${username} terminó el tutorial. ¡Buen momento para desafiarlo!` }),
+        }).catch(() => {});
+      }
       return;
     }
     setState(s2 => ({ ...advanceTutorial(s2), isTutorialAnimating: false }));
@@ -7554,7 +7556,7 @@ function renderLanding() {
         <div class="landing-feature-label">${t('landing.feature.league')}</div>
       </div>
     </div>
-    <button id="lang-toggle-btn" style="margin-top:16px;background:none;border:1px solid #c8d4c0;border-radius:999px;padding:5px 14px;font-size:0.8rem;color:#6b7a64;cursor:pointer;font-family:inherit;">
+    <button id="lang-toggle-btn" style="margin-top:16px;background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
       ${t('landing.lang')}
     </button>
     <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
@@ -7675,6 +7677,11 @@ function renderMainMenu() {
          onclick="trackEvent('feedback_click')"
          style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
         Feedback
+      </a>
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform?usp=header" target="_blank" rel="noopener"
+         onclick="trackEvent('bug_report_click')"
+         style="display:inline-flex;align-items:center;gap:6px;background:#dc2626;border:1px solid #dc2626;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        ${lang === 'en' ? 'Report bug' : lang === 'pt' ? 'Reportar bug' : 'Reportar bug'}
       </a>
       <button id="menu-lang-btn" style="background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
         ${t('landing.lang')}
@@ -10813,12 +10820,14 @@ function wireEvents() {
       render();
     } else {
       trackEvent('tutorial_complete', { type: 'quick' });
-      const username = userProfile?.username || (currentUser?.isAnonymous ? 'Invitado' : currentUser?.email || 'Desconocido');
-      fetch('https://discord.com/api/webhooks/1527085809487057048/i87E-iXVuId4qGMCS_WNTSrwQMc1sMmvGw5gEUj3omG6O67myw49xoqx_nVBFGzsElQh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: `🚀 **Primera partida completada** — ${username} completó el tutorial rápido. ¡Buen momento para desafiarlo!` }),
-      }).catch(() => {});
+      if (currentUser && !currentUser.isAnonymous) {
+        const username = userProfile?.username || currentUser?.email || 'Desconocido';
+        fetch('https://discord.com/api/webhooks/1527085809487057048/i87E-iXVuId4qGMCS_WNTSrwQMc1sMmvGw5gEUj3omG6O67myw49xoqx_nVBFGzsElQh', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: `🚀 **Primera partida completada** — ${username} completó el tutorial rápido. ¡Buen momento para desafiarlo!` }),
+        }).catch(() => {});
+      }
       startQuickTutorialMatch();
     }
   };
