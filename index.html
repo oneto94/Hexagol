@@ -6953,6 +6953,30 @@ function getSVGH() { return _activeBoardHeight * CELL; }
 // MÓDULO: UI — Render, wireEvents, helpers visuales
 // ═══════════════════════════════════════════════════════════
 function hsl(str) { return str ? `hsl(${str})` : '#888'; }
+
+// Parses an "H S% L%" color string and returns the lightness value (0-100),
+// used to decide whether a team color is too light to be legible as a subtle
+// overlay against the pitch and needs a stronger treatment.
+function colorLightness(str) {
+  if (!str) return 50;
+  const parts = str.trim().split(/\s+/);
+  const l = parseFloat(parts[2]);
+  return isNaN(l) ? 50 : l;
+}
+
+// Returns the fill opacity and optional border to use for a team's goal-area
+// tint: light colors (e.g. white, pale yellow) get a stronger opacity plus a
+// subtle dark outline so the goal squares stay legible against the pitch;
+// darker/saturated colors keep the original subtle wash.
+function goalTintStyle(colorStr) {
+  const lightness = colorLightness(colorStr);
+  if (lightness >= 78) {
+    return { opacity: 0.45, stroke: 'rgba(28,43,34,0.35)', strokeWidth: 1 };
+  } else if (lightness >= 60) {
+    return { opacity: 0.3, stroke: 'none', strokeWidth: 0 };
+  }
+  return { opacity: 0.18, stroke: 'none', strokeWidth: 0 };
+}
 // Picks a halo/outline color for jersey numbers: dark halo behind light text, light halo behind dark text.
 function numberHalo(hslColorStr) {
   if (!hslColorStr) return 'rgba(0,0,0,0.55)';
@@ -7091,9 +7115,11 @@ function renderBoardSVG(s) {
       const cls = (x + y) % 2 === 0 ? 'tile' : 'tile dark';
       svg += `<rect class="${cls} tile-hit" x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" data-x="${x}" data-y="${y}" />`;
       if (isPosInOwnGoal({ x, y }, 'home')) {
-        svg += `<rect x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" fill="${hsl(s.homeTeam.primaryColor)}" opacity="0.18" pointer-events="none" />`;
+        const tint = goalTintStyle(s.homeTeam.primaryColor);
+        svg += `<rect x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" fill="${hsl(s.homeTeam.primaryColor)}" opacity="${tint.opacity}" ${tint.stroke !== 'none' ? `stroke="${tint.stroke}" stroke-width="${tint.strokeWidth}"` : ''} pointer-events="none" />`;
       } else if (isPosInOwnGoal({ x, y }, 'away')) {
-        svg += `<rect x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" fill="${hsl(s.awayTeam.primaryColor)}" opacity="0.18" pointer-events="none" />`;
+        const tint = goalTintStyle(s.awayTeam.primaryColor);
+        svg += `<rect x="${x * CELL}" y="${y * CELL}" width="${CELL}" height="${CELL}" fill="${hsl(s.awayTeam.primaryColor)}" opacity="${tint.opacity}" ${tint.stroke !== 'none' ? `stroke="${tint.stroke}" stroke-width="${tint.strokeWidth}"` : ''} pointer-events="none" />`;
       }
     }
   }
