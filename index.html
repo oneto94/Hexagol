@@ -352,6 +352,16 @@
   }
 
   .last-action-arrow { stroke: var(--gold); stroke-width: 1.4; opacity: 0.85; stroke-dasharray: 1.5,1.2; fill:none; }
+  .shot-threat-line { stroke: #dc2626; stroke-width: 1.6; opacity: 0.8; stroke-dasharray: 2,1.5; fill: none; }
+  .shot-threat-pulse {
+    fill: rgba(220,38,38,0.18); stroke: #dc2626; stroke-width: 1.8;
+    transform-box: fill-box; transform-origin: center;
+    animation: shotThreatPulse 1.4s ease-in-out infinite;
+  }
+  @keyframes shotThreatPulse {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.12); }
+  }
 
   /* ---------- Dice / controls ---------- */
   .controls {
@@ -5114,6 +5124,219 @@ function isDirectGoalTarget(pos, team) {
 // Returns true if the bot has a clear unobstructed line from ballPos to any
 // opponent goal square, AND at least one bot player is adjacent to ballPos.
 // This is the "guaranteed goal next turn if rival rolls 0" check.
+// Returns the specific goal square under threat (or null) — used to render
+// a visual "check" warning to the player about to move, showing that the
+// opponent could score on their next turn if left unaddressed.
+// Checks if there's a clear line of sight between two points on the board
+// (used for both kick/drag threat lines and chain-pass link validation).
+// Line-of-sight check that mirrors chain-pass semantics: the ball path is
+// "lofted" over teammates (they don't block), but any opponent anywhere along
+// the path — including standing on the destination square itself, stacked
+// with the receiving teammate — blocks the pass entirely.
+function hasLineOfSight(from, to, allPlayers, excludeIds, threatTeam) {
+  const dx = Math.sign(to.x - from.x);
+  const dy = Math.sign(to.y - from.y);
+  if (dx === 0 && dy === 0) return false;
+  if (to.x !== from.x && to.y !== from.y && Math.abs(to.x - from.x) !== Math.abs(to.y - from.y)) return false;
+  let cx = from.x + dx, cy = from.y + dy;
+  while (true) {
+    const blockedByOpponent = allPlayers.some(p =>
+      p.position.x === cx && p.position.y === cy &&
+      !(excludeIds || []).includes(p.id) &&
+      (threatTeam ? p.team !== threatTeam : true) // if threatTeam given, only opponents block; teammates are hopped over
+    );
+    if (blockedByOpponent) return false;
+    if (cx === to.x && cy === to.y) break;
+    cx += dx; cy += dy;
+  }
+  return true;
+}
+
+// Detects goal threats reachable via a chain of chain-passes (each link ≤4
+// squares, clear line of sight) starting from a teammate of the player
+// currently adjacent to the ball, ending in a player with a clear ≤4 shot.
+function getChainPassThreatGoalSquares(ballPos, threatTeam, allPlayers) {
+  if (!ballPos) return [];
+  const oppGoal = threatTeam === 'home' ? _activeAwayGoal : _activeHomeGoal;
+  const initialHolders = allPlayers.filter(p => p.team === threatTeam && isAdjacent(p.position, ballPos));
+
+  // A player standing exactly in the direction opposite to a target cannot kick
+  // "backward" toward that target — mirrors getValidKickTargets' backwardDir rule.
+  function canKickToward(fromPos, kickerPos, targetPos) {
+    const dx = Math.sign(targetPos.x - fromPos.x);
+    const dy = Math.sign(targetPos.y - fromPos.y);
+    const backX = Math.sign(kickerPos.x - fromPos.x);
+    const backY = Math.sign(kickerPos.y - fromPos.y);
+    return !(dx === backX && dy === backY);
+  }
+
+  const teammates = allPlayers.filter(p => p.team === threatTeam);
+  const results = []; // { goal, path: [ballPos, p1.position, p2.position, ...] }
+
+  // BFS — explore ALL paths (not just the first found), tracking visited players
+  // per-path so different chains can revisit the board from different angles,
+  // but capped by team size (max 11) so it can never loop indefinitely.
+  // Each player adjacent to the ball is a possible kicker for this turn — the
+  // "no backward kick" rule depends on which one actually takes the shot, so
+  // all of them are considered as candidate first links.
+  let initialFrontier = [];
+  initialHolders.forEach(holder => {
+    teammates
+      .filter(p =>
+        p.id !== holder.id &&
+        Math.max(Math.abs(p.position.x - ballPos.x), Math.abs(p.position.y - ballPos.y)) <= 4 &&
+        canKickToward(ballPos, holder.position, p.position) &&
+        hasLineOfSight(ballPos, p.position, allPlayers, [holder.id, p.id], threatTeam)
+      )
+      .forEach(p => {
+        initialFrontier.push({ player: p, path: [ballPos, p.position], visited: new Set([holder.id, p.id]) });
+      });
+  });
+
+  // Case: a player DRAGS the ball in a straight line all the way onto a
+  // teammate's square — that triggers a chain pass. This covers two situations:
+  //   (a) the teammate wasn't adjacent to the ball at all, so this is their
+  //       only way to receive it, and
+  //   (b) the teammate WAS already adjacent but couldn't kick toward the next
+  //       link due to the backward-kick rule — dragging the ball onto their
+  //       square repositions it, and a chain-pass reception has no such
+  //       direction restriction, "unblocking" them.
+  // Requires the dragger to be aligned with the ball, and total distance
+  // (dragger→ball + ball→teammate) ≤ 6 (dice limit). The dragger's walk to the
+  // ball can hop over any player en route (movement isn't blocked that way).
+  teammates.forEach(teammate => {
+    const dx = Math.sign(teammate.position.x - ballPos.x);
+    const dy = Math.sign(teammate.position.y - ballPos.y);
+    if (dx === 0 && dy === 0) return;
+    // Must be a straight line from the ball to the teammate
+    if (teammate.position.x !== ballPos.x && teammate.position.y !== ballPos.y &&
+        Math.abs(teammate.position.x - ballPos.x) !== Math.abs(teammate.position.y - ballPos.y)) return;
+    const distBallToTeammate = Math.max(Math.abs(teammate.position.x - ballPos.x), Math.abs(teammate.position.y - ballPos.y));
+    if (!hasLineOfSight(ballPos, teammate.position, allPlayers, [teammate.id], threatTeam)) return; // drag path to teammate must be clear of opponents
+    // Scan the whole line behind the ball for a threatTeam dragger — their walk
+    // to the ball can pass over anyone, so we don't stop at the first occupant.
+    for (let stepsBack = 1; stepsBack <= 6; stepsBack++) {
+      const px = ballPos.x - dx * stepsBack, py = ballPos.y - dy * stepsBack;
+      if (px < 0 || px >= _activeBoardWidth || py < 0 || py >= _activeBoardHeight) break;
+      const occupant = allPlayers.find(p => p.position.x === px && p.position.y === py);
+      if (occupant && occupant.team === threatTeam && occupant.id !== teammate.id) {
+        const totalDist = stepsBack + distBallToTeammate;
+        if (totalDist <= 6) {
+          initialFrontier.push({
+            player: teammate,
+            path: [ballPos, teammate.position],
+            visited: new Set([occupant.id, teammate.id]),
+          });
+          break;
+        }
+      }
+    }
+  });
+
+  // Deduplicate identical (player, single-link) starting points across different holders
+  const dedupeKey = f => `${f.player.id}`;
+  const seenStarts = new Set();
+  initialFrontier = initialFrontier.filter(f => {
+    const key = dedupeKey(f);
+    if (seenStarts.has(key)) return false;
+    seenStarts.add(key);
+    return true;
+  });
+
+  let frontier = initialFrontier;
+  while (frontier.length > 0) {
+    const next = [];
+    for (const { player, path, visited } of frontier) {
+      // Check if this player has a clear, non-offside shot ≤4 from their position
+      for (const g of oppGoal) {
+        if (allPlayers.some(p => p.position.x === g.x && p.position.y === g.y)) continue; // goal occupied — blocked
+        const dist = Math.max(Math.abs(g.x - player.position.x), Math.abs(g.y - player.position.y));
+        if (dist > 4) continue;
+        if (!hasLineOfSight(player.position, g, allPlayers, [player.id], threatTeam)) continue;
+        // A shot straight at the goal is never offside in itself (mirrors isActionOffside),
+        // but the receiving player must not have been offside when they got the ball via
+        // the previous link in the chain — check using the position they received it from.
+        const prevBallPos = path[path.length - 2];
+        if (isActionOffside(
+          { ...player, team: threatTeam }, // the passer for offside-check purposes is the player himself relative to prevBallPos
+          player.position, allPlayers, prevBallPos
+        )) continue;
+        results.push({ goal: g, path: [...path, g] });
+      }
+      // Expand the chain to further teammates. Once the ball is already at a
+      // player's feet mid-chain, the "no backward kick" rule doesn't apply the
+      // same way (the chain-pass action isn't direction-restricted like a fresh
+      // kick from where a player is standing), so only line-of-sight and offside matter.
+      teammates.forEach(next2 => {
+        if (visited.has(next2.id)) return;
+        const dist = Math.max(Math.abs(next2.position.x - player.position.x), Math.abs(next2.position.y - player.position.y));
+        if (dist > 4) return;
+        if (!hasLineOfSight(player.position, next2.position, allPlayers, [player.id, next2.id], threatTeam)) return;
+        if (isActionOffside({ ...player, team: threatTeam }, next2.position, allPlayers, player.position)) return;
+        next.push({ player: next2, path: [...path, next2.position], visited: new Set([...visited, next2.id]) });
+      });
+    }
+    frontier = next;
+  }
+  return results;
+}
+
+function getShotThreatGoalSquares(ballPos, threatTeam, allPlayers) {
+  if (!ballPos) return [];
+  const oppGoal = threatTeam === 'home' ? _activeAwayGoal : _activeHomeGoal;
+  const threats = [];
+
+  // Direct kick/pass threat — a threat player already adjacent to the ball
+  const threatAdjacentToBall = allPlayers.some(p =>
+    p.team === threatTeam && isAdjacent(p.position, ballPos));
+
+  for (const g of oppGoal) {
+    // If a player (e.g. the goalkeeper) is standing on the target goal square,
+    // the shot is blocked regardless of an otherwise clear path.
+    if (allPlayers.some(p => p.position.x === g.x && p.position.y === g.y)) continue;
+
+    const distBallToGoal = Math.max(Math.abs(g.x - ballPos.x), Math.abs(g.y - ballPos.y));
+    const dx = Math.sign(g.x - ballPos.x);
+    const dy = Math.sign(g.y - ballPos.y);
+    if (dx === 0 && dy === 0) continue;
+    if (g.x !== ballPos.x && g.y !== ballPos.y &&
+        Math.abs(g.x - ballPos.x) !== Math.abs(g.y - ballPos.y)) continue;
+
+    // Check the ball→goal path is clear
+    let cx = ballPos.x + dx, cy = ballPos.y + dy;
+    let pathBlocked = false;
+    while (cx !== g.x || cy !== g.y) {
+      if (allPlayers.some(p => p.position.x === cx && p.position.y === cy)) { pathBlocked = true; break; }
+      cx += dx; cy += dy;
+    }
+    if (pathBlocked) continue;
+
+    // Case 1: kick/pass — threat player adjacent to ball, ball→goal ≤ 6
+    if (threatAdjacentToBall && distBallToGoal <= 6) {
+      threats.push(g);
+      continue;
+    }
+
+    // Case 2: drag — a threat player standing behind the ball on the same line
+    // (opposite side from the goal). The path from the player to the ball can
+    // pass over any other player (movement isn't blocked en route), so we scan
+    // the whole line behind the ball for any threatTeam player within reach,
+    // rather than stopping at the first occupied square.
+    let dragFound = false;
+    for (let stepsBack = 1; stepsBack <= 6; stepsBack++) {
+      const px = ballPos.x - dx * stepsBack, py = ballPos.y - dy * stepsBack;
+      if (px < 0 || px >= _activeBoardWidth || py < 0 || py >= _activeBoardHeight) break;
+      const occupant = allPlayers.find(p => p.position.x === px && p.position.y === py);
+      if (occupant && occupant.team === threatTeam) {
+        const totalDist = stepsBack + distBallToGoal;
+        if (totalDist <= 6) { dragFound = true; break; }
+      }
+    }
+    if (dragFound) threats.push(g);
+  }
+  return threats;
+}
+
 function botHasDirectShotFromPos(ballPos, botTeam, allPlayers) {
   if (!ballPos) return false;
   const oppGoal = botTeam === 'home' ? _activeAwayGoal : _activeHomeGoal;
@@ -6924,6 +7147,38 @@ function renderBoardSVG(s) {
     }
   } else if (s.lastAction) {
     svg += `<line class="last-action-arrow" x1="${cx(s.lastAction.from.x)}" y1="${cy(s.lastAction.from.y)}" x2="${cx(s.lastAction.to.x)}" y2="${cy(s.lastAction.to.y)}" />`;
+  }
+
+  // Shot threat warning — shown to the player about to move if the OTHER team
+  // left the ball with a direct line to this player's own goal (a "check").
+  // Only relevant during active piece-selection phases, not mid-animation.
+  if (s.ballPosition && ['rolling', 'selecting-piece', 'moving-piece'].includes(s.gamePhase) && !(s.gameMode === 'vs-ai' && s.currentPlayer === s.aiTeam)) {
+    const threatTeam = s.currentPlayer === 'home' ? 'away' : 'home';
+    const directThreats = getShotThreatGoalSquares(s.ballPosition, threatTeam, s.players);
+    const chainThreats = getChainPassThreatGoalSquares(s.ballPosition, threatTeam, s.players);
+    const seenPulses = new Set();
+
+    // Direct kick/drag threats — single straight line from ball to goal
+    directThreats.forEach(threatGoal => {
+      const key = `${threatGoal.x},${threatGoal.y}`;
+      svg += `<line class="shot-threat-line" x1="${cx(s.ballPosition.x)}" y1="${cy(s.ballPosition.y)}" x2="${cx(threatGoal.x)}" y2="${cy(threatGoal.y)}" />`;
+      if (!seenPulses.has(key)) {
+        seenPulses.add(key);
+        svg += `<circle class="shot-threat-pulse" cx="${cx(threatGoal.x)}" cy="${cy(threatGoal.y)}" r="${CELL * 0.55}" />`;
+      }
+    });
+
+    // Chain-pass threats — draw the actual multi-segment path (ball → p1 → p2 → ... → goal)
+    chainThreats.forEach(({ goal, path }) => {
+      const key = `${goal.x},${goal.y}`;
+      for (let i = 0; i < path.length - 1; i++) {
+        svg += `<line class="shot-threat-line" x1="${cx(path[i].x)}" y1="${cy(path[i].y)}" x2="${cx(path[i+1].x)}" y2="${cy(path[i+1].y)}" />`;
+      }
+      if (!seenPulses.has(key)) {
+        seenPulses.add(key);
+        svg += `<circle class="shot-threat-pulse" cx="${cx(goal.x)}" cy="${cy(goal.y)}" r="${CELL * 0.55}" />`;
+      }
+    });
   }
 
   // Target indicators — icon + color combo matches the original (Footprints/Target/ArrowUpFromLine/ShieldAlert).
