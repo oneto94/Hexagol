@@ -5184,7 +5184,7 @@ function getChainPassThreatGoalSquares(ballPos, threatTeam, allPlayers) {
     teammates
       .filter(p =>
         p.id !== holder.id &&
-        Math.max(Math.abs(p.position.x - ballPos.x), Math.abs(p.position.y - ballPos.y)) <= 4 &&
+        Math.max(Math.abs(p.position.x - ballPos.x), Math.abs(p.position.y - ballPos.y)) <= 6 &&
         canKickToward(ballPos, holder.position, p.position) &&
         hasLineOfSight(ballPos, p.position, allPlayers, [holder.id, p.id], threatTeam)
       )
@@ -5215,13 +5215,15 @@ function getChainPassThreatGoalSquares(ballPos, threatTeam, allPlayers) {
     if (!hasLineOfSight(ballPos, teammate.position, allPlayers, [teammate.id], threatTeam)) return; // drag path to teammate must be clear of opponents
     // Scan the whole line behind the ball for a threatTeam dragger — their walk
     // to the ball can pass over anyone, so we don't stop at the first occupant.
+    // Per the drag rule, even spending the entire dice value reaching the ball
+    // still guarantees at least 1 extra square of drag.
     for (let stepsBack = 1; stepsBack <= 6; stepsBack++) {
       const px = ballPos.x - dx * stepsBack, py = ballPos.y - dy * stepsBack;
       if (px < 0 || px >= _activeBoardWidth || py < 0 || py >= _activeBoardHeight) break;
       const occupant = allPlayers.find(p => p.position.x === px && p.position.y === py);
       if (occupant && occupant.team === threatTeam && occupant.id !== teammate.id) {
-        const totalDist = stepsBack + distBallToTeammate;
-        if (totalDist <= 6) {
+        const dragBudget = Math.max(1, 6 - stepsBack);
+        if (distBallToTeammate <= dragBudget) {
           initialFrontier.push({
             player: teammate,
             path: [ballPos, teammate.position],
@@ -5322,14 +5324,18 @@ function getShotThreatGoalSquares(ballPos, threatTeam, allPlayers) {
     // pass over any other player (movement isn't blocked en route), so we scan
     // the whole line behind the ball for any threatTeam player within reach,
     // rather than stopping at the first occupied square.
+    // Per the drag rule (dragLimit = max(1, remaining)), a player who spends
+    // their entire dice value just reaching the ball can STILL drag it at
+    // least 1 extra square — so distBallToGoal === 1 is reachable even when
+    // stepsBack === 6 (leaving 0 nominal budget for the drag itself).
     let dragFound = false;
     for (let stepsBack = 1; stepsBack <= 6; stepsBack++) {
       const px = ballPos.x - dx * stepsBack, py = ballPos.y - dy * stepsBack;
       if (px < 0 || px >= _activeBoardWidth || py < 0 || py >= _activeBoardHeight) break;
       const occupant = allPlayers.find(p => p.position.x === px && p.position.y === py);
       if (occupant && occupant.team === threatTeam) {
-        const totalDist = stepsBack + distBallToGoal;
-        if (totalDist <= 6) { dragFound = true; break; }
+        const dragBudget = Math.max(1, 6 - stepsBack); // guaranteed minimum 1-square drag
+        if (distBallToGoal <= dragBudget) { dragFound = true; break; }
       }
     }
     if (dragFound) threats.push(g);
@@ -9188,10 +9194,11 @@ function renderPublicProfile() {
     const result = m.result === 'win' ? (lang === 'en' ? '🏆 Win' : lang === 'pt' ? '🏆 Vitória' : '🏆 Victoria')
       : m.result === 'loss' ? (lang === 'en' ? '😔 Loss' : lang === 'pt' ? '😔 Derrota' : '😔 Derrota')
       : (lang === 'en' ? '🤝 Draw' : lang === 'pt' ? '🤝 Empate' : '🤝 Empate');
-    const score = `${m.homeScore ?? '-'} - ${m.awayScore ?? '-'}`;
+    const score = `${m.myScore ?? '-'} - ${m.oppScore ?? '-'}`;
     const eloChange = m.eloChange > 0 ? `+${m.eloChange}` : m.eloChange;
+    const date = m.playedAt?.toDate?.() ? m.playedAt.toDate().toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'pt' ? 'pt-BR' : 'es-AR', { day: '2-digit', month: '2-digit' }) : '';
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e1e8db;font-size:0.8rem;">
-      <span>${result}</span>
+      <span>${result}<span style="color:#9aa593;font-size:0.72rem;"> vs ${escapeHtml(m.opponentName || '?')}${date ? ' · ' + date : ''}</span></span>
       <span style="color:#6b7a64;">${score}</span>
       <span style="color:${m.eloChange > 0 ? '#2a6e3f' : m.eloChange < 0 ? '#9a2f24' : '#6b7a64'};">${eloChange} ELO</span>
     </div>`;
