@@ -578,6 +578,7 @@
   }
   .menu-screen .subtitle { color: #6b7a64; font-size: 0.95rem; margin-bottom: 26px; }
   .menu-grid { display: grid; gap: 10px; }
+  .menu-section-divider { height: 1px; background: #e1e8db; margin: 14px 0; }
   .menu-btn {
     appearance: none; border: 1.5px solid #e1e8db; background: #fbfcf9;
     border-radius: 10px; padding: 16px 20px; text-align: left;
@@ -1488,6 +1489,13 @@ function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGo
 
 function applyRemoteState(remote) {
   if (!remote || !remote.gamePhase || remote.gamePhase === 'main-menu') return;
+  // If we've already locally decided the match is over (e.g. opponent
+  // disconnected, or our own goal/clock ended it in a delayed setState), never
+  // let a stale remote snapshot — one written before that decision propagated —
+  // drag the phase backward.
+  if (state.gamePhase === 'game-over' && remote.gamePhase !== 'game-over') {
+    return;
+  }
   // Firestore delivers the full document — no sanitization needed (unlike RTDB).
   //
   // timer and gameClock run independently on each client and must NOT be
@@ -1595,6 +1603,24 @@ function applyRemoteState(remote) {
 
   if (prev.gamePhase !== 'game-over' && state.gamePhase === 'game-over' && state.gameMode === 'online') {
     scheduleRoomDeletion();
+    // The match may have ended via a remotely-received state (e.g. the other
+    // player scored the winning goal or their clock ran out) — that path never
+    // goes through setState/playSoundsForTransition, so ELO + tournament
+    // reporting need to be triggered here too, guarded the same way.
+    if (onlineMyTeam && onlineOpponentUid && !onlineMatchResultSaved) {
+      onlineMatchResultSaved = true;
+      const myScore = state.score[onlineMyTeam];
+      const theirTeam = onlineMyTeam === 'home' ? 'away' : 'home';
+      const result = myScore > state.score[theirTeam] ? 'win' : myScore < state.score[theirTeam] ? 'loss' : 'draw';
+      trackEvent('online_match_complete', { result });
+      updateEloAfterMatch(result, onlineOpponentUid).catch(err =>
+        console.warn('[Hexagol ELO] Update failed:', err)
+      );
+      if (state.tournamentId && state.tournamentMatchId && onlineIsHost) {
+        reportTournamentResult(state.tournamentId, state.tournamentMatchId, state.tournamentIsLeague, state.score.home, state.score.away)
+          .catch(err => console.warn('[Hexagol Tournament] Report failed:', err));
+      }
+    }
   }
 
   currentMenuView = 'main';
@@ -1861,6 +1887,7 @@ auth.onAuthStateChanged(async user => {
     await loadOrCreateUserProfile(user);
     loadFriends();
     listenForChallenges();
+    listenForTournamentInvites();
   } else {
     userProfile = null;
     friendsData = [];
@@ -2287,14 +2314,13 @@ function handleOpponentDisconnected() {
   if (['main-menu', 'game-over'].includes(state.gamePhase)) { render(); return; }
   const opponentTeam = onlineMyTeam === 'home' ? 'away' : 'home';
   const opponentName = getTeamName(state, opponentTeam);
-  state = {
-    ...state,
+  setState(s => ({
+    ...s,
     gamePhase: 'game-over',
     isClockRunning: false,
     message: `${opponentName} ${t('msg.disconnect')}`,
     toastToShow: { title: lang === 'en' ? 'Opponent disconnected' : lang === 'pt' ? 'Adversário desconectado' : 'Rival desconectado', description: lang === 'en' ? `${opponentName} lost connection. You win by forfeit.` : lang === 'pt' ? `${opponentName} perdeu a conexão. Você venceu por abandono.` : `${opponentName} perdió la conexión. Ganás la partida por abandono.` },
-  };
-  render();
+  }));
 }
 
 function detachOnlinePresence() {
@@ -4846,6 +4872,12 @@ function playSoundsForTransition(prev, next) {
       updateEloAfterMatch(result, onlineOpponentUid).catch(err =>
         console.warn('[Hexagol ELO] Update failed:', err)
       );
+      // If this match belongs to a tournament, report the result back —
+      // only the host reports to avoid a double-write race between both clients.
+      if (next.tournamentId && next.tournamentMatchId && onlineIsHost) {
+        reportTournamentResult(next.tournamentId, next.tournamentMatchId, next.tournamentIsLeague, next.score.home, next.score.away)
+          .catch(err => console.warn('[Hexagol Tournament] Report failed:', err));
+      }
     }
     return;
   }
@@ -5003,19 +5035,22 @@ function handleGoal(s) {
 
   if (matchEnds) {
     const winMsg = lang === 'en' ? `GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL! ${scorerName} venceu a partida!` : `¡GOL! ¡${scorerName} gana el partido!`;
-    // First show the goal normally (with toast and board reset), then end match after a delay
+    // First show the goal normally (with toast and board reset), then end match after a delay.
+    // gamePhase is 'match-ending' (not 'rolling') during this window so the
+    // dice/board stay non-interactive — the match is decided, just showing the
+    // celebratory board reset before flipping to the real game-over screen.
     const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), scoringTeam === 'home' ? 'away' : 'home', s.boardSize);
     const goalState = logAction({
       ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
       currentPlayer: scoringTeam === 'home' ? 'away' : 'home', diceValue: null,
       ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
       turnStartState: null, lastAction: null, matchStats: newMatchStats, assistProviderId: null,
-      gamePhase: 'rolling',
+      gamePhase: 'match-ending', isClockRunning: false,
       toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : lang === 'pt' ? '⚽ FIM DE JOGO!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : lang === 'pt' ? `${scorerName} venceu!` : `¡${scorerName} gana!` },
     }, winMsg, 'goal', scoringTeam);
     // Delay game-over so the goal toast and board reset are visible
     setTimeout(() => {
-      setState(s2 => s2.gamePhase === 'rolling' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
+      setState(s2 => s2.gamePhase === 'match-ending' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
         ? { ...s2, gamePhase: 'game-over', isClockRunning: false }
         : s2);
     }, 1800);
@@ -7653,6 +7688,13 @@ function renderMainMenu() {
         <div class="t">${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</div>
         <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : lang === 'pt' ? 'Online, local, vs IA, liga e mais.' : 'Online, local, vs IA, liga y más.'}</div>
       </button>
+      <button class="menu-btn" data-menu="tournaments">
+        <div class="t">${lang === 'en' ? 'Tournaments' : lang === 'pt' ? 'Torneios' : 'Torneos'}</div>
+        <div class="d">${lang === 'en' ? 'Official cups and private leagues with friends.' : lang === 'pt' ? 'Copas oficiais e ligas privadas com amigos.' : 'Copas oficiales y ligas privadas con amigos.'}</div>
+      </button>
+    </div>
+    <div class="menu-section-divider"></div>
+    <div class="menu-grid">
       <button class="menu-btn" data-menu="quick-tutorial" style="border-color:#e8a020;background:#fffbf0;">
         <div class="t">${t('menu.quicktutorial')}</div>
         <div class="d">${t('menu.quicktutorial.desc')}</div>
@@ -7665,6 +7707,9 @@ function renderMainMenu() {
         <div class="t">${t('menu.rules')}</div>
         <div class="d">${t('menu.rules.desc')}</div>
       </button>
+    </div>
+    <div class="menu-section-divider"></div>
+    <div class="menu-grid">
       <button class="menu-btn" data-menu="leaderboard">
         <div class="t">${t('menu.leaderboard')}</div>
         <div class="d">${t('menu.leaderboard.desc')}</div>
@@ -9051,8 +9096,11 @@ function showChallengePopup(data, docId) {
   const el = document.createElement('div');
   el.id = 'challenge-popup';
   el.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1c2b22;color:#fff;border-radius:14px;padding:16px 20px;max-width:320px;width:90%;z-index:9500;box-shadow:0 4px 24px rgba(0,0,0,0.4);animation:tooltipIn 0.35s cubic-bezier(0.34,1.56,0.64,1);text-align:center;border:1.5px solid #3a5a3a;`;
+  const headerLabel = data.tournamentId
+    ? `🏆 ${data.tournamentName ? escapeHtml(data.tournamentName) : (lang === 'en' ? 'Tournament match' : lang === 'pt' ? 'Partida de torneio' : 'Partido de torneo')}`
+    : `⚔️ ${lang === 'en' ? 'Challenge!' : lang === 'pt' ? 'Desafio!' : '¡Desafío!'}`;
   el.innerHTML = `
-    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">⚔️ ${lang === 'en' ? 'Challenge!' : lang === 'pt' ? 'Desafio!' : '¡Desafío!'}</div>
+    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${headerLabel}</div>
     <div style="font-weight:700;font-size:0.95rem;margin-bottom:2px;">${escapeHtml(data.fromUsername || '?')} ${lang === 'en' ? 'challenged you' : lang === 'pt' ? 'te desafiou' : 'te desafió'}</div>
     <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;">${variantNames[data.gameVariant] || 'Clásico'}</div>
     <div style="display:flex;gap:8px;justify-content:center;">
@@ -9092,6 +9140,763 @@ function showChallengePopup(data, docId) {
     await db.collection('users').doc(currentUser.uid).collection('challenges').doc(docId).delete();
   };
   setTimeout(() => { if (el.parentNode) el.remove(); }, 60000);
+}
+
+// ── Tournaments ───────────────────────────────────────────────────────────────
+let tournamentSetupName = '';
+let tournamentSetupFormat = 'league'; // 'league' | 'cup'
+let tournamentSetupVariant = 'classic';
+let tournamentSetupBoardSize = 'classic';
+let tournamentSetupDuration = 5;
+let tournamentSetupTargetGoals = null;
+let tournamentSetupInvited = []; // [{ uid, username }]
+let myTournaments = []; // [{ id, ...data, myRole }]
+let myTournamentsLoading = false;
+
+function maxPlayersForFormat(format) {
+  return format === 'league' ? 10 : 8;
+}
+
+async function loadMyTournaments() {
+  if (!currentUser || currentUser.isAnonymous) return;
+  myTournamentsLoading = true;
+  try {
+    const refSnap = await db.collection('users').doc(currentUser.uid).collection('tournaments').get();
+    const results = [];
+    for (const doc of refSnap.docs) {
+      try {
+        const tSnap = await db.collection('tournaments').doc(doc.id).get();
+        if (tSnap.exists) results.push({ id: tSnap.id, ...tSnap.data(), myRole: doc.data().role });
+      } catch (e) {}
+    }
+    myTournaments = results.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+  } catch (e) {}
+  myTournamentsLoading = false;
+}
+
+function openTournamentCreation() {
+  tournamentSetupName = '';
+  tournamentSetupFormat = 'league';
+  tournamentSetupVariant = 'classic';
+  tournamentSetupBoardSize = 'classic';
+  tournamentSetupInvited = [];
+  tournamentSetupDuration = 5;
+  tournamentSetupTargetGoals = null;
+  currentMenuView = 'tournament-create';
+  render();
+}
+
+async function createTournament() {
+  if (!currentUser || currentUser.isAnonymous) return;
+  const name = tournamentSetupName.trim();
+  if (!name) return;
+  const maxP = maxPlayersForFormat(tournamentSetupFormat);
+  const participants = [
+    { uid: currentUser.uid, username: userProfile?.username || '?', status: 'accepted' },
+    ...tournamentSetupInvited.slice(0, maxP - 1).map(f => ({ uid: f.uid, username: f.username, status: 'invited' })),
+  ];
+
+  const tRef = db.collection('tournaments').doc();
+  const data = {
+    name,
+    format: tournamentSetupFormat,
+    gameVariant: tournamentSetupVariant,
+    boardSize: tournamentSetupBoardSize,
+    duration: tournamentSetupDuration,
+    targetGoals: tournamentSetupTargetGoals,
+    createdBy: currentUser.uid,
+    status: 'inviting',
+    maxPlayers: maxP,
+    participants,
+    fixture: [],
+    standings: {},
+    bracket: {},
+    champion: null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    startedAt: null,
+    finishedAt: null,
+  };
+  await tRef.set(data);
+
+  // Reference for the creator
+  await db.collection('users').doc(currentUser.uid).collection('tournaments').doc(tRef.id).set({ role: 'creator' });
+
+  // Invite each participant + send them a notification
+  for (const p of tournamentSetupInvited.slice(0, maxP - 1)) {
+    await db.collection('users').doc(p.uid).collection('tournaments').doc(tRef.id).set({ role: 'participant' });
+    await db.collection('users').doc(p.uid).collection('tournamentInvites').doc(tRef.id).set({
+      tournamentId: tRef.id,
+      name,
+      format: tournamentSetupFormat,
+      fromUsername: userProfile?.username || '?',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  currentMenuView = 'tournaments';
+  await loadMyTournaments();
+  render();
+}
+
+async function respondTournamentInvite(tournamentId, accept) {
+  if (!currentUser) return;
+  const tRef = db.collection('tournaments').doc(tournamentId);
+  const tSnap = await tRef.get();
+  if (!tSnap.exists) return;
+  const data = tSnap.data();
+  const updatedParticipants = data.participants.map(p =>
+    p.uid === currentUser.uid ? { ...p, status: accept ? 'accepted' : 'declined' } : p
+  );
+  await tRef.update({ participants: updatedParticipants });
+  await db.collection('users').doc(currentUser.uid).collection('tournamentInvites').doc(tournamentId).delete();
+  if (!accept) {
+    await db.collection('users').doc(currentUser.uid).collection('tournaments').doc(tournamentId).delete();
+  }
+  await loadMyTournaments();
+  render();
+}
+
+function listenForTournamentInvites() {
+  if (!currentUser || currentUser.isAnonymous) return;
+  db.collection('users').doc(currentUser.uid).collection('tournamentInvites')
+    .onSnapshot(snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          const data = change.doc.data();
+          showTournamentInvitePopup(data);
+        }
+      });
+    });
+}
+
+function showTournamentInvitePopup(data) {
+  const existing = document.getElementById('tournament-invite-popup');
+  if (existing) existing.remove();
+  const formatLabel = data.format === 'league'
+    ? (lang === 'en' ? 'League' : lang === 'pt' ? 'Liga' : 'Liga')
+    : (lang === 'en' ? 'Cup' : lang === 'pt' ? 'Copa' : 'Copa');
+  const el = document.createElement('div');
+  el.id = 'tournament-invite-popup';
+  el.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1c2b22;color:#fff;border-radius:14px;padding:16px 20px;max-width:320px;width:90%;z-index:9500;box-shadow:0 4px 24px rgba(0,0,0,0.4);text-align:center;border:1.5px solid #3a5a3a;`;
+  el.innerHTML = `
+    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${lang === 'en' ? 'Tournament invite' : lang === 'pt' ? 'Convite de torneio' : 'Invitación a torneo'}</div>
+    <div style="font-weight:700;font-size:0.95rem;margin-bottom:2px;">${escapeHtml(data.name)}</div>
+    <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;">${formatLabel} · ${escapeHtml(data.fromUsername)}</div>
+    <div style="display:flex;gap:8px;justify-content:center;">
+      <button id="tournament-invite-accept" style="background:#2a6e3f;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✓ ${lang === 'en' ? 'Accept' : lang === 'pt' ? 'Aceitar' : 'Aceptar'}</button>
+      <button id="tournament-invite-decline" style="background:#3a3a3a;color:#ccc;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✕ ${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</button>
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector('#tournament-invite-accept').onclick = () => { el.remove(); respondTournamentInvite(data.tournamentId, true); };
+  el.querySelector('#tournament-invite-decline').onclick = () => { el.remove(); respondTournamentInvite(data.tournamentId, false); };
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 60000);
+}
+
+function renderTournamentCreate() {
+  const maxP = maxPlayersForFormat(tournamentSetupFormat);
+  const variants = [
+    { id: 'classic', label: lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico' },
+    { id: 'compact', label: lang === 'en' ? 'Compact' : lang === 'pt' ? 'Compacto' : 'Compacto' },
+    { id: 'quick', label: lang === 'en' ? 'Quick' : lang === 'pt' ? 'Rápido' : 'Rápido' },
+  ];
+  const invitedRows = tournamentSetupInvited.map(f => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
+      <span style="flex:1;font-size:0.85rem;">${escapeHtml(f.username)}</span>
+      <button data-remove-invite="${f.uid}" style="background:#f0f4ee;border:1px solid #c8d5c0;border-radius:6px;padding:2px 8px;font-size:0.72rem;cursor:pointer;">✕</button>
+    </div>`).join('');
+  const friendOptions = friendsData
+    .filter(f => f.status === 'accepted' && !tournamentSetupInvited.some(i => i.uid === f.uid))
+    .map(f => `<option value="${f.uid}" data-username="${escapeHtml(f.username)}">${escapeHtml(f.username)}</option>`).join('');
+
+  return `
+  <div class="menu-screen" style="max-width:480px;">
+    <h1>${lang === 'en' ? 'Create tournament' : lang === 'pt' ? 'Criar torneio' : 'Crear torneo'}</h1>
+    <div class="setup-fields">
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Name' : lang === 'pt' ? 'Nome' : 'Nombre'}</span>
+        <input id="tournament-name-input" type="text" maxlength="40" value="${escapeHtml(tournamentSetupName)}"
+          placeholder="${lang === 'en' ? 'e.g. Friday League' : lang === 'pt' ? 'ex: Liga de sexta' : 'ej: Liga de los viernes'}"
+          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:0.9rem;font-family:inherit;">
+      </div>
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Format' : lang === 'pt' ? 'Formato' : 'Formato'}</span>
+        <div class="duration-row" id="tournament-format-row">
+          <button data-tournament-format="league" class="${tournamentSetupFormat === 'league' ? 'active' : ''}">${lang === 'en' ? 'League (up to 10)' : lang === 'pt' ? 'Liga (até 10)' : 'Liga (hasta 10)'}</button>
+          <button data-tournament-format="cup" class="${tournamentSetupFormat === 'cup' ? 'active' : ''}">${lang === 'en' ? 'Cup (up to 8)' : lang === 'pt' ? 'Copa (até 8)' : 'Copa (hasta 8)'}</button>
+        </div>
+      </div>
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Game variant' : lang === 'pt' ? 'Variante' : 'Variante'}</span>
+        <div class="duration-row" id="tournament-variant-row">
+          ${variants.map(v => `<button data-tournament-variant="${v.id}" class="${v.id === tournamentSetupVariant ? 'active' : ''}">${v.label}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        <span class="field-label">${t('setup.duration')}</span>
+        <div class="duration-row" id="tournament-duration-row">
+          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-tournament-duration="${m}" class="${m === tournamentSetupDuration && !tournamentSetupTargetGoals ? 'active' : ''}">${m} min</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : 'O: primero en marcar N goles'}</span>
+        <div class="duration-row" id="tournament-goals-row">
+          ${[1, 3, 5].map(g => `<button data-tournament-goals="${g}" class="${g === tournamentSetupTargetGoals ? 'active' : ''}">${g} ${g === 1 ? (lang === 'en' ? 'goal' : 'gol') : (lang === 'en' ? 'goals' : 'goles')}</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Invite friends' : lang === 'pt' ? 'Convidar amigos' : 'Invitar amigos'} (${tournamentSetupInvited.length + 1}/${maxP})</span>
+        <div style="display:flex;gap:8px;">
+          <select id="tournament-invite-select" style="flex:1;padding:8px 12px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:0.85rem;font-family:inherit;background:#fff;">
+            <option value="">${lang === 'en' ? 'Choose a friend...' : lang === 'pt' ? 'Escolha um amigo...' : 'Elegí un amigo...'}</option>
+            ${friendOptions}
+          </select>
+          <button id="tournament-invite-add-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">+</button>
+        </div>
+        <div style="margin-top:4px;">${invitedRows || `<div style="color:#9aa593;font-size:0.78rem;padding:6px 0;">${lang === 'en' ? 'No one invited yet.' : lang === 'pt' ? 'Ninguém convidado ainda.' : 'Nadie invitado todavía.'}</div>`}</div>
+      </div>
+    </div>
+    <div class="menu-grid" style="margin-top:20px;">
+      <button class="menu-btn" id="create-tournament-btn" style="border-color:var(--accent);background:#f0f4ff;">
+        <div class="t">${lang === 'en' ? 'Create tournament' : lang === 'pt' ? 'Criar torneio' : 'Crear torneo'}</div>
+      </button>
+      <button class="menu-btn" data-menu="tournaments"><div class="t">${t('setup.back')}</div></button>
+    </div>
+  </div>`;
+}
+
+// ── Fixture generation ─────────────────────────────────────────────────────────
+
+// Round-robin (liga): everyone plays everyone once. Uses the standard
+// "circle method" — fix one player, rotate the rest. Handles odd counts by
+// adding a "bye" placeholder (null) that gets skipped when pairing up.
+function generateLeagueFixture(participantUids) {
+  const players = [...participantUids];
+  if (players.length % 2 !== 0) players.push(null); // bye slot
+  const n = players.length;
+  const rounds = n - 1;
+  const half = n / 2;
+  const fixture = []; // [{ round, matches: [{home, away}] }]
+
+  let arr = [...players];
+  for (let r = 0; r < rounds; r++) {
+    const matches = [];
+    for (let i = 0; i < half; i++) {
+      const home = arr[i];
+      const away = arr[n - 1 - i];
+      if (home !== null && away !== null) {
+        // Alternate home/away across rounds for fairness
+        if (r % 2 === 0) matches.push({ home, away });
+        else matches.push({ home: away, away: home });
+      }
+    }
+    fixture.push({ round: r + 1, matches });
+    // Rotate all but the first element
+    const fixed = arr[0];
+    const rest = arr.slice(1);
+    rest.unshift(rest.pop());
+    arr = [fixed, ...rest];
+  }
+  return fixture;
+}
+
+// Cup bracket (copa): single elimination. Byes go to the highest-ELO players
+// when the participant count isn't a power of 2. Returns a bracket structure:
+// { rounds: [ [{home, away, winner}], ... ] } — round 0 is the first round,
+// byes are represented as away: null (home auto-advances).
+function generateCupBracket(participants) {
+  // participants: [{ uid, elo }], already sorted or not — we sort by elo desc
+  const sorted = [...participants].sort((a, b) => (b.elo || 1200) - (a.elo || 1200));
+  const n = sorted.length;
+  const bracketSize = Math.pow(2, Math.ceil(Math.log2(n)));
+  const byeCount = bracketSize - n;
+
+  // Standard seeding: top seeds get byes first
+  const slots = new Array(bracketSize).fill(null);
+  // Seed placement using standard bracket seeding order to keep top seeds apart
+  const seedOrder = generateSeedOrder(bracketSize);
+  sorted.forEach((p, i) => {
+    slots[seedOrder[i]] = p.uid;
+  });
+
+  const round0 = [];
+  for (let i = 0; i < bracketSize; i += 2) {
+    const home = slots[i];
+    const away = slots[i + 1];
+    round0.push({ home, away, winner: away === null && home !== null ? home : (home === null && away !== null ? away : null) });
+  }
+
+  return { rounds: [round0], byeCount };
+}
+
+// Standard single-elimination seeding order (e.g. for 8: 1v8, 4v5, 3v6, 2v7 in
+// bracket position terms) so the top seeds are spread apart and only meet late.
+function generateSeedOrder(size) {
+  if (size === 1) return [0];
+  if (size === 2) return [0, 1];
+  const prev = generateSeedOrder(size / 2);
+  const order = [];
+  prev.forEach(s => {
+    order.push(s);
+    order.push(size - 1 - s);
+  });
+  return order;
+}
+
+// Advances the cup bracket by generating the next round from the winners of
+// the current (last) round. Call after all matches in a round are decided.
+function advanceCupBracket(bracket) {
+  const lastRound = bracket.rounds[bracket.rounds.length - 1].matches;
+  if (lastRound.some(m => m.winner === null)) return bracket; // round not finished yet
+  if (lastRound.length === 1) return bracket; // final already played, nothing to advance
+  const winners = lastRound.map(m => m.winner);
+  const nextRoundMatches = [];
+  for (let i = 0; i < winners.length; i += 2) {
+    const home = winners[i];
+    const away = winners[i + 1];
+    nextRoundMatches.push({ home, away, winner: null, id: `round${bracket.rounds.length}m${i / 2}`, homeScore: null, awayScore: null, status: 'pending', roomCode: null, playedAt: null });
+  }
+  return { ...bracket, rounds: [...bracket.rounds, { matches: nextRoundMatches }] };
+}
+
+// Starts the tournament: generates the fixture (league or cup) from accepted
+// participants and moves status to 'active'.
+async function startTournament(tournamentId) {
+  const tRef = db.collection('tournaments').doc(tournamentId);
+  const tSnap = await tRef.get();
+  if (!tSnap.exists) return;
+  const data = tSnap.data();
+  const accepted = data.participants.filter(p => p.status === 'accepted');
+  if (accepted.length < 2) {
+    alert(lang === 'en' ? 'Need at least 2 accepted participants to start.' : lang === 'pt' ? 'É necessário pelo menos 2 participantes aceitos para começar.' : 'Necesitás al menos 2 participantes aceptados para empezar.');
+    return;
+  }
+
+  if (data.format === 'league') {
+    const fixture = generateLeagueFixture(accepted.map(p => p.uid));
+    // Flatten into a matches array with explicit ids for easy lookup/update
+    const matches = [];
+    fixture.forEach(r => r.matches.forEach((m, i) => {
+      matches.push({
+        id: `r${r.round}m${i}`, round: r.round, homeUid: m.home, awayUid: m.away,
+        homeScore: null, awayScore: null, status: 'pending', roomCode: null, playedAt: null,
+      });
+    }));
+    await tRef.update({ status: 'active', fixture: matches, startedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  } else {
+    const bracket = generateCupBracket(accepted.map(p => ({ uid: p.uid, elo: p.elo || 1200 })));
+    // Attach ids to each match for lookup. Firestore doesn't support nested
+    // arrays, so each round is stored as { matches: [...] } instead of a bare array.
+    const round0Matches = bracket.rounds[0].map((m, i) => ({ ...m, id: `round0m${i}`, homeScore: null, awayScore: null, status: m.winner ? 'bye' : 'pending', roomCode: null, playedAt: null }));
+    const wrappedBracket = { rounds: [{ matches: round0Matches }], byeCount: bracket.byeCount };
+    await tRef.update({ status: 'active', bracket: wrappedBracket, startedAt: firebase.firestore.FieldValue.serverTimestamp() });
+  }
+  await loadMyTournaments();
+  render();
+}
+
+// Computes league standings from the fixture, applying the agreed tie-break
+// order: head-to-head result, goal difference, goals for, goals against
+// (fewer is better), ELO, then registration order (fallback).
+function computeLeagueStandings(tournament) {
+  const table = {};
+  tournament.participants.filter(p => p.status === 'accepted').forEach((p, i) => {
+    table[p.uid] = { uid: p.uid, username: p.username, played: 0, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, points: 0, regOrder: i };
+  });
+
+  const headToHead = {}; // headToHead[uidA][uidB] = 'win' | 'loss' | 'draw'
+
+  (tournament.fixture || []).forEach(m => {
+    if (m.homeScore === null || m.awayScore === null || !m.homeUid || !m.awayUid) return;
+    const home = table[m.homeUid], away = table[m.awayUid];
+    if (!home || !away) return;
+    home.played++; away.played++;
+    home.goalsFor += m.homeScore; home.goalsAgainst += m.awayScore;
+    away.goalsFor += m.awayScore; away.goalsAgainst += m.homeScore;
+    if (m.homeScore > m.awayScore) { home.won++; away.lost++; home.points += 3; }
+    else if (m.homeScore < m.awayScore) { away.won++; home.lost++; away.points += 3; }
+    else { home.drawn++; away.drawn++; home.points++; away.points++; }
+
+    if (!headToHead[m.homeUid]) headToHead[m.homeUid] = {};
+    if (!headToHead[m.awayUid]) headToHead[m.awayUid] = {};
+    if (m.homeScore > m.awayScore) { headToHead[m.homeUid][m.awayUid] = 'win'; headToHead[m.awayUid][m.homeUid] = 'loss'; }
+    else if (m.homeScore < m.awayScore) { headToHead[m.awayUid][m.homeUid] = 'win'; headToHead[m.homeUid][m.awayUid] = 'loss'; }
+    else { headToHead[m.homeUid][m.awayUid] = 'draw'; headToHead[m.awayUid][m.homeUid] = 'draw'; }
+  });
+
+  const rows = Object.values(table);
+  rows.sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    // Tie-break 1: head-to-head result between the tied pair
+    const h2h = headToHead[a.uid]?.[b.uid];
+    if (h2h === 'win') return -1;
+    if (h2h === 'loss') return 1;
+    // Tie-break 2: goal difference
+    const gdA = a.goalsFor - a.goalsAgainst, gdB = b.goalsFor - b.goalsAgainst;
+    if (gdB !== gdA) return gdB - gdA;
+    // Tie-break 3: goals for
+    if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+    // Tie-break 4: fewer goals against is better
+    if (a.goalsAgainst !== b.goalsAgainst) return a.goalsAgainst - b.goalsAgainst;
+    // Tie-break 5: ELO (need to be passed in from participant data — approximated via username lookup skipped, falls to regOrder)
+    // Tie-break 6: registration order
+    return a.regOrder - b.regOrder;
+  });
+  return rows;
+}
+
+let currentTournamentData = null;
+let currentTournamentLoading = false;
+
+async function openTournamentDetail(tournamentId) {
+  currentTournamentLoading = true;
+  currentTournamentData = null;
+  currentMenuView = 'tournament-detail';
+  render();
+  try {
+    const tSnap = await db.collection('tournaments').doc(tournamentId).get();
+    if (tSnap.exists) currentTournamentData = { id: tSnap.id, ...tSnap.data() };
+  } catch (e) {}
+  currentTournamentLoading = false;
+  render();
+}
+
+// Starts (or resumes) the online room for a specific tournament match/cruce.
+// Reuses the same room infrastructure as challenges, tagging the room with
+// tournament context so the result auto-reports back to the fixture/bracket.
+async function playTournamentMatch(tournamentId, matchId, isLeague) {
+  if (!currentUser) return;
+  const t = currentTournamentData;
+  if (!t) return;
+  const match = isLeague
+    ? (t.fixture || []).find(m => m.id === matchId)
+    : t.bracket.rounds.flatMap(r => r.matches).find(m => m.id === matchId);
+  if (!match) return;
+  const opponentUid = match.homeUid === currentUser.uid ? match.awayUid : match.homeUid;
+  const isLeagueOpponent = isLeague ? opponentUid : (match.home === currentUser.uid ? match.away : match.home);
+  const realOpponent = isLeague ? opponentUid : isLeagueOpponent;
+  if (!realOpponent) return; // bye, nothing to play
+
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const myTeam = TEAMS[0];
+  const tDuration = t.duration || 5;
+  const tTargetGoals = t.targetGoals || null;
+  onlineRoomId = code;
+  onlineIsHost = true;
+  onlineMyTeam = 'home';
+  onlineRoomRef = db.collection('rooms').doc(code);
+  await onlineRoomRef.set({
+    status: 'waiting',
+    homeTeam: sanitizeForFirestore(myTeam),
+    homeUid: currentUser.uid,
+    duration: tDuration,
+    targetGoals: tTargetGoals,
+    gameVariant: t.gameVariant || 'classic',
+    boardSize: t.boardSize || 'classic',
+    gameState: null,
+    tournamentId, tournamentMatchId: matchId, tournamentIsLeague: isLeague,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+  await db.collection('users').doc(realOpponent).collection('challenges').doc(code).set({
+    from: currentUser.uid,
+    fromUsername: userProfile?.username || '?',
+    roomCode: code,
+    gameVariant: t.gameVariant || 'classic',
+    tournamentId, tournamentName: t.name,
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  });
+
+  setupGameVariant = t.gameVariant || 'classic';
+  setupBoardSize = t.boardSize || 'classic';
+  setActiveBoardSize(setupBoardSize);
+  currentMenuView = 'online-waiting';
+  render();
+
+  onlineStatusUnsub = onlineRoomRef.onSnapshot(async snap => {
+    if (!snap.exists) { if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; } onlineStatus = 'idle'; currentMenuView = 'tournaments'; render(); return; }
+    const data = snap.data();
+    if (data.status !== 'playing') return;
+    if (onlineStatusUnsub) { onlineStatusUnsub(); onlineStatusUnsub = null; }
+    onlineStatus = 'connected';
+    onlineOpponentUid = data.awayUid || null;
+    const guestTeam = data.awayTeam || TEAMS[1];
+    const conflict = customKitsClash(
+      { primaryColor: myTeam.primaryColor, secondaryColor: myTeam.secondaryColor },
+      { primaryColor: guestTeam.primaryColor, secondaryColor: guestTeam.secondaryColor }
+    );
+    const finalAwayTeam = conflict
+      ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
+      : guestTeam;
+    const initialState = buildInitialOnlineState(myTeam, finalAwayTeam, TURN_DURATION, tDuration, tTargetGoals, t.gameVariant || 'classic', t.boardSize || 'classic');
+    preGameRollStartedAt = Date.now();
+    state = { ...initialState, timer: 30, tournamentId, tournamentMatchId: matchId, tournamentIsLeague: isLeague };
+    window.state = state;
+    attachOnlineStateListener();
+    attachOnlineRematchListener(startOnlineRematch);
+    attachOnlineUndoListener();
+    attachOnlinePresence();
+    attachOnlineChat();
+    saveOnlineSession();
+    await onlineRoomRef.update({ gameState: sanitizeForFirestore(state) }).catch(() => {});
+    currentMenuView = 'main';
+    render();
+    startClock();
+    startTurnTimer();
+  });
+}
+
+// Called when a tournament match ends — writes the result back to the
+// tournament doc (fixture row for league, bracket cell for cup) and, for cup
+// matches, tries to auto-advance the bracket if the whole round is finished.
+async function reportTournamentResult(tournamentId, matchId, isLeague, homeScore, awayScore) {
+  const tRef = db.collection('tournaments').doc(tournamentId);
+  const tSnap = await tRef.get();
+  if (!tSnap.exists) return;
+  const data = tSnap.data();
+
+  if (isLeague) {
+    const fixture = (data.fixture || []).map(m =>
+      m.id === matchId ? { ...m, homeScore, awayScore, status: 'finished', playedAt: new Date() } : m
+    );
+    const allDone = fixture.every(m => m.homeScore !== null || !m.homeUid || !m.awayUid);
+    await tRef.update({ fixture, status: allDone ? 'finished' : 'active', finishedAt: allDone ? firebase.firestore.FieldValue.serverTimestamp() : null });
+  } else {
+    const bracket = { ...data.bracket, rounds: data.bracket.rounds.map(round => ({ matches: [...round.matches] })) };
+    const lastRoundIdx = bracket.rounds.length - 1;
+    const matchIdx = bracket.rounds[lastRoundIdx].matches.findIndex(m => m.id === matchId);
+    if (matchIdx === -1) return;
+    const winner = homeScore > awayScore ? bracket.rounds[lastRoundIdx].matches[matchIdx].home : bracket.rounds[lastRoundIdx].matches[matchIdx].away;
+    bracket.rounds[lastRoundIdx].matches[matchIdx] = { ...bracket.rounds[lastRoundIdx].matches[matchIdx], homeScore, awayScore, status: 'finished', winner, playedAt: new Date() };
+    const advanced = advanceCupBracket(bracket);
+    const isFinal = advanced.rounds.length === bracket.rounds.length && bracket.rounds[lastRoundIdx].matches.length === 1;
+    await tRef.update({
+      bracket: advanced,
+      status: isFinal ? 'finished' : 'active',
+      champion: isFinal ? winner : null,
+      finishedAt: isFinal ? firebase.firestore.FieldValue.serverTimestamp() : null,
+    });
+  }
+}
+
+function renderTournamentDetail() {
+  if (currentTournamentLoading) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:#6b7a64;">${lang === 'en' ? 'Loading...' : 'Cargando...'}</div></div>`;
+  const t = currentTournamentData;
+  if (!t) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:#dc2626;">${lang === 'en' ? 'Not found.' : 'No encontrado.'}</div></div>`;
+
+  const isCreator = currentUser && t.createdBy === currentUser.uid;
+  const isLeague = t.format === 'league';
+  const acceptedCount = t.participants.filter(p => p.status === 'accepted').length;
+
+  let bodyHtml = '';
+  if (t.status === 'inviting') {
+    const rows = t.participants.map(p => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e1e8db;">
+        <span style="flex:1;font-size:0.85rem;">${escapeHtml(p.username)}</span>
+        <span style="font-size:0.72rem;color:${p.status === 'accepted' ? '#2a6e3f' : p.status === 'declined' ? '#9a2f24' : '#9aa593'};">
+          ${p.status === 'accepted' ? (lang === 'en' ? 'Accepted' : 'Aceptó') : p.status === 'declined' ? (lang === 'en' ? 'Declined' : 'Rechazó') : (lang === 'en' ? 'Pending' : 'Pendiente')}
+        </span>
+      </div>`).join('');
+    bodyHtml = `
+      <div style="margin-bottom:16px;">${rows}</div>
+      ${isCreator ? `
+      <div class="menu-grid">
+        <button class="menu-btn" id="start-tournament-btn" style="border-color:var(--accent);background:#f0f4ff;">
+          <div class="t">${lang === 'en' ? 'Start tournament' : lang === 'pt' ? 'Começar torneio' : 'Comenzar torneo'}</div>
+          <div class="d">${acceptedCount} ${lang === 'en' ? 'accepted so far' : 'aceptaron hasta ahora'}</div>
+        </button>
+      </div>` : `<div style="text-align:center;color:#9aa593;font-size:0.85rem;">${lang === 'en' ? 'Waiting for the creator to start the tournament.' : 'Esperando a que el creador comience el torneo.'}</div>`}
+    `;
+  } else if (isLeague) {
+    const standings = computeLeagueStandings(t);
+    const standingsRows = standings.map((r, i) => `
+      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:6px 0;border-bottom:1px solid #e1e8db;font-size:0.76rem;align-items:center;">
+        <span style="color:#9aa593;">${i + 1}</span>
+        <span style="font-weight:600;">${escapeHtml(r.username)}</span>
+        <span style="text-align:center;">${r.played}</span>
+        <span style="text-align:center;color:#2a6e3f;">${r.won}</span>
+        <span style="text-align:center;">${r.drawn}</span>
+        <span style="text-align:center;color:#9a2f24;">${r.lost}</span>
+        <span style="text-align:center;">${r.goalsFor - r.goalsAgainst}</span>
+        <span style="text-align:center;font-weight:700;">${r.points}</span>
+      </div>`).join('');
+    const myMatches = (t.fixture || []).filter(m => currentUser && (m.homeUid === currentUser.uid || m.awayUid === currentUser.uid));
+    const matchRows = myMatches.map(m => {
+      const oppUid = m.homeUid === currentUser.uid ? m.awayUid : m.homeUid;
+      const opp = t.participants.find(p => p.uid === oppUid);
+      const canPlay = m.status === 'pending' && oppUid;
+      const scoreText = m.status === 'finished' ? `${m.homeScore} - ${m.awayScore}` : (lang === 'en' ? 'Pending' : 'Pendiente');
+      return `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e1e8db;">
+        <span style="flex:1;font-size:0.82rem;">${lang === 'en' ? 'Round' : 'Jornada'} ${m.round} vs ${escapeHtml(opp?.username || '?')}</span>
+        <span style="font-size:0.78rem;color:#6b7a64;">${scoreText}</span>
+        ${canPlay ? `<button data-play-tournament-match="${m.id}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play' : 'Jugar'}</button>` : ''}
+      </div>`;
+    }).join('');
+    bodyHtml = `
+      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'Standings' : 'Posiciones'}</div>
+      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:4px 0;font-size:0.68rem;color:#9aa593;font-weight:700;">
+        <span></span><span></span><span style="text-align:center;">PJ</span><span style="text-align:center;">G</span><span style="text-align:center;">E</span><span style="text-align:center;">P</span><span style="text-align:center;">DG</span><span style="text-align:center;">Pts</span>
+      </div>
+      ${standingsRows}
+      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;">${lang === 'en' ? 'My matches' : 'Mis partidos'}</div>
+      ${matchRows || `<div style="color:#9aa593;font-size:0.8rem;">${lang === 'en' ? 'No matches.' : 'Sin partidos.'}</div>`}
+    `;
+  } else {
+    const roundLabel = (idx, total) => {
+      const remaining = total - idx;
+      if (remaining === 1) return lang === 'en' ? 'Final' : 'Final';
+      if (remaining === 2) return lang === 'en' ? 'Semifinal' : 'Semifinal';
+      if (remaining === 3) return lang === 'en' ? 'Quarterfinal' : 'Cuartos de final';
+      return `${lang === 'en' ? 'Round' : 'Ronda'} ${idx + 1}`;
+    };
+    const roundsHtml = (t.bracket.rounds || []).map((round, ridx) => {
+      const matches = round.matches.map(m => {
+        const homeP = t.participants.find(p => p.uid === m.home);
+        const awayP = t.participants.find(p => p.uid === m.away);
+        const isMine = currentUser && (m.home === currentUser.uid || m.away === currentUser.uid);
+        const canPlay = isMine && !m.winner && m.home && m.away && ridx === t.bracket.rounds.length - 1;
+        const scoreText = m.status === 'finished' ? `${m.homeScore} - ${m.awayScore}` : (m.away === null ? 'Bye' : '');
+        return `
+        <div style="padding:8px;background:#f0f4ee;border-radius:8px;margin-bottom:6px;font-size:0.78rem;">
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-weight:${m.winner === m.home ? '700' : '400'};">${escapeHtml(homeP?.username || '—')}</span>
+            <span style="color:#6b7a64;">${scoreText}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span style="font-weight:${m.winner === m.away ? '700' : '400'};">${escapeHtml(awayP?.username || '—')}</span>
+          </div>
+          ${canPlay ? `<button data-play-tournament-match="${m.id}" style="margin-top:6px;width:100%;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play this match' : 'Jugar este cruce'}</button>` : ''}
+        </div>`;
+      }).join('');
+      return `
+      <div style="margin-bottom:16px;">
+        <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${roundLabel(ridx, t.bracket.rounds.length)}</div>
+        ${matches}
+      </div>`;
+    }).join('');
+    bodyHtml = roundsHtml;
+    if (t.champion) {
+      const champ = t.participants.find(p => p.uid === t.champion);
+      bodyHtml = `<div style="text-align:center;padding:16px;background:#fffbf0;border:1.5px solid #e8a020;border-radius:12px;margin-bottom:16px;">
+        <div style="font-size:1.5rem;margin-bottom:4px;">🏆</div>
+        <div style="font-weight:700;">${escapeHtml(champ?.username || '?')}</div>
+        <div style="font-size:0.75rem;color:#6b7a64;">${lang === 'en' ? 'Champion' : 'Campeón'}</div>
+      </div>` + bodyHtml;
+    }
+  }
+
+  const removeLabel = isCreator
+    ? (lang === 'en' ? 'Delete tournament' : lang === 'pt' ? 'Excluir torneio' : 'Eliminar torneo')
+    : (lang === 'en' ? 'Leave tournament' : lang === 'pt' ? 'Sair do torneio' : 'Salir del torneo');
+
+  return `
+  <div class="menu-screen" style="max-width:520px;">
+    <h1 style="text-align:center;">${escapeHtml(t.name)}</h1>
+    <div class="subtitle" style="text-align:center;">${isLeague ? (lang === 'en' ? 'League' : 'Liga') : (lang === 'en' ? 'Cup' : 'Copa')} · ${acceptedCount}/${t.maxPlayers}</div>
+    ${bodyHtml}
+    <div class="menu-grid" style="margin-top:16px;">
+      <button class="menu-btn" data-menu="tournaments"><div class="t">${lang === 'en' ? "Back" : "Volver"}</div></button>
+      <button class="menu-btn" id="remove-tournament-detail-btn" style="border-color:#e8b0b0;"><div class="t" style="color:#9a2f24;">${removeLabel}</div></button>
+    </div>
+  </div>`;
+}
+
+// Removes the tournament from "my tournaments" — for the creator this also
+// deletes the tournament entirely (and notifies/cleans up other participants'
+// references); for a regular participant it just removes their own reference,
+// leaving the tournament intact for the others.
+async function leaveOrDeleteTournament(tournamentId) {
+  if (!currentUser) return;
+  const tRef = db.collection('tournaments').doc(tournamentId);
+  const tSnap = await tRef.get();
+  if (!tSnap.exists) {
+    // Already gone — just clean up our own dangling reference
+    await db.collection('users').doc(currentUser.uid).collection('tournaments').doc(tournamentId).delete();
+    await loadMyTournaments();
+    render();
+    return;
+  }
+  const data = tSnap.data();
+  const isCreator = data.createdBy === currentUser.uid;
+
+  if (isCreator) {
+    const confirmMsg = lang === 'en' ? 'Delete this tournament for everyone?' : lang === 'pt' ? 'Excluir este torneio para todos?' : '¿Eliminar este torneo para todos?';
+    if (!confirm(confirmMsg)) return;
+    // Remove every participant's reference, then delete the tournament doc
+    for (const p of data.participants) {
+      await db.collection('users').doc(p.uid).collection('tournaments').doc(tournamentId).delete().catch(() => {});
+      await db.collection('users').doc(p.uid).collection('tournamentInvites').doc(tournamentId).delete().catch(() => {});
+    }
+    await tRef.delete();
+  } else {
+    await db.collection('users').doc(currentUser.uid).collection('tournaments').doc(tournamentId).delete();
+  }
+  await loadMyTournaments();
+  render();
+}
+
+function renderTournamentsScreen() {
+  const isLoggedIn = currentUser && !currentUser.isAnonymous;
+  if (!isLoggedIn) {
+    return `
+    <div class="menu-screen" style="text-align:center;">
+      <h1>${lang === 'en' ? 'Tournaments' : lang === 'pt' ? 'Torneios' : 'Torneos'}</h1>
+      <div style="padding:24px 16px;color:#9aa593;font-size:0.9rem;">
+        ${lang === 'en' ? 'Create an account to join or create tournaments.' : lang === 'pt' ? 'Crie uma conta para participar ou criar torneios.' : 'Creá una cuenta para participar o crear torneos.'}
+      </div>
+      <div class="menu-grid">
+        <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
+      </div>
+    </div>`;
+  }
+
+  const formatLabel = f => f === 'league'
+    ? (lang === 'en' ? 'League' : lang === 'pt' ? 'Liga' : 'Liga')
+    : (lang === 'en' ? 'Cup' : lang === 'pt' ? 'Copa' : 'Copa');
+  const statusLabel = s => ({
+    inviting: lang === 'en' ? 'Inviting' : lang === 'pt' ? 'Convidando' : 'Invitando',
+    active: lang === 'en' ? 'In progress' : lang === 'pt' ? 'Em andamento' : 'En curso',
+    finished: lang === 'en' ? 'Finished' : lang === 'pt' ? 'Terminado' : 'Terminado',
+  }[s] || s);
+
+  const rows = myTournaments.map(t => {
+    const acceptedCount = t.participants.filter(p => p.status === 'accepted').length;
+    const isCreator = currentUser && t.createdBy === currentUser.uid;
+    const removeLabel = isCreator
+      ? (lang === 'en' ? 'Delete' : lang === 'pt' ? 'Excluir' : 'Eliminar')
+      : (lang === 'en' ? 'Leave' : lang === 'pt' ? 'Sair' : 'Salir');
+    return `
+    <div class="menu-btn" style="display:flex;align-items:center;gap:8px;">
+      <div data-open-tournament="${t.id}" style="cursor:pointer;flex:1;">
+        <div class="t">${escapeHtml(t.name)}</div>
+        <div class="d">${formatLabel(t.format)} · ${acceptedCount}/${t.maxPlayers} · ${statusLabel(t.status)}</div>
+      </div>
+      <button data-remove-tournament="${t.id}" style="background:#f0f4ee;border:1px solid #c8d5c0;border-radius:6px;padding:6px 10px;font-size:0.7rem;color:#9a2f24;cursor:pointer;white-space:nowrap;">${removeLabel}</button>
+    </div>`;
+  }).join('');
+
+  const emptyMsg = myTournamentsLoading
+    ? (lang === 'en' ? 'Loading...' : 'Cargando...')
+    : (lang === 'en' ? "You're not in any tournament yet." : lang === 'pt' ? 'Você ainda não está em nenhum torneio.' : 'Todavía no estás en ningún torneo.');
+
+  return `
+  <div class="menu-screen">
+    <h1 style="text-align:center;">${lang === 'en' ? 'Tournaments' : lang === 'pt' ? 'Torneios' : 'Torneos'}</h1>
+    <div class="subtitle" style="text-align:center;">${lang === 'en' ? 'Official cups and private leagues with friends.' : lang === 'pt' ? 'Copas oficiais e ligas privadas com amigos.' : 'Copas oficiales y ligas privadas con amigos.'}</div>
+    <div class="menu-grid" style="margin-bottom:16px;">
+      <button class="menu-btn" id="open-tournament-create-btn" style="border-color:var(--accent);background:#f0f4ff;">
+        <div class="t">${lang === 'en' ? 'Create private tournament' : lang === 'pt' ? 'Criar torneio privado' : 'Crear torneo privado'}</div>
+        <div class="d">${lang === 'en' ? 'League or cup, invite your friends.' : lang === 'pt' ? 'Liga ou copa, convide seus amigos.' : 'Liga o copa, invitá a tus amigos.'}</div>
+      </button>
+    </div>
+    <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'My tournaments' : lang === 'pt' ? 'Meus torneios' : 'Mis torneos'}</div>
+    <div class="menu-grid">
+      ${rows || `<div style="color:#9aa593;font-size:0.85rem;padding:12px 0;text-align:center;">${emptyMsg}</div>`}
+    </div>
+    <div class="menu-grid" style="margin-top:16px;">
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
+    </div>
+  </div>`;
 }
 
 function renderLeaderboard() {
@@ -10088,6 +10893,9 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
+    else if (currentMenuView === 'tournaments') app.innerHTML = renderTournamentsScreen();
+    else if (currentMenuView === 'tournament-create') app.innerHTML = renderTournamentCreate();
+    else if (currentMenuView === 'tournament-detail') app.innerHTML = renderTournamentDetail();
     else if (currentMenuView === 'public-profile') app.innerHTML = renderPublicProfile();
     else if (currentMenuView === 'challenge-setup') app.innerHTML = renderChallengeSetup();
     else if (currentMenuView === 'challenge-guest-setup') app.innerHTML = renderChallengeGuestSetup();
@@ -10202,7 +11010,7 @@ function wireEvents() {
       if (target === 'back') {
         const variantViews = ['variant-classic', 'variant-compact', 'variant-quick'];
         const playSubViews = ['setup', 'ai-setup', 'online-setup', 'tutorial', 'league-entry', 'sandbox'];
-        if (['public-profile', 'challenge-setup', 'challenge-guest-setup'].includes(currentMenuView)) {
+        if (['public-profile', 'challenge-setup', 'challenge-guest-setup', 'tournaments'].includes(currentMenuView)) {
           currentMenuView = 'main';
         } else if (playSubViews.includes(currentMenuView)) {
           // Go back to whichever variant was active
@@ -10214,6 +11022,12 @@ function wireEvents() {
         } else {
           currentMenuView = (currentUser && !currentUser.isAnonymous) || (currentUser && currentUser.isAnonymous) ? 'main' : 'landing';
         }
+      }
+      else if (target === 'tournaments') {
+        currentMenuView = 'tournaments';
+        render();
+        loadMyTournaments().then(render);
+        return;
       }
       else currentMenuView = target;
       render();
@@ -10705,6 +11519,114 @@ function wireEvents() {
 
   const friendsBtn = document.getElementById('friends-btn');
   if (friendsBtn) friendsBtn.onclick = () => { loadFriends().then(() => showFriendsModal()); };
+
+  // Tournaments list screen
+  const openTournamentCreateBtn = document.getElementById('open-tournament-create-btn');
+  if (openTournamentCreateBtn) openTournamentCreateBtn.onclick = () => openTournamentCreation();
+
+  document.querySelectorAll('[data-open-tournament]').forEach(el => {
+    el.onclick = () => { openTournamentDetail(el.getAttribute('data-open-tournament')); };
+  });
+
+  document.querySelectorAll('[data-remove-tournament]').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      leaveOrDeleteTournament(btn.getAttribute('data-remove-tournament'));
+    };
+  });
+
+  const removeTournamentDetailBtn = document.getElementById('remove-tournament-detail-btn');
+  if (removeTournamentDetailBtn && currentTournamentData) {
+    removeTournamentDetailBtn.onclick = async () => {
+      await leaveOrDeleteTournament(currentTournamentData.id);
+      currentMenuView = 'tournaments';
+      render();
+    };
+  }
+
+  // Tournament creation screen
+  const tournamentNameInput = document.getElementById('tournament-name-input');
+  if (tournamentNameInput) tournamentNameInput.oninput = () => { tournamentSetupName = tournamentNameInput.value; };
+
+  document.querySelectorAll('[data-tournament-format]').forEach(btn => {
+    btn.onclick = () => {
+      tournamentSetupFormat = btn.getAttribute('data-tournament-format');
+      const maxP = maxPlayersForFormat(tournamentSetupFormat);
+      if (tournamentSetupInvited.length > maxP - 1) tournamentSetupInvited = tournamentSetupInvited.slice(0, maxP - 1);
+      document.querySelectorAll('[data-tournament-format]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    };
+  });
+
+  document.querySelectorAll('[data-tournament-variant]').forEach(btn => {
+    btn.onclick = () => {
+      tournamentSetupVariant = btn.getAttribute('data-tournament-variant');
+      tournamentSetupBoardSize = tournamentSetupVariant === 'compact' ? 'compact' : 'classic';
+      document.querySelectorAll('[data-tournament-variant]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
+  document.querySelectorAll('[data-tournament-duration]').forEach(btn => {
+    btn.onclick = () => {
+      tournamentSetupDuration = parseInt(btn.getAttribute('data-tournament-duration'));
+      tournamentSetupTargetGoals = null;
+      document.querySelectorAll('[data-tournament-duration],[data-tournament-goals]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
+  document.querySelectorAll('[data-tournament-goals]').forEach(btn => {
+    btn.onclick = () => {
+      tournamentSetupTargetGoals = parseInt(btn.getAttribute('data-tournament-goals'));
+      document.querySelectorAll('[data-tournament-duration],[data-tournament-goals]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
+  const tournamentInviteAddBtn = document.getElementById('tournament-invite-add-btn');
+  if (tournamentInviteAddBtn) tournamentInviteAddBtn.onclick = () => {
+    const sel = document.getElementById('tournament-invite-select');
+    if (!sel || !sel.value) return;
+    const maxP = maxPlayersForFormat(tournamentSetupFormat);
+    if (tournamentSetupInvited.length >= maxP - 1) return;
+    const uid = sel.value;
+    const username = sel.selectedOptions[0].getAttribute('data-username');
+    tournamentSetupInvited.push({ uid, username });
+    render();
+  };
+
+  document.querySelectorAll('[data-remove-invite]').forEach(btn => {
+    btn.onclick = () => {
+      const uid = btn.getAttribute('data-remove-invite');
+      tournamentSetupInvited = tournamentSetupInvited.filter(f => f.uid !== uid);
+      render();
+    };
+  });
+
+  const createTournamentBtn = document.getElementById('create-tournament-btn');
+  if (createTournamentBtn) createTournamentBtn.onclick = async () => {
+    if (!tournamentSetupName.trim()) return;
+    createTournamentBtn.disabled = true;
+    await createTournament();
+  };
+
+  // Tournament detail screen
+  const startTournamentBtn = document.getElementById('start-tournament-btn');
+  if (startTournamentBtn) startTournamentBtn.onclick = async () => {
+    startTournamentBtn.disabled = true;
+    await startTournament(currentTournamentData.id);
+    await openTournamentDetail(currentTournamentData.id);
+  };
+
+  document.querySelectorAll('[data-play-tournament-match]').forEach(btn => {
+    btn.onclick = () => {
+      const matchId = btn.getAttribute('data-play-tournament-match');
+      const isLeague = currentTournamentData.format === 'league';
+      playTournamentMatch(currentTournamentData.id, matchId, isLeague);
+    };
+  });
 
   // Challenge host setup
   document.querySelectorAll('[data-ch-variant]').forEach(btn => {
