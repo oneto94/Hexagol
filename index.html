@@ -276,8 +276,10 @@
     max-width: 100%;
     width: auto;
     display: block;
-    border-radius: 10px;
+    border-radius: 14px;
     touch-action: manipulation;
+    box-shadow: 0 10px 28px -8px rgba(28,43,34,0.32), 0 2px 8px -2px rgba(28,43,34,0.18);
+    overflow: hidden;
   }
 
   .tile { fill: var(--field-light); }
@@ -297,6 +299,12 @@
   }
   .target-icon:hover .target-icon-bg { opacity: 0.85; r: 9.5; }
   .target-icon.offside-invalid .target-icon-bg { opacity: 0.3; }
+  .target-ring {
+    fill: none;
+    stroke-width: 1.4;
+    opacity: 0.28;
+    pointer-events: none;
+  }
   .action-bubble { cursor: pointer; }
   .action-bubble circle { transition: r 0.1s ease; }
   .action-bubble:hover circle { r: 11; }
@@ -309,13 +317,13 @@
   }
   .player-piece .num {
     font-size: 11px;
-    font-weight: 800;
+    font-weight: 900;
     text-anchor: middle;
     dominant-baseline: central;
     pointer-events: none;
     font-family: 'Inter', sans-serif;
     paint-order: stroke;
-    stroke-width: 2px;
+    stroke-width: 2.6px;
     stroke-linejoin: round;
   }
   .player-piece.selectable { cursor: pointer; }
@@ -360,11 +368,12 @@
   .training-dice-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
   .ball {
-    fill: #fffdf5;
+    fill: url(#ball-gradient);
     stroke: #2a2a2a;
     stroke-width: 1;
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
   }
+  .player-shadow { fill: #000; opacity: 0.16; }
 
   .last-action-arrow { stroke: var(--gold); stroke-width: 1.4; opacity: 0.85; stroke-dasharray: 1.5,1.2; fill:none; }
   .shot-threat-line { stroke: #dc2626; stroke-width: 1.6; opacity: 0.8; stroke-dasharray: 2,1.5; fill: none; }
@@ -7056,10 +7065,10 @@ function goalTintStyle(colorStr) {
 }
 // Picks a halo/outline color for jersey numbers: dark halo behind light text, light halo behind dark text.
 function numberHalo(hslColorStr) {
-  if (!hslColorStr) return 'rgba(0,0,0,0.55)';
+  if (!hslColorStr) return 'rgba(0,0,0,0.75)';
   const match = hslColorStr.match(/(\d+(?:\.\d+)?)%\s*\)?\s*$/);
   const lightness = match ? parseFloat(match[1]) : 100;
-  return lightness > 55 ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.65)';
+  return lightness > 55 ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)';
 }
 
 function cx(x) { return x * CELL + CELL / 2; }
@@ -7179,6 +7188,13 @@ function renderBoardSVG(s) {
       <stop offset="78%" stop-color="#000000" stop-opacity="0" />
       <stop offset="100%" stop-color="#0c1a0e" stop-opacity="0.12" />
     </radialGradient>
+    <radialGradient id="ball-gradient" cx="35%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#d8ddd0" />
+    </radialGradient>
+    <pattern id="grass-fiber" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="9" stroke="#000000" stroke-opacity="0.015" stroke-width="1" />
+    </pattern>
   </defs>`;
 
   if (flipBoard) {
@@ -7202,6 +7218,7 @@ function renderBoardSVG(s) {
   }
 
   // Subtle vignette overlay for depth (realistic turf lighting, not flat color)
+  svg += `<rect x="0" y="0" width="${getSVGW()}" height="${getSVGH()}" fill="url(#grass-fiber)" pointer-events="none" />`;
   svg += `<rect x="0" y="0" width="${getSVGW()}" height="${getSVGH()}" fill="url(#turf-vignette)" pointer-events="none" />`;
 
   // Field markings — dynamic based on active board size
@@ -7316,6 +7333,7 @@ function renderBoardSVG(s) {
   const addIcon = (arr, kind, extraClass) => {
     if (!showTargetIcons) return;
     (arr || []).forEach(p => {
+      svg += `<circle class="target-ring" cx="${cx(p.x)}" cy="${cy(p.y)}" r="${CELL*0.28}" stroke="${targetIconColor(kind)}" />`;
       svg += `<g class="target-icon ${extraClass||''}" transform="translate(${cx(p.x)},${cy(p.y)})" data-action-x="${p.x}" data-action-y="${p.y}">`;
       svg += `<circle r="8" class="target-icon-bg" fill="${targetIconColor(kind)}" />`;
       svg += targetIconGlyph(kind);
@@ -7341,6 +7359,7 @@ function renderBoardSVG(s) {
       } else if (rivalOnTile) {
         rivalOnTilePositions.push({ ...p, kind: 'move' });
       } else {
+        svg += `<circle class="target-ring" cx="${cx(p.x)}" cy="${cy(p.y)}" r="${CELL*0.28}" stroke="${targetIconColor('move')}" />`;
         svg += `<g class="target-icon" transform="translate(${cx(p.x)},${cy(p.y)})" data-action-x="${p.x}" data-action-y="${p.y}">`;
         svg += `<circle r="8" class="target-icon-bg" fill="${targetIconColor('move')}" />`;
         svg += targetIconGlyph('move');
@@ -7361,6 +7380,7 @@ function renderBoardSVG(s) {
       } else if (rivalOnTile) {
         rivalOnTilePositions.push({ ...p, kind: 'kick' });
       } else {
+        svg += `<circle class="target-ring" cx="${cx(p.x)}" cy="${cy(p.y)}" r="${CELL*0.28}" stroke="${targetIconColor('kick')}" />`;
         svg += `<g class="target-icon" transform="translate(${cx(p.x)},${cy(p.y)})" data-action-x="${p.x}" data-action-y="${p.y}">`;
         svg += `<circle r="8" class="target-icon-bg" fill="${targetIconColor('kick')}" />`;
         svg += targetIconGlyph('kick');
@@ -7385,6 +7405,7 @@ function renderBoardSVG(s) {
         } else if (rivalOnTile) {
           rivalOnTilePositions.push({ ...p, kind });
         } else {
+          svg += `<circle class="target-ring" cx="${cx(p.x)}" cy="${cy(p.y)}" r="${CELL*0.28}" stroke="${targetIconColor(kind)}" />`;
           svg += `<g class="target-icon" transform="translate(${cx(p.x)},${cy(p.y)})" data-action-x="${p.x}" data-action-y="${p.y}">`;
           svg += `<circle r="8" class="target-icon-bg" fill="${targetIconColor(kind)}" />`;
           svg += targetIconGlyph(kind);
@@ -7462,6 +7483,7 @@ function renderBoardSVG(s) {
       const r = 11.5 * off.scale;
       svg += `<g class="${classes}" data-player-id="${p.id}" transform="translate(${px},${py})">`;
       svg += `<clipPath id="clip-${p.id}"><circle r="${r}" /></clipPath>`;
+      svg += `<ellipse class="player-shadow" cx="${r*0.12}" cy="${r*0.55}" rx="${r*0.85}" ry="${r*0.28}" />`;
       svg += `<circle class="disc" r="${r}" fill="${jersey.fill}" stroke="${stroke}" />`;
       if (jersey.overlay) svg += `<g clip-path="url(#clip-${p.id})" transform="scale(${off.scale})">${jersey.overlay}</g>`;
       svg += `<g ${flipBoard ? 'transform="rotate(180)"' : ''}><text class="num" fill="${textColor}" stroke="${numberHalo(team.textColor)}" y="0.5" style="font-size:${11 * Math.max(off.scale, 0.85)}px;">${p.playerNumber}</text></g>`;
