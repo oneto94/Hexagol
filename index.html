@@ -5078,38 +5078,59 @@ function handleGoal(s) {
 
   if (matchEnds) {
     const winMsg = lang === 'en' ? `GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL! ${scorerName} venceu a partida!` : `¡GOL! ¡${scorerName} gana el partido!`;
-    // First show the goal normally (with toast and board reset), then end match after a delay.
-    // gamePhase is 'match-ending' (not 'rolling') during this window so the
-    // dice/board stay non-interactive — the match is decided, just showing the
-    // celebratory board reset before flipping to the real game-over screen.
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), scoringTeam === 'home' ? 'away' : 'home', s.boardSize);
-    const goalState = logAction({
-      ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
-      currentPlayer: scoringTeam === 'home' ? 'away' : 'home', diceValue: null,
-      ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
-      turnStartState: null, lastAction: null, matchStats: newMatchStats, assistProviderId: null,
-      gamePhase: 'match-ending', isClockRunning: false,
+    // Same two-step approach as the regular goal: first show the ball/player
+    // actually at the net (so the FLIP glide is visible), then reset
+    // positions for the celebratory board a beat later, and only after that
+    // flip to the real game-over screen.
+    const goalScoredState = {
+      ...s, score: newScore, gamePhase: 'goal-scored-match-ending', diceValue: null,
+      matchStats: newMatchStats,
       toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : lang === 'pt' ? '⚽ FIM DE JOGO!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : lang === 'pt' ? `${scorerName} venceu!` : `¡${scorerName} gana!` },
-    }, winMsg, 'goal', scoringTeam);
+    };
+    setTimeout(() => {
+      setState(s2 => {
+        if (s2.gamePhase !== 'goal-scored-match-ending') return s2;
+        const newPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), scoringTeam === 'home' ? 'away' : 'home', s2.boardSize);
+        return {
+          ...s2, players: newPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
+          currentPlayer: scoringTeam === 'home' ? 'away' : 'home',
+          ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
+          turnStartState: null, lastAction: null, assistProviderId: null,
+          gamePhase: 'match-ending', isClockRunning: false,
+        };
+      });
+    }, 420);
     // Delay game-over so the goal toast and board reset are visible
     setTimeout(() => {
-      setState(s2 => s2.gamePhase === 'match-ending' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
+      setState(s2 => (s2.gamePhase === 'match-ending' || s2.gamePhase === 'goal-scored-match-ending') && s2.score[scoringTeam] >= (s2.targetGoals || 1)
         ? { ...s2, gamePhase: 'game-over', isClockRunning: false }
         : s2);
     }, 1800);
-    return goalState;
+    return logAction(goalScoredState, winMsg, 'goal', scoringTeam);
   }
 
-  const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), scoringTeam === 'home' ? 'away' : 'home', s.boardSize);
   const msg = lang === 'en' ? `GOAL by ${scorerName}! ${concederName} kicks off.` : lang === 'pt' ? `GOL de ${scorerName}! ${concederName} sai com a bola.` : `¡GOL de ${scorerName}! Repone ${concederName}. Lanza el dado.`;
-  const news = {
-    ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
-    currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling', diceValue: null,
-    ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
-    turnStartState: null, lastAction: null, isKickoffTurn: true, matchStats: newMatchStats, assistProviderId: null,
-    toastToShow: { title: lang === 'en' ? '⚽ GOAAAL!' : lang === 'pt' ? '⚽ GOOOLLL!' : '¡GOOOOL!', description: lang === 'en' ? `${scorerName} scored!` : lang === 'pt' ? `${scorerName} marcou!` : `${scorerName} ha marcado.` },
+  // Delay the kickoff position reset briefly so the FLIP glide of the ball
+  // reaching the net is actually visible before it jumps back to center —
+  // otherwise this same setState both scores the goal AND resets positions,
+  // leaving no intermediate frame for the "ball entering the goal" motion.
+  const goalScoredState = {
+    ...s, score: newScore, gamePhase: 'goal-scored', diceValue: null,
+    matchStats: newMatchStats, toastToShow: { title: lang === 'en' ? '⚽ GOAAAL!' : lang === 'pt' ? '⚽ GOOOLLL!' : '¡GOOOOL!', description: lang === 'en' ? `${scorerName} scored!` : lang === 'pt' ? `${scorerName} marcou!` : `${scorerName} ha marcado.` },
   };
-  return logAction(news, msg, 'goal', scoringTeam);
+  setTimeout(() => {
+    setState(s2 => {
+      if (s2.gamePhase !== 'goal-scored') return s2; // superseded by something else meanwhile
+      const newPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), scoringTeam === 'home' ? 'away' : 'home', s2.boardSize);
+      return {
+        ...s2, players: newPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
+        currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling',
+        ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
+        turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+      };
+    });
+  }, 420);
+  return logAction(goalScoredState, msg, 'goal', scoringTeam);
 }
 
 function handleOwnGoal(s) {
@@ -5127,30 +5148,48 @@ function handleOwnGoal(s) {
 
   if (matchEnds) {
     const winMsg = lang === 'en' ? `OWN GOAL! ${scorerName} wins the match!` : lang === 'pt' ? `GOL CONTRA! ${scorerName} venceu a partida!` : `¡AUTOGOL! ¡${scorerName} gana el partido!`;
-    const goalState = logAction({
-      ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
-      currentPlayer: team, diceValue: null, ...freshActionState(),
-      lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
-      turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
-      gamePhase: 'rolling',
+    const goalScoredState = {
+      ...s, score: newScore, gamePhase: 'goal-scored-match-ending', diceValue: null,
       toastToShow: { title: lang === 'en' ? '⚽ MATCH OVER!' : lang === 'pt' ? '⚽ FIM DE JOGO!' : '⚽ ¡FIN DEL PARTIDO!', description: lang === 'en' ? `${scorerName} wins!` : lang === 'pt' ? `${scorerName} venceu!` : `¡${scorerName} gana!` },
-    }, winMsg, 'goal', scoringTeam);
+    };
     setTimeout(() => {
-      setState(s2 => s2.gamePhase === 'rolling' && s2.score[scoringTeam] >= (s2.targetGoals || 1)
+      setState(s2 => {
+        if (s2.gamePhase !== 'goal-scored-match-ending') return s2;
+        const resetPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), team, s2.boardSize);
+        return {
+          ...s2, players: resetPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
+          currentPlayer: team, ...freshActionState(),
+          lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
+          turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+          gamePhase: 'match-ending', isClockRunning: false,
+        };
+      });
+    }, 420);
+    setTimeout(() => {
+      setState(s2 => (s2.gamePhase === 'match-ending' || s2.gamePhase === 'goal-scored-match-ending') && s2.score[scoringTeam] >= (s2.targetGoals || 1)
         ? { ...s2, gamePhase: 'game-over', isClockRunning: false }
         : s2);
     }, 1800);
-    return goalState;
+    return logAction(goalScoredState, winMsg, 'goal', scoringTeam);
   }
 
-  const news = {
-    ...s, score: newScore, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
-    currentPlayer: team, gamePhase: 'rolling', diceValue: null, ...freshActionState(),
-    lastPlayerToTouchBallId: null, swapCandidates: [], timer: s.turnDuration,
-    turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+  const goalScoredState = {
+    ...s, score: newScore, gamePhase: 'goal-scored', diceValue: null,
     toastToShow: { title: lang === 'en' ? '⚽ OWN GOAL!' : lang === 'pt' ? '⚽ GOL CONTRA!' : '¡AUTOGOL!', description: lang === 'en' ? `${concederName} scored an own goal.` : lang === 'pt' ? `${concederName} fez um gol contra.` : `${concederName} ha marcado en propia puerta.` },
   };
-  return logAction(news, msg, 'goal', scoringTeam);
+  setTimeout(() => {
+    setState(s2 => {
+      if (s2.gamePhase !== 'goal-scored') return s2;
+      const resetPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), team, s2.boardSize);
+      return {
+        ...s2, players: resetPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
+        currentPlayer: team, gamePhase: 'rolling',
+        ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
+        turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+      };
+    });
+  }, 420);
+  return logAction(goalScoredState, msg, 'goal', scoringTeam);
 }
 
 function handleEndHalfOrMatch(s) {
@@ -6893,12 +6932,12 @@ function handleActionExecution(s, executedAction, position) {
 
     const opponentGoal = currentPlayer === 'home' ? _activeAwayGoal : _activeHomeGoal;
     if (opponentGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) {
-      const goalLog = logAction(s, lang === 'en' ? `Player #${actingPlayer.playerNumber} drags toward goal!` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} arrasta em direção ao gol!` : `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
+      const goalLog = logAction({ ...s, players: newPlayers, ballPosition: finalBallPos }, lang === 'en' ? `Player #${actingPlayer.playerNumber} drags toward goal!` : lang === 'pt' ? `Jogador #${actingPlayer.playerNumber} arrasta em direção ao gol!` : `¡El jugador #${actingPlayer.playerNumber} arrastra a puerta!`, 'shot-on-goal');
       const withStat = { ...goalLog, stats: { ...goalLog.stats, shotsOnGoal: { ...goalLog.stats.shotsOnGoal, [currentPlayer]: goalLog.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
     const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
-    if (ownGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) return handleOwnGoal(s);
+    if (ownGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) return handleOwnGoal({ ...s, players: newPlayers, ballPosition: finalBallPos });
 
     const receivingTeammate = players.find(p => p.position.x === finalBallPos.x && p.position.y === finalBallPos.y && p.team === currentPlayer && p.id !== selectedPlayerId);
     if (receivingTeammate) {
@@ -6951,12 +6990,12 @@ function handleActionExecution(s, executedAction, position) {
     const opponentGoal = currentPlayer === 'home' ? _activeAwayGoal : _activeHomeGoal;
     if (opponentGoal.some(p => p.x === position.x && p.y === position.y)) {
       const shooter = executedAction === 'chain-pass' ? s.players.find(p => p.id === s.chainPassInitiatorId) : actingPlayer;
-      const logState = logAction(s, lang === 'en' ? `Player #${shooter.playerNumber} shoots!` : lang === 'pt' ? `Jogador #${shooter.playerNumber} chuta!` : `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
+      const logState = logAction({ ...s, ballPosition: position }, lang === 'en' ? `Player #${shooter.playerNumber} shoots!` : lang === 'pt' ? `Jogador #${shooter.playerNumber} chuta!` : `¡El jugador #${shooter.playerNumber} chuta a puerta!`, 'shot-on-goal');
       const withStat = { ...logState, stats: { ...logState.stats, shotsOnGoal: { ...logState.stats.shotsOnGoal, [currentPlayer]: logState.stats.shotsOnGoal[currentPlayer] + 1 } } };
       return handleGoal(withStat);
     }
     const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
-    if (ownGoal.some(p => p.x === position.x && p.y === position.y)) return handleOwnGoal(s);
+    if (ownGoal.some(p => p.x === position.x && p.y === position.y)) return handleOwnGoal({ ...s, ballPosition: position });
 
     const playersOnTarget = players.filter(p => p.position.x === position.x && p.position.y === position.y);
     const opponentOnTarget = playersOnTarget.find(p => p.team !== currentPlayer);
@@ -10958,6 +10997,81 @@ function renderDicePanel(s) {
 
 let currentMenuView = 'landing'; // starts on landing until auth resolves
 
+// ── FLIP animation for board pieces ─────────────────────────────────────────
+// The board is a fresh SVG string re-inserted via innerHTML on every render,
+// so CSS transitions on transform never fire naturally (the DOM nodes are
+// destroyed and recreated, not moved). This captures each player/ball's
+// screen position just before the swap and, right after, replays the delta
+// as an inverted transform that's then animated back to zero — the classic
+// FLIP technique — giving real glide animation without touching the render
+// pipeline itself.
+function captureBoardPiecePositions() {
+  const positions = {};
+  document.querySelectorAll('#board .player-piece').forEach(el => {
+    const id = el.getAttribute('data-player-id');
+    const t = el.getAttribute('transform');
+    const m = t && t.match(/translate\(([-\d.]+),([-\d.]+)\)/);
+    if (id && m) positions[`p${id}`] = { x: parseFloat(m[1]), y: parseFloat(m[2]) };
+  });
+  const ball = document.querySelector('#board .ball');
+  if (ball) positions.ball = { x: parseFloat(ball.getAttribute('cx')), y: parseFloat(ball.getAttribute('cy')) };
+  return positions;
+}
+
+function replayBoardPieceAnimation(prevPositions) {
+  if (!prevPositions) return;
+  const board = document.getElementById('board');
+  if (!board) return;
+
+  const animate = (el, oldPos, newPos, isCircle) => {
+    const dx = oldPos.x - newPos.x;
+    const dy = oldPos.y - newPos.y;
+    if (Math.abs(dx) < 0.01 && Math.abs(dy) < 0.01) return; // didn't move — nothing to animate
+    if (isCircle) {
+      // Ball: animate cx/cy directly since it has no group transform to piggyback on.
+      const startX = newPos.x + dx, startY = newPos.y + dy;
+      el.setAttribute('cx', startX);
+      el.setAttribute('cy', startY);
+      el.style.transition = 'none';
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.transition = 'cx 0.32s cubic-bezier(.2,.7,.3,1), cy 0.32s cubic-bezier(.2,.7,.3,1)';
+          el.setAttribute('cx', newPos.x);
+          el.setAttribute('cy', newPos.y);
+        });
+      });
+    } else {
+      // Players: prepend an inverted translate to the existing transform,
+      // then let the existing CSS transition (.player-piece transform 0.18s)
+      // animate it away — same technique, using the transform chain instead
+      // of raw attributes since players are positioned via transform.
+      const base = el.getAttribute('transform') || '';
+      el.style.transition = 'none';
+      el.setAttribute('transform', `translate(${dx},${dy}) ${base}`);
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          el.style.transition = 'transform 0.32s cubic-bezier(.2,.7,.3,1)';
+          el.setAttribute('transform', base);
+        });
+      });
+    }
+  };
+
+  document.querySelectorAll('#board .player-piece').forEach(el => {
+    const id = el.getAttribute('data-player-id');
+    const key = `p${id}`;
+    const t = el.getAttribute('transform');
+    const m = t && t.match(/translate\(([-\d.]+),([-\d.]+)\)/);
+    if (!id || !m || !prevPositions[key]) return;
+    animate(el, prevPositions[key], { x: parseFloat(m[1]), y: parseFloat(m[2]) }, false);
+  });
+
+  const ball = document.querySelector('#board .ball');
+  if (ball && prevPositions.ball) {
+    animate(ball, prevPositions.ball, { x: parseFloat(ball.getAttribute('cx')), y: parseFloat(ball.getAttribute('cy')) }, true);
+  }
+}
+
 function render() {
   const app = document.getElementById('app');
 
@@ -11009,9 +11123,13 @@ function render() {
   } else if (state.gamePhase === 'league-over') {
     app.innerHTML = renderLeagueOver(state);
   } else if (state.gamePhase === 'tutorial') {
+    const prevPositions = captureBoardPiecePositions();
     app.innerHTML = renderGameScreen(state);
+    replayBoardPieceAnimation(prevPositions);
   } else {
+    const prevPositions = captureBoardPiecePositions();
     app.innerHTML = renderGameScreen(state);
+    replayBoardPieceAnimation(prevPositions);
   }
 
   renderToast();
