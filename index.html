@@ -71,10 +71,24 @@
   html, body {
     margin: 0; padding: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(160deg, #eef5ea 0%, #dfeede 60%, #d7ead4 100%);
+    background-color: #eef5ea;
     color: var(--ink);
     height: 100%;
     overflow: hidden;
+  }
+  /* Textured background only behind menu screens — during gameplay the board
+     itself is already a grass pattern, so a plain backdrop avoids visual clash. */
+  body:has(.menu-screen), body:has(.landing-screen) {
+    background-image:
+      radial-gradient(ellipse 75% 65% at 50% 30%, rgba(238,245,234,0) 0%, rgba(195,221,192,0.5) 100%),
+      repeating-linear-gradient(90deg, #dfeede 0px, #dfeede 30px, #d7ead4 30px, #d7ead4 60px);
+  }
+  /* During gameplay: a calmer, darker neutral tone that reads as "stadium
+     surroundings" rather than more grass — keeps the board itself as the
+     only green pattern on screen. */
+  body:not(:has(.menu-screen)):not(:has(.landing-screen)) {
+    background-color: #c9d4c2;
+    background-image: radial-gradient(ellipse 80% 70% at 50% 25%, rgba(201,212,194,0) 0%, rgba(163,178,153,0.55) 100%);
   }
   #app {
     max-width: 1180px;
@@ -269,11 +283,12 @@
   .tile { fill: var(--field-light); }
   .tile.dark { fill: var(--field-dark); }
   .tile-hit { cursor: pointer; }
-  .goal-line { stroke: #ffffff; stroke-width: 2.4; fill: none; opacity: 0.9; }
   .center-line { stroke: #ffffff; stroke-width: 1.6; opacity: 0.65; }
   .center-circle { stroke: #ffffff; stroke-width: 1.6; fill: none; opacity: 0.65; }
   .goal-rect { fill: none; stroke: #ffffff; stroke-width: 2; opacity: 0.85; }
+  .field-outline { fill: none; stroke: #ffffff; stroke-width: 2.5; opacity: 0.9; }
   .goal-net { fill: #fff; opacity: 0.18; }
+  .goal-frame { fill: none; stroke: #1c2b22; stroke-width: 2.5; opacity: 0.75; }
 
   .target-icon { cursor: pointer; }
   .target-icon-bg {
@@ -578,14 +593,33 @@
   }
   .menu-screen .subtitle { color: #6b7a64; font-size: 0.95rem; margin-bottom: 26px; }
   .menu-grid { display: grid; gap: 10px; }
+  .menu-screen > *, .menu-grid > * {
+    animation: staggerIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .menu-screen > h1 { animation-delay: 0ms; }
+  .menu-screen > .subtitle { animation-delay: 40ms; }
+  .menu-grid > *:nth-child(1) { animation-delay: 80ms; }
+  .menu-grid > *:nth-child(2) { animation-delay: 120ms; }
+  .menu-grid > *:nth-child(3) { animation-delay: 160ms; }
+  .menu-grid > *:nth-child(4) { animation-delay: 200ms; }
+  .menu-grid > *:nth-child(5) { animation-delay: 240ms; }
+  .menu-grid > *:nth-child(n+6) { animation-delay: 280ms; }
+  @keyframes staggerIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .menu-screen > *, .menu-grid > * { animation: none; }
+  }
   .menu-section-divider { height: 1px; background: #e1e8db; margin: 14px 0; }
   .menu-btn {
-    appearance: none; border: 1.5px solid #e1e8db; background: #fbfcf9;
+    appearance: none; border: 1px solid #e1e8db; background: #fbfcf9;
     border-radius: 10px; padding: 16px 20px; text-align: left;
     cursor: pointer; transition: all 0.15s ease;
     font-family: inherit;
+    box-shadow: 0 3px 6px -2px rgba(28,43,34,0.10);
   }
-  .menu-btn:hover { border-color: var(--accent); background: #f1f5ff; transform: translateY(-1px); }
+  .menu-btn:hover { border-color: var(--accent); background: #f1f5ff; transform: translateY(-1px); box-shadow: 0 5px 10px -2px rgba(28,43,34,0.14); }
   .menu-btn .t { font-weight: 800; font-size: 0.98rem; }
   .menu-btn .d { font-size: 0.8rem; color: #7a8772; margin-top: 2px; }
 
@@ -7190,15 +7224,38 @@ function renderBoardSVG(s) {
 
   svg += `<line class="center-line" x1="0" y1="${midY}" x2="${getSVGW()}" y2="${midY}" />`;
   svg += `<circle class="center-circle" cx="${centerX}" cy="${midY}" r="${CELL*2}" />`;
-  // Big areas
-  svg += `<rect class="goal-rect" x="${bigAreaX*CELL}" y="${(bh-bigAreaH)*CELL}" width="${bigAreaW*CELL}" height="${bigAreaH*CELL}" />`;
-  svg += `<rect class="goal-rect" x="${bigAreaX*CELL}" y="0" width="${bigAreaW*CELL}" height="${bigAreaH*CELL}" />`;
+  // Field perimeter — sidelines run only along the playable pitch, stopping
+  // at the goal line (not continuing behind it alongside the goal-mouth row).
+  const inset = 1.2;
+  svg += `<line class="field-outline" x1="${inset}" y1="${CELL}" x2="${inset}" y2="${(bh-1)*CELL}" />`;
+  svg += `<line class="field-outline" x1="${getSVGW()-inset}" y1="${CELL}" x2="${getSVGW()-inset}" y2="${(bh-1)*CELL}" />`;
+  // Goal line — NOT the absolute board edge. It sits one row inward, at the
+  // boundary between the goal-mouth row (0 to 1, or bh-1 to bh) and the first
+  // row of regular playable pitch — same rule as a real pitch, where the goal
+  // line is where the ball crosses to score, with the net/goal area behind it.
+  // The gap in the middle leaves the goal mouth itself open.
+  svg += `<line class="field-outline" x1="0" y1="${CELL}" x2="${goalX*CELL}" y2="${CELL}" />`;
+  svg += `<line class="field-outline" x1="${(goalX+5)*CELL}" y1="${CELL}" x2="${getSVGW()}" y2="${CELL}" />`;
+  svg += `<line class="field-outline" x1="0" y1="${(bh-1)*CELL}" x2="${goalX*CELL}" y2="${(bh-1)*CELL}" />`;
+  svg += `<line class="field-outline" x1="${(goalX+5)*CELL}" y1="${(bh-1)*CELL}" x2="${getSVGW()}" y2="${(bh-1)*CELL}" />`;
+  // Big areas — the rect's outer edge stops exactly at the goal line (row
+  // bh-1 at the bottom, row 1 at the top) rather than the absolute board
+  // edge, so the area closes flush against the goal line instead of
+  // swallowing it. Height reduced by 1 so the footprint matches what it was
+  // before (not an extra row taller).
+  svg += `<rect class="goal-rect" x="${bigAreaX*CELL}" y="${(bh-bigAreaH)*CELL}" width="${bigAreaW*CELL}" height="${(bigAreaH-1)*CELL}" />`;
+  svg += `<rect class="goal-rect" x="${bigAreaX*CELL}" y="${CELL}" width="${bigAreaW*CELL}" height="${(bigAreaH-1)*CELL}" />`;
   // Small areas
   svg += `<rect class="goal-rect" x="${smallAreaX*CELL}" y="${(bh-3)*CELL}" width="${smallAreaW*CELL}" height="${2*CELL}" />`;
   svg += `<rect class="goal-rect" x="${smallAreaX*CELL}" y="${1*CELL}" width="${smallAreaW*CELL}" height="${2*CELL}" />`;
-  // Goal nets
-  svg += `<rect class="goal-net" x="${goalX*CELL}" y="${bh*CELL + CELL*0.55}" width="${5*CELL}" height="${CELL*0.5}" />`;
-  svg += `<rect class="goal-net" x="${goalX*CELL}" y="${-CELL*1.05}" width="${5*CELL}" height="${CELL*0.5}" />`;
+  // Goal nets — the tinted fill inside the goal-mouth row.
+  svg += `<rect class="goal-net" x="${goalX*CELL}" y="${(bh-1)*CELL}" width="${5*CELL}" height="${CELL}" />`;
+  svg += `<rect class="goal-net" x="${goalX*CELL}" y="0" width="${5*CELL}" height="${CELL}" />`;
+  // Goal frame — only the two posts and the crossbar (open toward the pitch,
+  // where the goal line already provides that edge) — a 3-sided path, not a
+  // closed rectangle, so it doesn't duplicate the goal line.
+  svg += `<path d="M ${goalX*CELL} ${(bh-1)*CELL} L ${goalX*CELL} ${bh*CELL} L ${(goalX+5)*CELL} ${bh*CELL} L ${(goalX+5)*CELL} ${(bh-1)*CELL}" class="goal-frame" />`;
+  svg += `<path d="M ${goalX*CELL} ${CELL} L ${goalX*CELL} 0 L ${(goalX+5)*CELL} 0 L ${(goalX+5)*CELL} ${CELL}" class="goal-frame" />`;
   // Penalty arcs
   svg += `<path d="M ${goalX*CELL} ${bigAreaH*CELL} A ${arcR} ${arcR} 0 0 0 ${(goalX+5)*CELL} ${bigAreaH*CELL}" class="goal-rect" />`;
   svg += `<path d="M ${goalX*CELL} ${(bh-bigAreaH)*CELL} A ${arcR} ${arcR} 0 0 1 ${(goalX+5)*CELL} ${(bh-bigAreaH)*CELL}" class="goal-rect" />`;
@@ -7450,7 +7507,15 @@ function renderBoardSVG(s) {
     const isMobile = window.innerWidth <= 600;
     const bubbleR = isMobile ? 14 : 9.5;
     const spacing = isMobile ? 32 : 17;
-    const startX = baseX - ((n - 1) * spacing) / 2;
+    const rowHalfWidth = ((n - 1) * spacing) / 2;
+    // Clamp the row so no bubble's edge falls outside the board's horizontal
+    // bounds — near the left/right edges this shifts the whole fan sideways
+    // instead of letting the outermost bubble get cut off by the SVG viewport.
+    const margin = bubbleR + 4;
+    let startX = baseX - rowHalfWidth;
+    const boardW = getSVGW();
+    if (startX < margin) startX = margin;
+    if (startX + rowHalfWidth * 2 > boardW - margin) startX = boardW - margin - rowHalfWidth * 2;
     const bubbleY = position.y <= 2 ? baseY + (isMobile ? 30 : 20) : baseY - (isMobile ? 30 : 20);
     svg += `<g class="action-choice-popover">`;
     svg += `<line x1="${baseX}" y1="${bubbleY}" x2="${baseX}" y2="${baseY}" stroke="#1c2b22" stroke-width="1" stroke-dasharray="1.5,1.5" opacity="0.5" />`;
