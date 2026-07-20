@@ -936,6 +936,40 @@
     width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--accent);
     color: #fff; font-size: 0.95rem; cursor: pointer; flex-shrink: 0;
   }
+  /* ── Mobile menu screens (≤600px) — placed last in the stylesheet so it
+     wins the cascade over the base .menu-screen/.menu-btn rules defined
+     earlier (same specificity, later wins). The main menu especially (6
+     cards + user chip + secondary links) can exceed the viewport height on
+     tall lists even on large phones — this shrinks padding, gaps and type
+     scale so it fits without scrolling on common device sizes. ── */
+  @media (max-width: 600px) {
+    .menu-screen { padding: 16px 14px; border-radius: 16px; margin: 8px auto; max-width: 480px; }
+    .menu-screen h1 { font-size: 1.15rem; margin: 0 0 2px; }
+    .menu-screen .subtitle { font-size: 0.74rem; margin-bottom: 10px; }
+    .menu-grid { gap: 6px; }
+    .menu-btn { padding: 9px 12px; border-radius: 8px; }
+    .menu-btn .t { font-size: 0.84rem; }
+    .menu-btn .d { font-size: 0.68rem; margin-top: 0; line-height: 1.25; }
+    .menu-section-divider { margin: 8px 0; }
+    .user-chip { padding: 6px 8px; margin-bottom: 8px; gap: 6px; }
+    .user-chip-avatar { width: 26px; height: 26px; font-size: 0.75rem; }
+    .user-chip-name { font-size: 0.78rem; }
+    .user-chip-elo { font-size: 0.64rem; }
+
+    /* Landing page: smaller logo/title/preview so the whole thing fits
+       without scroll on common phone heights. */
+    .landing-logo { width: 52px; height: 52px; margin-bottom: 2px; }
+    .landing-title { font-size: 1.6rem; margin-bottom: 3px; }
+    .landing-subtitle { font-size: 0.82rem; margin-bottom: 14px; }
+    .landing-preview { margin-bottom: 14px; }
+    .landing-actions { gap: 7px; }
+    .landing-btn { padding: 10px 16px; font-size: 0.88rem; border-radius: 10px; }
+    .landing-btn-guest { font-size: 0.78rem; }
+    .landing-features { margin-top: 12px; gap: 6px; }
+    .landing-feature { padding: 8px 6px; }
+    .landing-feature-icon svg { width: 16px; height: 16px; }
+    .landing-feature-label { font-size: 0.62rem; }
+  }
 </style>
 </head>
 <body>
