@@ -80,6 +80,8 @@
     --text-3: #6b7a64;         /* muted text */
     --text-4: #9aa593;         /* faint text */
     --accent-tint: #f0f4ff;    /* light accent-colored highlight background */
+    --green-accent: #2a6e3f;
+    --green-tint: #edf5ef;
   }
   [data-theme="dark"] {
     --background: hsl(150 18% 9%);
@@ -99,6 +101,8 @@
     --text-3: #9fb0a5;
     --text-4: #74887b;
     --accent-tint: #1e2a42;
+    --green-accent: #3f9159;
+    --green-tint: #16281c;
     /* The board itself stays green/realistic per design — only the
        surrounding chrome (menus, panels, modals) goes dark. */
   }
@@ -416,7 +420,7 @@
     background: var(--surface-1); font-weight: 800; font-size: 1.1rem; cursor: pointer;
     font-family: inherit; transition: background 0.1s, border-color 0.1s;
   }
-  .training-dice-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .training-dice-btn:hover { background: var(--green-accent); color: #fff; border-color: var(--green-accent); }
 
   .ball {
     fill: url(#ball-gradient);
@@ -467,8 +471,8 @@
     background: var(--surface-3); flex-shrink: 0;
   }
   .dice-panel h3 { margin: 0; }
-  .tutorial-progress-bar { height: 6px; background: var(--accent-tint); border-radius: 4px; margin-top: 8px; overflow: hidden; }
-  .tutorial-progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s ease; }
+  .tutorial-progress-bar { height: 6px; background: var(--green-tint); border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .tutorial-progress-fill { height: 100%; background: var(--green-accent); border-radius: 4px; transition: width 0.3s ease; }
 
   @keyframes tutorial-highlight-pulse {
     0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(74,108,222,0.7); }
@@ -483,7 +487,7 @@
     50% { stroke-width: 5.5; opacity: 0.5; }
   }
   .tutorial-highlight-svg {
-    stroke: var(--accent); fill: none;
+    stroke: var(--green-accent); fill: none;
     animation: tutorial-highlight-svg-pulse 1.3s ease-in-out infinite;
   }
   .zero-note {
@@ -492,7 +496,7 @@
   }
   .turn-timer-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
   .turn-timer-bar { flex: 1; height: 6px; background: var(--border-1); border-radius: 4px; overflow: hidden; }
-  .turn-timer-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 1s linear; }
+  .turn-timer-fill { height: 100%; background: var(--green-accent); border-radius: 4px; transition: width 1s linear; }
   .turn-timer-fill.low { background: #dc2626; }
   .turn-timer-label { font-size: 0.72rem; font-weight: 700; color: var(--text-3); min-width: 32px; text-align: right; }
   .turn-timer-label.low { color: #dc2626; }
@@ -511,7 +515,7 @@
     appearance: none; border: none; cursor: pointer;
     font-family: inherit; font-weight: 700; font-size: 0.85rem;
     padding: 10px 18px; border-radius: 999px;
-    background: var(--accent); color: #fff;
+    background: var(--green-accent); color: #fff;
     box-shadow: 0 4px 12px -4px rgba(38,90,217,0.6);
     transition: transform 0.1s ease, filter 0.1s ease;
   }
@@ -520,8 +524,8 @@
   .btn.secondary { background: var(--text-2); box-shadow: none; }
   .btn.team-btn { box-shadow: 0 3px 8px -3px rgba(0,0,0,0.45); }
   .btn.ghost {
-    background: transparent; color: var(--accent-dark);
-    border: 1.5px solid var(--accent);
+    background: transparent; color: var(--green-accent);
+    border: 1.5px solid var(--green-accent);
     box-shadow: none;
   }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -559,20 +563,30 @@
     border-top: 1px solid var(--border-1); padding-top: 6px;
   }
   .log-list li { padding: 3px 8px; border-radius: 6px; }
-  .log-list li.home { background: rgba(99,141,237,0.08); }
-  .log-list li.away { background: rgba(229,90,80,0.08); }
   .log-list li.goal { background: rgba(217,164,65,0.18); font-weight: 700; }
   .log-list li .turn-tag { color: var(--text-4); font-weight: 600; margin-right: 4px; }
 
   /* ---------- Menus / overlays ---------- */
   .menu-screen {
-    background: var(--paper);
+    background:
+      radial-gradient(ellipse 90% 40% at 50% 0%, rgba(42,110,63,0.05) 0%, rgba(42,110,63,0) 60%),
+      radial-gradient(ellipse 60% 50% at 0% 100%, rgba(28,43,34,0.035) 0%, rgba(28,43,34,0) 70%),
+      radial-gradient(ellipse 60% 50% at 100% 100%, rgba(28,43,34,0.035) 0%, rgba(28,43,34,0) 70%),
+      repeating-linear-gradient(135deg, rgba(28,43,34,0.012) 0px, rgba(28,43,34,0.012) 1px, transparent 1px, transparent 7px),
+      var(--paper);
     border-radius: 22px;
     box-shadow: var(--shadow);
     padding: 36px 28px;
     text-align: center;
     max-width: 560px;
     margin: 40px auto;
+    position: relative;
+    overflow: hidden;
+  }
+  .menu-screen::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, #2a6e3f, var(--gold), #2a6e3f);
   }
   .menu-screen.league-screen { text-align: left; }
   .rules-screen { position: relative; }
@@ -585,14 +599,14 @@
     background: var(--surface-2); border: 1px solid var(--border-1);
     font-size: 0.82rem;
   }
-  .lb-row.lb-me { background: var(--accent-tint); border-color: var(--accent); font-weight: 700; }
+  .lb-row.lb-me { background: var(--green-tint); border-color: var(--green-accent); font-weight: 700; }
   .lb-rank { font-size: 1rem; text-align: center; }
   .lb-name { font-weight: 600; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lb-elo { font-weight: 800; color: #1d6b2b; white-space: nowrap; }
   .lb-record { color: var(--text-3); font-size: 0.74rem; white-space: nowrap; }
   .lb-my-position {
     margin-top: 10px; padding: 8px 12px; border-radius: 10px;
-    background: var(--accent-tint); border: 1px solid var(--accent);
+    background: var(--green-tint); border: 1px solid var(--green-accent);
     font-size: 0.82rem; text-align: center; color: var(--text-2);
   }
 
@@ -630,7 +644,7 @@
     font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-4);
     border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
   }
-  .league-tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
+  .league-tab.active { color: var(--green-accent); border-bottom-color: var(--green-accent); }
   .league-tab-body { max-height: 56vh; overflow-y: auto; }
   .league-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
   .league-table th { font-size: 0.66rem; text-transform: uppercase; color: var(--text-4); padding: 6px 4px; border-bottom: 1.5px solid var(--border-1); }
@@ -638,7 +652,7 @@
   .league-table tr.top { background: rgba(99,141,237,0.08); }
   .league-round { margin-bottom: 16px; }
   .league-round-title { font-weight: 800; font-size: 0.85rem; margin-bottom: 8px; color: var(--text-2); }
-  .league-round-title.current { color: var(--accent-dark); }
+  .league-round-title.current { color: var(--green-accent); }
   .league-match-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
     padding: 8px 10px; border-radius: 10px; background: var(--surface-3); margin-bottom: 6px;
@@ -674,15 +688,20 @@
   }
   .menu-section-divider { height: 1px; background: var(--border-1); margin: 14px 0; }
   .menu-btn {
-    appearance: none; border: 1px solid var(--border-1); background: var(--surface-2);
+    appearance: none; border: 1px solid var(--border-1); border-left: 3px solid transparent; background: var(--surface-2);
     border-radius: 10px; padding: 16px 20px; text-align: left;
-    cursor: pointer; transition: all 0.15s ease;
+    cursor: pointer; transition: border-color 0.18s ease, background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
     font-family: inherit;
     box-shadow: 0 3px 6px -2px rgba(28,43,34,0.10);
     color: var(--text-1);
   }
-  .menu-btn:hover { border-color: var(--accent); background: var(--accent-tint); transform: translateY(-1px); box-shadow: 0 5px 10px -2px rgba(28,43,34,0.14); }
-  .menu-btn .t { font-weight: 800; font-size: 0.98rem; color: var(--text-1); }
+  .menu-btn:hover {
+    border-color: var(--green-accent); border-left-color: var(--green-accent);
+    background: var(--green-tint); transform: translateY(-1px);
+    box-shadow: 0 6px 14px -3px rgba(28,43,34,0.18);
+  }
+  .menu-btn:hover .t { color: var(--green-accent); }
+  .menu-btn .t { font-weight: 800; font-size: 0.98rem; color: var(--text-1); transition: color 0.18s ease; }
   .menu-btn .d { font-size: 0.8rem; color: var(--text-3); margin-top: 2px; }
 
   .setup-row { display: flex; flex-direction: column; gap: 14px; text-align: left; margin-bottom: 22px; }
@@ -698,7 +717,7 @@
     flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid var(--border-1);
     background: var(--surface-1); font-weight: 700; cursor: pointer; font-family: inherit; color: var(--text-1);
   }
-  .duration-row button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .duration-row button.active { background: var(--green-accent); color: #fff; border-color: var(--green-accent); }
 
   /* ---------- Custom team picker / kit editor ---------- */
   .team-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -711,7 +730,7 @@
     flex: 1; padding: 6px; border-radius: 8px; border: 1.5px solid var(--border-1);
     background: var(--surface-1); font-weight: 700; font-size: 0.72rem; cursor: pointer; font-family: inherit; color: var(--text-1);
   }
-  .picker-toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .picker-toggle-btn.active { background: var(--green-accent); color: #fff; border-color: var(--green-accent); }
   .custom-team-summary { display: flex; align-items: center; gap: 10px; padding: 4px 2px; }
   .custom-team-summary-text { display: flex; flex-direction: column; line-height: 1.3; }
   .custom-team-summary-text strong { font-size: 0.85rem; color: var(--text-1); }
@@ -725,7 +744,7 @@
     flex: 1; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border-1);
     font-family: inherit; font-weight: 700; font-size: 0.9rem; background: var(--surface-1); color: var(--text-1);
   }
-  .online-team-name-input:focus { outline: none; border-color: var(--accent); }
+  .online-team-name-input:focus { outline: none; border-color: var(--green-accent); }
   .kit-editor-section { margin-bottom: 16px; }
   .kit-design-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
   .kit-design-btn {
@@ -734,13 +753,13 @@
     cursor: pointer; font-family: inherit;
   }
   .kit-design-btn span { font-size: 0.68rem; font-weight: 700; color: var(--text-2); text-align: center; }
-  .kit-design-btn.active { border-color: var(--accent); background: var(--accent-tint); }
+  .kit-design-btn.active { border-color: var(--green-accent); background: var(--green-tint); }
   .color-swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .color-swatch {
     width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface-1);
     outline: 1.5px solid var(--border-2); cursor: pointer; padding: 0;
   }
-  .color-swatch.active { outline: 2.5px solid var(--accent); outline-offset: 1px; }
+  .color-swatch.active { outline: 2.5px solid var(--green-accent); outline-offset: 1px; }
 
   .overlay {
     position: fixed; inset: 0; background: rgba(10,18,12,0.55);
@@ -814,9 +833,9 @@
   @keyframes online-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   .room-code-display {
     font-size: 2.4rem; font-weight: 900; letter-spacing: 0.18em;
-    color: var(--accent-dark); background: var(--accent-tint); border-radius: 14px;
+    color: var(--green-accent); background: var(--green-tint); border-radius: 14px;
     padding: 14px 24px; margin: 18px 0; display: inline-block;
-    border: 2px dashed var(--accent);
+    border: 2px dashed var(--green-accent);
   }
   .online-input {
     width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--border-1);
@@ -824,7 +843,7 @@
     letter-spacing: 0.2em; text-transform: uppercase; background: var(--surface-1); color: var(--text-1);
     margin: 10px 0;
   }
-  .online-input:focus { outline: none; border-color: var(--accent); }
+  .online-input:focus { outline: none; border-color: var(--green-accent); }
   .spectator-banner {
     background: rgba(10,18,12,0.7); color: #f3f7ee;
     border-radius: 8px; padding: 6px 12px; font-size: 0.78rem;
@@ -846,7 +865,7 @@
     border: 1.5px solid #fde68a;
   }
   .rematch-prompt {
-    background: var(--accent-tint); border: 1.5px dashed var(--accent); border-radius: 10px;
+    background: var(--green-tint); border: 1.5px dashed var(--green-accent); border-radius: 10px;
     padding: 10px 12px; margin: 6px 0; text-align: center;
   }
 
@@ -880,13 +899,13 @@
   }
   .landing-btn:hover { opacity: 0.88; }
   .landing-btn-google { background: #fff; color: #1c2b22; box-shadow: 0 2px 8px rgba(0,0,0,0.14); }
-  .landing-btn-email { background: var(--accent); color: #fff; }
+  .landing-btn-email { background: var(--green-accent); color: #fff; }
   .landing-btn-guest { background: transparent; color: var(--text-3); border: 1.5px solid #d8ded2; font-size: 0.88rem; }
   .landing-divider { display: flex; align-items: center; gap: 10px; color: var(--text-4); font-size: 0.8rem; }
   .landing-divider::before, .landing-divider::after { content:''; flex:1; height:1px; background:var(--border-1); }
   .landing-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; width: min(380px, 92vw); }
   .landing-feature { background: var(--surface-2); border: 1px solid var(--border-1); border-radius: 12px; padding: 12px 8px; }
-  .landing-feature-icon { display: flex; align-items: center; justify-content: center; color: var(--accent-dark); margin-bottom: 4px; }
+  .landing-feature-icon { display: flex; align-items: center; justify-content: center; color: var(--green-accent); margin-bottom: 4px; }
   .landing-feature-label { font-size: 0.72rem; font-weight: 700; color: var(--text-2); line-height: 1.3; }
 
   /* ── Auth forms ── */
@@ -897,10 +916,10 @@
     font-size: 0.95rem; font-family: inherit; background: var(--surface-1); color: var(--text-1);
     transition: border-color 0.15s;
   }
-  .auth-input:focus { outline: none; border-color: var(--accent); }
+  .auth-input:focus { outline: none; border-color: var(--green-accent); }
   .auth-error { color: #dc2626; font-size: 0.8rem; text-align: center; margin-top: -4px; }
   .auth-switch { text-align: center; font-size: 0.82rem; color: var(--text-3); margin-top: 8px; }
-  .auth-switch button { background: none; border: none; color: var(--accent); font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit; }
+  .auth-switch button { background: none; border: none; color: var(--green-accent); font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit; }
 
   /* ── User profile chip in main menu ── */
   .user-chip {
@@ -911,7 +930,7 @@
   }
   .user-chip-avatar {
     width: 28px; height: 28px; border-radius: 50%;
-    background: var(--accent); color: #fff; font-weight: 700;
+    background: var(--green-accent); color: #fff; font-weight: 700;
     display: flex; align-items: center; justify-content: center; font-size: 0.75rem;
     overflow: hidden; flex-shrink: 0;
   }
@@ -921,10 +940,10 @@
   .user-chip-logout { margin-left: auto; background: none; border: none; color: var(--text-4); cursor: pointer; font-size: 0.8rem; padding: 0 0 0 8px; }
 
   .rematch-prompt {
-    background: var(--accent-tint); border: 1.5px dashed var(--accent); border-radius: 10px;
+    background: var(--green-tint); border: 1.5px dashed var(--green-accent); border-radius: 10px;
     padding: 10px 12px; margin: 6px 0; text-align: center;
   }
-  .rematch-prompt p { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; color: var(--accent-dark); }
+  .rematch-prompt p { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; color: var(--green-accent); }
   .rematch-prompt-actions { display: flex; gap: 6px; }
   .rematch-waiting {
     text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--text-3);
@@ -935,7 +954,7 @@
   .chat-fab {
     position: fixed; bottom: 18px; right: 18px; z-index: 40;
     width: 52px; height: 52px; border-radius: 50%; border: none;
-    background: var(--accent); color: #fff; font-size: 1.3rem; cursor: pointer;
+    background: var(--green-accent); color: #fff; font-size: 1.3rem; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,0.25); display: flex; align-items: center; justify-content: center;
   }
   .chat-fab-badge {
@@ -968,15 +987,15 @@
     max-width: 78%; padding: 7px 11px; border-radius: 14px; font-size: 0.82rem; line-height: 1.35;
     word-wrap: break-word;
   }
-  .chat-msg.mine { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
+  .chat-msg.mine { align-self: flex-end; background: var(--green-accent); color: #fff; border-bottom-right-radius: 4px; }
   .chat-msg.theirs { align-self: flex-start; background: #e7ebe2; color: #2a3322; border-bottom-left-radius: 4px; }
   .chat-quick-row {
     display: flex; gap: 5px; padding: 6px 10px; overflow-x: auto; flex-shrink: 0;
     border-top: 1px solid var(--border-1);
   }
   .chat-quick-btn {
-    flex-shrink: 0; background: var(--accent-tint); border: 1px solid #dde4f5; border-radius: 999px;
-    padding: 4px 10px; font-size: 0.72rem; color: var(--accent-dark); cursor: pointer; white-space: nowrap;
+    flex-shrink: 0; background: var(--green-tint); border: 1px solid #dde4f5; border-radius: 999px;
+    padding: 4px 10px; font-size: 0.72rem; color: var(--green-accent); cursor: pointer; white-space: nowrap;
   }
   .chat-quick-btn:hover { background: #e3e9fb; }
   .chat-input-row { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border-1); flex-shrink: 0; }
@@ -984,9 +1003,9 @@
     flex: 1; border: 1px solid #ddd; border-radius: 999px; padding: 8px 14px;
     font-size: 0.82rem; font-family: inherit; outline: none;
   }
-  .chat-input:focus { border-color: var(--accent); }
+  .chat-input:focus { border-color: var(--green-accent); }
   .chat-send-btn {
-    width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--accent);
+    width: 36px; height: 36px; border-radius: 50%; border: none; background: var(--green-accent);
     color: #fff; font-size: 0.95rem; cursor: pointer; flex-shrink: 0;
   }
   /* ── Mobile menu screens (≤600px) — placed last in the stylesheet so it
@@ -1022,6 +1041,25 @@
     .landing-feature { padding: 8px 6px; }
     .landing-feature-icon svg { width: 16px; height: 16px; }
     .landing-feature-label { font-size: 0.62rem; }
+  }
+
+  /* ── Compact desktop menu (limited viewport height, e.g. 1080p browser
+     window) ── Pure spacing/type-scale reduction, no structural changes —
+     same single-column layout, just denser, so the full main menu fits
+     without scrolling on common desktop viewport heights. Only kicks in on
+     wider screens (min-width) so it doesn't clash with the ≤600px mobile
+     rules above, and only when height is actually tight (max-height). */
+  @media (min-width: 601px) and (max-height: 980px) {
+    .menu-screen { padding: 20px 26px; margin: 16px auto; }
+    .menu-screen h1 { font-size: 1.7rem; margin: 0 0 2px; }
+    .menu-screen .subtitle { font-size: 0.82rem; margin-bottom: 14px; }
+    .menu-grid { gap: 7px; }
+    .menu-btn { padding: 11px 16px; }
+    .menu-btn .t { font-size: 0.88rem; }
+    .menu-btn .d { font-size: 0.72rem; }
+    .menu-section-divider { margin: 8px 0; }
+    .user-chip { padding: 5px 10px 5px 5px; margin-bottom: 8px; }
+    .user-chip-avatar { width: 24px; height: 24px; }
   }
 </style>
 <script>
@@ -1086,6 +1124,43 @@ function setLang(l) {
   lang = l;
   localStorage.setItem('hexagol_lang', l);
   render();
+}
+
+// Display names for the language-picker button/modal — each language names
+// itself (native autonym), so the button always reads correctly regardless
+// of which language is currently active.
+const langDisplayNames = { es: 'Español', en: 'English', pt: 'Português', fr: 'Français' };
+
+function showLanguageModal() {
+  const existing = document.getElementById('language-modal');
+  if (existing) { existing.remove(); return; }
+  const langs = [
+    { code: 'es', abbr: 'ES' }, { code: 'en', abbr: 'EN' },
+    { code: 'pt', abbr: 'PT' }, { code: 'fr', abbr: 'FR' },
+  ];
+  const modal = document.createElement('div');
+  modal.id = 'language-modal';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
+  modal.innerHTML = `
+    <div style="background:var(--surface-1);border-radius:16px;padding:16px;max-width:320px;width:100%;box-shadow:var(--shadow);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <h2 style="margin:0;font-size:1rem;color:var(--text-1);">${lang === 'en' ? 'Language' : lang === 'pt' ? 'Idioma' : lang === 'fr' ? 'Langue' : 'Idioma'}</h2>
+        <button id="language-modal-close" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-3);">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        ${langs.map(l => `
+          <button data-select-lang="${l.code}" style="display:flex;align-items:center;gap:10px;text-align:left;padding:10px 12px;border-radius:10px;border:1.5px solid ${lang === l.code ? 'var(--green-accent)' : 'var(--border-1)'};background:${lang === l.code ? 'var(--green-tint)' : 'var(--surface-2)'};color:var(--text-1);font-family:inherit;font-size:0.9rem;font-weight:${lang === l.code ? '700' : '500'};cursor:pointer;">
+            <span style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;border-radius:5px;background:var(--surface-3);border:1px solid var(--border-2);font-size:0.68rem;font-weight:800;letter-spacing:0.02em;color:var(--text-2);">${l.abbr}</span>${langDisplayNames[l.code]}
+          </button>
+        `).join('')}
+      </div>
+    </div>`;
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+  modal.querySelector('#language-modal-close').onclick = () => modal.remove();
+  modal.querySelectorAll('[data-select-lang]').forEach(btn => {
+    btn.onclick = () => { modal.remove(); setLang(btn.getAttribute('data-select-lang')); };
+  });
 }
 
 function t(key, params) {
@@ -8037,8 +8112,9 @@ function renderLanding() {
       </div>
     </div>
     <div style="display:flex; gap:8px; margin-top:16px; justify-content:center;">
-      <button id="lang-toggle-btn" style="background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        ${t('landing.lang')}
+      <button id="lang-toggle-btn" style="background:var(--green-accent);border:1px solid var(--green-accent);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);display:inline-flex;align-items:center;gap:6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>
+        ${langDisplayNames[lang] || t('landing.lang')}
       </button>
       <button id="theme-toggle-btn" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;">
         ${currentTheme === 'dark' ? (lang === 'en' ? 'Light mode' : lang === 'pt' ? 'Modo claro' : lang === 'fr' ? 'Mode clair' : 'Modo claro') : (lang === 'en' ? 'Dark mode' : lang === 'pt' ? 'Modo escuro' : lang === 'fr' ? 'Mode sombre' : 'Modo oscuro')}
@@ -8128,7 +8204,7 @@ function renderMainMenu() {
     </div>
     <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" data-menu="play" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : lang === 'fr' ? 'Jouer' : 'Jugar'}</div>
         <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : lang === 'pt' ? 'Online, local, vs IA, liga e mais.' : lang === 'fr' ? 'En ligne, local, vs IA, ligue et plus.' : 'Online, local, vs IA, liga y más.'}</div>
       </button>
@@ -8159,31 +8235,36 @@ function renderMainMenu() {
         <div class="d">${t('menu.leaderboard.desc')}</div>
       </button>
     </div>
-    <div style="margin-top:14px; text-align:center; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-      <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#d9a441;border:1px solid #d9a441;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        ${lang === 'en' ? 'Donate' : lang === 'pt' ? 'Doações' : lang === 'fr' ? 'Faire un don' : 'Donaciones'}
-      </a>
-      <a href="javascript:void(0)" onclick="showCommunityModal()"
-         style="display:inline-flex;align-items:center;gap:6px;background:#25D366;border:1px solid #25D366;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);cursor:pointer;">
-        ${t('menu.community')}
-      </a>
-      <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
-         onclick="trackEvent('feedback_click')"
-         style="display:inline-flex;align-items:center;gap:6px;background:#FF4500;border:1px solid #FF4500;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        Feedback
-      </a>
-      <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform?usp=header" target="_blank" rel="noopener"
-         onclick="trackEvent('bug_report_click')"
-         style="display:inline-flex;align-items:center;gap:6px;background:#dc2626;border:1px solid #dc2626;border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;text-decoration:none;font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        ${lang === 'en' ? 'Report bug' : lang === 'pt' ? 'Reportar bug' : lang === 'fr' ? 'Signaler un bug' : 'Reportar bug'}
-      </a>
-      <button id="menu-lang-btn" style="background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-        ${t('landing.lang')}
-      </button>
-      <button id="menu-theme-btn" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:8px;padding:6px 14px;font-size:0.78rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;">
-        ${currentTheme === 'dark' ? (lang === 'en' ? 'Light mode' : lang === 'pt' ? 'Modo claro' : lang === 'fr' ? 'Mode clair' : 'Modo claro') : (lang === 'en' ? 'Dark mode' : lang === 'pt' ? 'Modo escuro' : lang === 'fr' ? 'Mode sombre' : 'Modo oscuro')}
-      </button>
+    <div style="margin-top:14px; background:var(--surface-2); border:1px solid var(--border-1); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+        <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#b3822e;text-decoration:none;font-weight:600;cursor:pointer;">
+          ${lang === 'en' ? 'Donate' : lang === 'pt' ? 'Doações' : lang === 'fr' ? 'Faire un don' : 'Donaciones'}
+        </a>
+        <a href="javascript:void(0)" onclick="showCommunityModal()"
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#1e9e56;text-decoration:none;font-weight:600;cursor:pointer;">
+          ${t('menu.community')}
+        </a>
+        <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
+           onclick="trackEvent('feedback_click')"
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c1470f;text-decoration:none;font-weight:600;">
+          Feedback
+        </a>
+        <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform?usp=header" target="_blank" rel="noopener"
+           onclick="trackEvent('bug_report_click')"
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c0392b;text-decoration:none;font-weight:600;">
+          ${lang === 'en' ? 'Report bug' : lang === 'pt' ? 'Reportar bug' : lang === 'fr' ? 'Signaler un bug' : 'Reportar bug'}
+        </a>
+      </div>
+      <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--border-1);">
+        <button id="menu-lang-btn" style="background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z"/></svg>
+          ${langDisplayNames[lang] || t('landing.lang')}
+        </button>
+        <button id="menu-theme-btn" style="background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;">
+          ${currentTheme === 'dark' ? (lang === 'en' ? 'Light mode' : lang === 'pt' ? 'Modo claro' : lang === 'fr' ? 'Mode clair' : 'Modo claro') : (lang === 'en' ? 'Dark mode' : lang === 'pt' ? 'Modo escuro' : lang === 'fr' ? 'Mode sombre' : 'Modo oscuro')}
+        </button>
+      </div>
     </div>
     <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:var(--text-4);line-height:2;">
       ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : lang === 'pt' ? '© 2026 Hexagol. Todos os direitos reservados.' : lang === 'fr' ? '© 2026 Hexagol. Tous droits réservés.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
@@ -8199,7 +8280,7 @@ function renderPlayMenu() {
     <h1>${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : lang === 'fr' ? 'Jouer' : 'Jugar'}</h1>
     <div class="subtitle">${lang === 'en' ? 'Choose a game variant.' : lang === 'pt' ? 'Escolha uma variante do jogo.' : lang === 'fr' ? 'Choisissez une variante de jeu.' : 'Elegí una variante de juego.'}</div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="variant-classic" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" data-menu="variant-classic" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">${lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : lang === 'fr' ? 'Classique' : 'Clásico'}</div>
         <div class="d">${lang === 'en' ? 'The original game. 11vs11, full board, all rules.' : lang === 'pt' ? 'O jogo original. 11vs11, campo completo, todas as regras.' : lang === 'fr' ? 'Le jeu original. 11 contre 11, plateau complet, toutes les règles.' : 'El juego original. 11vs11, cancha completa, todas las reglas.'}</div>
       </button>
@@ -8235,7 +8316,7 @@ function renderVariantMenu(variant) {
   <div class="menu-screen">
     <h1>${name}</h1>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" data-menu="online-setup" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">${t('menu.online')}</div>
         <div class="d">${t('menu.online.desc')}</div>
       </button>
@@ -8367,7 +8448,7 @@ function renderCustomKitEditor() {
       <div class="color-swatch-row">${textSwatches}</div>
     </div>
     <div class="menu-grid" style="margin-top:14px;">
-      <button class="menu-btn" id="save-custom-kit-btn" style="background:var(--accent); border-color:var(--accent);">
+      <button class="menu-btn" id="save-custom-kit-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
         <div class="t" style="color:#fff;">${done}</div>
       </button>
       ${currentUser && !currentUser.isAnonymous ? `
@@ -8407,7 +8488,7 @@ function renderOnlineSetup() {
       </div>
     </div>
     <div class="menu-grid">
-      <button class="menu-btn" id="online-create-btn" style="background:var(--accent); border-color:var(--accent);">
+      <button class="menu-btn" id="online-create-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
         <div class="t" style="color:#fff;">${t('online.create')}</div>
         <div class="d" style="color:rgba(255,255,255,0.75);">${createDesc}</div>
       </button>
@@ -8434,7 +8515,7 @@ function renderOnlineJoin() {
       ${renderTeamPickerCard('home')}
     </div>
     <div class="menu-grid" style="margin-top:10px;">
-      <button class="menu-btn" id="online-join-btn" style="background:var(--accent); border-color:var(--accent);">
+      <button class="menu-btn" id="online-join-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
         <div class="t" style="color:#fff;">${t('online.join.btn')}</div>
       </button>
       <button class="menu-btn" data-menu="online-setup"><div class="t">${t('online.back')}</div></button>
@@ -8508,7 +8589,7 @@ function renderOnlineReconnect() {
     <h1>${t('reconnect.title')}</h1>
     <div class="subtitle">${t('reconnect.desc')}</div>
     <div class="menu-grid" style="margin-top:18px;">
-      <button class="menu-btn" id="reconnect-accept-btn" style="background:var(--accent); border-color:var(--accent);">
+      <button class="menu-btn" id="reconnect-accept-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
         <div class="t" style="color:#fff;">↩ ${t('reconnect.yes')}</div>
         <div class="d" style="color:rgba(255,255,255,0.75);">${returnDesc}</div>
       </button>
@@ -8962,14 +9043,14 @@ function renderQuickTutorial() {
       ${lang === 'en' ? 'First match' : lang === 'pt' ? 'Primeira partida' : lang === 'fr' ? 'Premier match' : 'Primera partida'} · ${quickTutorialStep + 1}/${QUICK_TUTORIAL_STEPS.length}
     </div>
     <div style="background:var(--surface-3);border-radius:16px;height:4px;margin-bottom:24px;">
-      <div style="background:var(--accent);border-radius:16px;height:4px;width:${progress}%;transition:width 0.3s;"></div>
+      <div style="background:var(--green-accent);border-radius:16px;height:4px;width:${progress}%;transition:width 0.3s;"></div>
     </div>
     <div style="font-size:3.5rem;line-height:1;margin-bottom:16px;">${step.icon}</div>
     <h2 style="margin:0 0 12px;font-size:1.4rem;">${lang === 'en' ? step.title.en : lang === 'pt' ? step.title.pt : lang === 'fr' ? step.title.fr : step.title.es}</h2>
     <p style="color:var(--text-2);font-size:0.92rem;line-height:1.6;margin:0 0 32px;">${lang === 'en' ? step.desc.en : lang === 'pt' ? step.desc.pt : lang === 'fr' ? step.desc.fr : step.desc.es}</p>
     <div style="display:flex;gap:10px;justify-content:center;">
       ${quickTutorialStep > 0 ? `<button class="btn ghost" id="qt-prev-btn" style="padding:10px 20px;">← ${lang === 'en' ? 'Back' : lang === 'pt' ? 'Voltar' : lang === 'fr' ? 'Retour' : 'Atrás'}</button>` : `<button class="btn ghost" id="qt-skip-btn" style="padding:10px 20px;">${skipLabel}</button>`}
-      <button class="btn" id="qt-next-btn" style="padding:10px 24px;background:var(--accent);border-color:var(--accent);color:#fff;">${nextLabel}</button>
+      <button class="btn" id="qt-next-btn" style="padding:10px 24px;background:var(--green-accent);border-color:var(--green-accent);color:#fff;">${nextLabel}</button>
     </div>
   </div>`;
 }
@@ -9092,7 +9173,7 @@ function renderChooseUsername() {
       value="${suggested}"
       style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid var(--border-2);border-radius:10px;font-size:1rem;font-family:inherit;margin-bottom:8px;outline:none;">
     <div id="choose-username-error" style="color:#9a2f24;font-size:0.78rem;min-height:18px;margin-bottom:12px;"></div>
-    <button class="btn" id="choose-username-btn" style="width:100%;background:var(--accent);border-color:var(--accent);color:#fff;padding:12px;">
+    <button class="btn" id="choose-username-btn" style="width:100%;background:var(--green-accent);border-color:var(--green-accent);color:#fff;padding:12px;">
       ${lang === 'en' ? 'Start playing' : lang === 'pt' ? 'Começar a jogar!' : lang === 'fr' ? 'Commencer à jouer' : '¡Empezar a jugar!'}
     </button>
   </div>`;
@@ -9368,7 +9449,7 @@ function renderChallengeSetup() {
       </div>
     </div>
     <div class="menu-grid" style="margin-top:20px;">
-      <button class="menu-btn" id="send-challenge-btn" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" id="send-challenge-btn" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">️ ${lang === 'en' ? 'Send challenge' : lang === 'pt' ? 'Enviar desafio' : lang === 'fr' ? 'Envoyer le défi' : 'Enviar desafío'}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -9402,7 +9483,7 @@ function renderChallengeGuestSetup() {
       ${renderTeamPickerCard('away')}
     </div>
     <div class="menu-grid" style="margin-top:20px;">
-      <button class="menu-btn" id="accept-challenge-btn" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" id="accept-challenge-btn" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">${lang === 'en' ? 'Join match' : lang === 'pt' ? 'Entrar na partida' : lang === 'fr' ? 'Rejoindre le match' : 'Entrar a la partida'}</div>
       </button>
       <button class="menu-btn" id="decline-challenge-btn">
@@ -9425,7 +9506,7 @@ function showFriendsModal() {
   const row = (content) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">${content}</div>`;
   const btnGreen = (onclick, text) => `<button onclick="${onclick}" style="background:#2a6e3f;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
   const btnGhost = (onclick, text) => `<button onclick="${onclick}" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
-  const btnAccent = (onclick, text) => `<button onclick="${onclick}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
+  const btnAccent = (onclick, text) => `<button onclick="${onclick}" style="background:var(--green-accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
 
   const pendingHtml = pending.length > 0 ? sectionTitle(`${lang === 'en' ? 'Requests' : lang === 'pt' ? 'Solicitações' : lang === 'fr' ? 'Demandes' : 'Solicitudes'} (${pending.length})`) +
     pending.map(f => row(`<span style="flex:1;font-weight:600;font-size:0.85rem;">${escapeHtml(f.username)}</span>${btnGreen(`acceptFriendRequest('${f.uid}')`, '✓')}${btnGhost(`declineFriendRequest('${f.uid}')`, '✕')}`)).join('') : '';
@@ -9451,7 +9532,7 @@ function showFriendsModal() {
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input id="friends-search-input" type="text" placeholder="${lang === 'en' ? 'Search by username...' : lang === 'pt' ? 'Buscar por nome...' : lang === 'fr' ? 'Rechercher par nom d\'utilisateur...' : 'Buscar por nombre...'}"
           style="flex:1;padding:8px 12px;border:1.5px solid var(--border-2);border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;">
-        <button id="friends-search-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">
+        <button id="friends-search-btn" style="background:var(--green-accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">
           ${lang === 'en' ? 'Search' : lang === 'pt' ? 'Buscar' : lang === 'fr' ? 'Rechercher' : 'Buscar'}
         </button>
       </div>
@@ -9486,7 +9567,7 @@ function showFriendsModal() {
       const u = doc.data();
       const addBtn = alreadyFriend
         ? `<span style="font-size:0.75rem;color:#2a6e3f;">✓ ${lang === 'en' ? 'Already friends' : lang === 'pt' ? 'Já são amigos' : lang === 'fr' ? 'Déjà amis' : 'Ya son amigos'}</span>`
-        : `<button id="add-friend-search-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.75rem;cursor:pointer;">+ ${lang === 'en' ? 'Add' : lang === 'pt' ? 'Adicionar' : lang === 'fr' ? 'Ajouter' : 'Agregar'}</button>`;
+        : `<button id="add-friend-search-btn" style="background:var(--green-accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.75rem;cursor:pointer;">+ ${lang === 'en' ? 'Add' : lang === 'pt' ? 'Adicionar' : lang === 'fr' ? 'Ajouter' : 'Agregar'}</button>`;
       resultDiv.innerHTML = `
         <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-3);border-radius:8px;margin-bottom:8px;">
           <div style="flex:1;">
@@ -9797,13 +9878,13 @@ function renderTournamentCreate() {
             <option value="">${lang === 'en' ? 'Choose a friend...' : lang === 'pt' ? 'Escolha um amigo...' : lang === 'fr' ? 'Choisissez un ami...' : 'Elegí un amigo...'}</option>
             ${friendOptions}
           </select>
-          <button id="tournament-invite-add-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">+</button>
+          <button id="tournament-invite-add-btn" style="background:var(--green-accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">+</button>
         </div>
         <div style="margin-top:4px;">${invitedRows || `<div style="color:var(--text-4);font-size:0.78rem;padding:6px 0;">${lang === 'en' ? 'No one invited yet.' : lang === 'pt' ? 'Ninguém convidado ainda.' : lang === 'fr' ? 'Personne d\'invité pour l\'instant.' : 'Nadie invitado todavía.'}</div>`}</div>
       </div>
     </div>
     <div class="menu-grid" style="margin-top:20px;">
-      <button class="menu-btn" id="create-tournament-btn" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" id="create-tournament-btn" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">${lang === 'en' ? 'Create tournament' : lang === 'pt' ? 'Criar torneio' : lang === 'fr' ? 'Créer un tournoi' : 'Crear torneo'}</div>
       </button>
       <button class="menu-btn" data-menu="tournaments"><div class="t">${t('setup.back')}</div></button>
@@ -10147,7 +10228,7 @@ function renderTournamentDetail() {
       <div style="margin-bottom:16px;">${rows}</div>
       ${isCreator ? `
       <div class="menu-grid">
-        <button class="menu-btn" id="start-tournament-btn" style="border-color:var(--accent);background:var(--accent-tint);">
+        <button class="menu-btn" id="start-tournament-btn" style="border-color:var(--green-accent);background:var(--green-tint);">
           <div class="t">${lang === 'en' ? 'Start tournament' : lang === 'pt' ? 'Começar torneio' : lang === 'fr' ? 'Démarrer le tournoi' : 'Comenzar torneo'}</div>
           <div class="d">${acceptedCount} ${lang === 'en' ? 'accepted so far' : 'aceptaron hasta ahora'}</div>
         </button>
@@ -10176,7 +10257,7 @@ function renderTournamentDetail() {
       <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">
         <span style="flex:1;font-size:0.82rem;">${lang === 'en' ? 'Round' : 'Jornada'} ${m.round} vs ${escapeHtml(opp?.username || '?')}</span>
         <span style="font-size:0.78rem;color:var(--text-3);">${scoreText}</span>
-        ${canPlay ? `<button data-play-tournament-match="${m.id}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play' : 'Jugar'}</button>` : ''}
+        ${canPlay ? `<button data-play-tournament-match="${m.id}" style="background:var(--green-accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play' : 'Jugar'}</button>` : ''}
       </div>`;
     }).join('');
     bodyHtml = `
@@ -10212,7 +10293,7 @@ function renderTournamentDetail() {
           <div style="display:flex;justify-content:space-between;">
             <span style="font-weight:${m.winner === m.away ? '700' : '400'};">${escapeHtml(awayP?.username || '—')}</span>
           </div>
-          ${canPlay ? `<button data-play-tournament-match="${m.id}" style="margin-top:6px;width:100%;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play this match' : 'Jugar este cruce'}</button>` : ''}
+          ${canPlay ? `<button data-play-tournament-match="${m.id}" style="margin-top:6px;width:100%;background:var(--green-accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play this match' : 'Jugar este cruce'}</button>` : ''}
         </div>`;
       }).join('');
       return `
@@ -10331,7 +10412,7 @@ function renderTournamentsScreen() {
     <h1 style="text-align:center;">${lang === 'en' ? 'Tournaments' : lang === 'pt' ? 'Torneios' : lang === 'fr' ? 'Tournois' : 'Torneos'}</h1>
     <div class="subtitle" style="text-align:center;">${lang === 'en' ? 'Official cups and private leagues with friends.' : lang === 'pt' ? 'Copas oficiais e ligas privadas com amigos.' : lang === 'fr' ? 'Coupes officielles et ligues privées entre amis.' : 'Copas oficiales y ligas privadas con amigos.'}</div>
     <div class="menu-grid" style="margin-bottom:16px;">
-      <button class="menu-btn" id="open-tournament-create-btn" style="border-color:var(--accent);background:var(--accent-tint);">
+      <button class="menu-btn" id="open-tournament-create-btn" style="border-color:var(--green-accent);background:var(--green-tint);">
         <div class="t">${lang === 'en' ? 'Create private tournament' : lang === 'pt' ? 'Criar torneio privado' : lang === 'fr' ? 'Créer un tournoi privé' : 'Crear torneo privado'}</div>
         <div class="d">${lang === 'en' ? 'League or cup, invite your friends.' : lang === 'pt' ? 'Liga ou copa, convide seus amigos.' : lang === 'fr' ? 'Ligue ou coupe, invitez vos amis.' : 'Liga o copa, invitá a tus amigos.'}</div>
       </button>
@@ -10464,7 +10545,7 @@ function renderPublicProfile() {
     <div style="text-align:center;margin-bottom:20px;">
       <div style="font-size:2.5rem;margin-bottom:8px;">👤</div>
       <h1 style="margin:0 0 4px;">${escapeHtml(u.username)}</h1>
-      <div style="font-size:1.2rem;font-weight:700;color:var(--accent);">⚡ ${u.elo || 1200} ELO</div>
+      <div style="font-size:1.2rem;font-weight:700;color:var(--green-accent);">⚡ ${u.elo || 1200} ELO</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;text-align:center;">
       <div style="background:var(--surface-3);border-radius:10px;padding:12px;">
@@ -10493,7 +10574,7 @@ function renderPublicProfile() {
         🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : lang === 'fr' ? 'Copier le lien' : 'Copiar link'}
       </button>
       ${currentUser && !currentUser.isAnonymous && publicProfileData && currentUser.uid !== publicProfileData.uid && !friendsData.some(f => f.uid === publicProfileData?.uid) ? `
-      <button id="add-friend-profile-btn" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+      <button id="add-friend-profile-btn" style="flex:1;background:var(--green-accent);color:#fff;border:none;border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
         👥 ${lang === 'en' ? 'Add friend' : lang === 'pt' ? 'Adicionar amigo' : lang === 'fr' ? 'Ajouter un ami' : 'Agregar amigo'}
       </button>` : ''}
     </div>
@@ -10722,7 +10803,7 @@ function renderSetup() {
       </div>
     </div>
     <div class="menu-grid">
-      <button class="menu-btn" id="start-match-btn" style="background:var(--accent); border-color:var(--accent);">
+      <button class="menu-btn" id="start-match-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
         <div class="t" style="color:#fff;">${t('setup.start')}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -10784,7 +10865,7 @@ function renderAiSetup() {
       </div>
     </div>
     <div class="menu-grid">
-      <button class="menu-btn" id="start-ai-match-btn" style="background:var(--accent); border-color:var(--accent);">
+      <button class="menu-btn" id="start-ai-match-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
         <div class="t" style="color:#fff;">${t('setup.start')}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -10887,7 +10968,7 @@ function renderLeagueSetup() {
     </div>
     ${hasDuplicates ? `<p style="color:#9a2f24; font-size:0.8rem; text-align:center; margin-top:8px;">${dupMsg}</p>` : ''}
     <div class="menu-grid" style="margin-top:16px;">
-      <button class="menu-btn" id="start-league-btn" style="background:var(--accent); border-color:var(--accent); ${(!allSelected || hasDuplicates) ? 'opacity:0.5; pointer-events:none;' : ''}">
+      <button class="menu-btn" id="start-league-btn" style="background:var(--green-accent); border-color:var(--green-accent); ${(!allSelected || hasDuplicates) ? 'opacity:0.5; pointer-events:none;' : ''}">
         <div class="t" style="color:#fff;">${lang === 'en' ? 'Start league →' : lang === 'pt' ? 'Começar liga →' : lang === 'fr' ? 'Démarrer la ligue →' : 'Comenzar liga →'}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -11079,7 +11160,11 @@ function renderGameScreen(s) {
       <div class="panel-log-section" style="display:flex; flex-direction:column; flex:1; min-height:0;">
         <h3>${t('game.log')}</h3>
         <ul class="log-list">
-          ${s.gameLog.slice().reverse().map(e => `<li class="${e.team || ''} ${e.actionType === 'goal' ? 'goal' : ''}"><span class="turn-tag">T${e.turn}</span>${e.message}</li>`).join('')}
+          ${s.gameLog.slice().reverse().map(e => {
+            const teamColor = e.team === 'home' ? s.homeTeam?.primaryColor : e.team === 'away' ? s.awayTeam?.primaryColor : null;
+            const bg = e.actionType === 'goal' ? 'rgba(217,164,65,0.18)' : (teamColor ? `hsl(${teamColor} / 0.10)` : 'transparent');
+            return `<li class="${e.actionType === 'goal' ? 'goal' : ''}" style="background:${bg};"><span class="turn-tag">T${e.turn}</span>${e.message}</li>`;
+          }).join('')}
         </ul>
       </div>
       <div class="btn-row" style="gap:6px;">
@@ -11144,7 +11229,7 @@ function renderTutorialPanel(s) {
   }
 
   return `
-  <div class="dice-panel" style="background:var(--accent-tint); border-color:#cfe0fb;">
+  <div class="dice-panel" style="background:var(--green-tint); border-color:#cfe0fb;">
     <h3>🎓 Tutorial · ${stepLabel}</h3>
     <div class="tutorial-progress-bar"><div class="tutorial-progress-fill" style="width:${progress}%;"></div></div>
     ${actionHtml}
@@ -11294,13 +11379,13 @@ function renderDicePanel(s) {
           <div class="rematch-prompt">
             <p>${requesterName} ${t('rematch.request')}</p>
             <div class="rematch-prompt-actions">
-              <button class="btn team-btn" id="accept-rematch-btn" style="flex:1; background:var(--accent); border-color:var(--accent);">${t('rematch.accept')}</button>
+              <button class="btn team-btn" id="accept-rematch-btn" style="flex:1; background:var(--green-accent); border-color:var(--green-accent);">${t('rematch.accept')}</button>
               <button class="btn ghost" id="decline-rematch-btn" style="flex:1;">${t('rematch.decline')}</button>
             </div>
           </div>
         ` : onlineRematchRequestedByMe
           ? `<div class="rematch-waiting">⏳ ${t('gameover.waiting')}</div>`
-          : `<button class="btn team-btn" id="request-rematch-btn" style="width:100%; margin-top:6px; background:var(--accent); border-color:var(--accent);">${t('gameover.rematch')}</button>`}
+          : `<button class="btn team-btn" id="request-rematch-btn" style="width:100%; margin-top:6px; background:var(--green-accent); border-color:var(--green-accent);">${t('gameover.rematch')}</button>`}
         <button class="btn ghost" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${t('gameover.back')}</button>
       </div>`;
     }
@@ -13264,10 +13349,10 @@ checkForReconnectableSession();
 checkUrlRoomParam();
 checkUrlProfileParam();
 
-// Global lang toggle — cycles ES → EN → PT → ES
+// Lang button (landing + main menu) — opens a picker modal with all 4 languages
 document.addEventListener('click', e => {
   const btn = e.target.closest('#lang-toggle-btn, #menu-lang-btn');
-  if (btn) setLang(lang === 'es' ? 'en' : lang === 'en' ? 'pt' : lang === 'pt' ? 'fr' : lang === 'fr' ? 'es' : 'es');
+  if (btn) showLanguageModal();
 });
 
 // Global theme toggle — light/dark
