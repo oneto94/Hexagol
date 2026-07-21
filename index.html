@@ -66,12 +66,48 @@
     --paper: #ffffff;
     --gold: #d9a441;
     --shadow: 0 10px 30px -10px rgba(0,0,0,0.35);
+    /* Surface tokens used by the dark-mode overrides below — in light mode
+       these just mirror the existing hardcoded values so nothing changes
+       for users who stay on light. */
+    --surface-0: #eef5ea;      /* page background */
+    --surface-1: #ffffff;      /* cards, panels */
+    --surface-2: #fbfcf9;      /* menu buttons */
+    --surface-3: #f0f4ee;      /* secondary/muted fills */
+    --border-1: #e1e8db;
+    --border-2: #c8d5c0;
+    --text-1: #1c2b22;         /* primary text */
+    --text-2: #384032;         /* secondary text */
+    --text-3: #6b7a64;         /* muted text */
+    --text-4: #9aa593;         /* faint text */
+    --accent-tint: #f0f4ff;    /* light accent-colored highlight background */
+  }
+  [data-theme="dark"] {
+    --background: hsl(150 18% 9%);
+    --accent: hsl(219 85% 68%);
+    --accent-dark: hsl(219 85% 58%);
+    --ink: hsl(120 20% 92%);
+    --paper: #182620;
+    --shadow: 0 10px 30px -10px rgba(0,0,0,0.6);
+    --surface-0: #101a15;
+    --surface-1: #182620;
+    --surface-2: #1e2f27;
+    --surface-3: #223226;
+    --border-1: #2e4136;
+    --border-2: #3a5245;
+    --text-1: #eaf2ec;
+    --text-2: #cdd9d0;
+    --text-3: #9fb0a5;
+    --text-4: #74887b;
+    --accent-tint: #1e2a42;
+    /* The board itself stays green/realistic per design — only the
+       surrounding chrome (menus, panels, modals) goes dark. */
   }
   * { box-sizing: border-box; }
+  button, select, input, textarea { color: inherit; }
   html, body {
     margin: 0; padding: 0;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background-color: #eef5ea;
+    background-color: var(--surface-0);
     color: var(--ink);
     height: 100%;
     overflow: hidden;
@@ -83,12 +119,21 @@
       radial-gradient(ellipse 75% 65% at 50% 30%, rgba(238,245,234,0) 0%, rgba(195,221,192,0.5) 100%),
       repeating-linear-gradient(90deg, #dfeede 0px, #dfeede 30px, #d7ead4 30px, #d7ead4 60px);
   }
+  [data-theme="dark"] body:has(.menu-screen), [data-theme="dark"] body:has(.landing-screen) {
+    background-image:
+      radial-gradient(ellipse 75% 65% at 50% 30%, rgba(16,26,21,0) 0%, rgba(6,12,9,0.6) 100%),
+      repeating-linear-gradient(90deg, #101a15 0px, #101a15 30px, #0d1611 30px, #0d1611 60px);
+  }
   /* During gameplay: a calmer, darker neutral tone that reads as "stadium
      surroundings" rather than more grass — keeps the board itself as the
      only green pattern on screen. */
   body:not(:has(.menu-screen)):not(:has(.landing-screen)) {
     background-color: #c9d4c2;
     background-image: radial-gradient(ellipse 80% 70% at 50% 25%, rgba(201,212,194,0) 0%, rgba(163,178,153,0.55) 100%);
+  }
+  [data-theme="dark"] body:not(:has(.menu-screen)):not(:has(.landing-screen)) {
+    background-color: #0d1611;
+    background-image: radial-gradient(ellipse 80% 70% at 50% 25%, rgba(13,22,17,0) 0%, rgba(4,9,6,0.6) 100%);
   }
   #app {
     max-width: 1180px;
@@ -144,7 +189,7 @@
   .mini-meta {
     display: flex; flex-wrap: wrap; gap: 6px 10px; justify-content: center; align-items: center; margin-top: 6px;
     padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.12);
-    font-size: 0.66rem; color: #b9c7af; letter-spacing: 0.05em; text-transform: uppercase;
+    font-size: 0.66rem; color: var(--text-4); letter-spacing: 0.05em; text-transform: uppercase;
   }
   .sound-toggle-btn {
     appearance: none; border: none; background: transparent; cursor: pointer;
@@ -154,7 +199,7 @@
   .fullscreen-btn {
     appearance: none; border: none; background: transparent; cursor: pointer;
     font-size: 0.78rem; line-height: 1; padding: 0; margin-left: 2px; opacity: 0.75;
-    color: #b9c7af;
+    color: var(--text-4);
   }
   .fullscreen-btn:hover { opacity: 1; }
   .clock { font-weight: 900; font-size: 1rem; color: var(--gold); letter-spacing: 0.04em; text-shadow: 0 0 8px rgba(217,164,65,0.45); }
@@ -249,8 +294,8 @@
     font-weight: 600;
     padding: 6px 12px;
     border-radius: 10px;
-    background: #f4f7f1;
-    border: 1px solid #e1e8db;
+    background: var(--surface-3);
+    border: 1px solid var(--border-1);
     margin-bottom: 6px;
     flex-shrink: 0;
     min-height: 1.2em;
@@ -281,6 +326,12 @@
     box-shadow: 0 10px 28px -8px rgba(28,43,34,0.32), 0 2px 8px -2px rgba(28,43,34,0.18);
     overflow: hidden;
   }
+  /* In dark mode the surrounding chrome goes dark/muted, so a fully bright,
+     saturated pitch reads as too intense by contrast — dim it slightly while
+     keeping the same green identity (no color changes, just less punch). */
+  [data-theme="dark"] svg#board {
+    filter: brightness(0.82) saturate(0.9);
+  }
 
   .tile { fill: var(--field-light); }
   .tile.dark { fill: var(--field-dark); }
@@ -290,7 +341,7 @@
   .goal-rect { fill: none; stroke: #ffffff; stroke-width: 2; opacity: 0.85; pointer-events: none; }
   .field-outline { fill: none; stroke: #ffffff; stroke-width: 2.5; opacity: 0.9; pointer-events: none; }
   .goal-net { fill: #fff; opacity: 0.18; pointer-events: none; }
-  .goal-frame { fill: none; stroke: #1c2b22; stroke-width: 2.5; opacity: 0.75; pointer-events: none; }
+  .goal-frame { fill: none; stroke: var(--text-1); stroke-width: 2.5; opacity: 0.75; pointer-events: none; }
 
   .target-icon { cursor: pointer; }
   .target-icon-bg {
@@ -361,8 +412,8 @@
   /* Training mode dice selector */
   .training-dice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 6px; }
   .training-dice-btn {
-    padding: 10px 0; border-radius: 10px; border: 1.5px solid #e1e8db;
-    background: #fff; font-weight: 800; font-size: 1.1rem; cursor: pointer;
+    padding: 10px 0; border-radius: 10px; border: 1.5px solid var(--border-1);
+    background: var(--surface-1); font-weight: 800; font-size: 1.1rem; cursor: pointer;
     font-family: inherit; transition: background 0.1s, border-color 0.1s;
   }
   .training-dice-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
@@ -403,6 +454,7 @@
     font-weight: 800; font-size: 1.1rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     flex-shrink: 0;
+    color: #1c2b22; /* fixed dark text — the dice face itself is always white/physical-looking, independent of theme */
   }
   .dice-face.zero {
     background: linear-gradient(160deg,#fde2e1,#f8c9c7); color: #9a2f24;
@@ -411,11 +463,11 @@
   .dice-face.empty { opacity: 0.45; font-size: 1.3rem; }
   @keyframes zero-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
   .dice-panel {
-    border: 1.5px solid #e8edE0; border-radius: 12px; padding: 10px 12px;
-    background: #f8faf6; flex-shrink: 0;
+    border: 1.5px solid var(--border-1); border-radius: 12px; padding: 10px 12px;
+    background: var(--surface-3); flex-shrink: 0;
   }
   .dice-panel h3 { margin: 0; }
-  .tutorial-progress-bar { height: 6px; background: #d9e6fb; border-radius: 4px; margin-top: 8px; overflow: hidden; }
+  .tutorial-progress-bar { height: 6px; background: var(--accent-tint); border-radius: 4px; margin-top: 8px; overflow: hidden; }
   .tutorial-progress-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.3s ease; }
 
   @keyframes tutorial-highlight-pulse {
@@ -439,17 +491,17 @@
     background: #fdeceb; border-radius: 8px; padding: 5px 8px; margin-top: 6px;
   }
   .turn-timer-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
-  .turn-timer-bar { flex: 1; height: 6px; background: #e1e8db; border-radius: 4px; overflow: hidden; }
+  .turn-timer-bar { flex: 1; height: 6px; background: var(--border-1); border-radius: 4px; overflow: hidden; }
   .turn-timer-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 1s linear; }
   .turn-timer-fill.low { background: #dc2626; }
-  .turn-timer-label { font-size: 0.72rem; font-weight: 700; color: #6b7a64; min-width: 32px; text-align: right; }
+  .turn-timer-label { font-size: 0.72rem; font-weight: 700; color: var(--text-3); min-width: 32px; text-align: right; }
   .turn-timer-label.low { color: #dc2626; }
   .bot-thinking {
     flex: 1; display: flex; align-items: center; gap: 5px;
-    font-size: 0.82rem; font-weight: 700; color: #6b7a64;
+    font-size: 0.82rem; font-weight: 700; color: var(--text-3);
   }
   .bot-dot {
-    width: 6px; height: 6px; border-radius: 50%; background: #6b7a64;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--text-3);
     animation: bot-dot-bounce 1.1s ease-in-out infinite;
   }
   .bot-dot:nth-child(2) { animation-delay: 0.15s; }
@@ -465,7 +517,7 @@
   }
   .btn:hover { filter: brightness(1.08); }
   .btn:active { transform: scale(0.96); }
-  .btn.secondary { background: #495a44; box-shadow: none; }
+  .btn.secondary { background: var(--text-2); box-shadow: none; }
   .btn.team-btn { box-shadow: 0 3px 8px -3px rgba(0,0,0,0.45); }
   .btn.ghost {
     background: transparent; color: var(--accent-dark);
@@ -487,13 +539,13 @@
   }
   .panel h3 {
     margin: 0; font-size: 0.78rem; text-transform: uppercase;
-    letter-spacing: 0.08em; color: #6b7a64; font-weight: 800;
+    letter-spacing: 0.08em; color: var(--text-3); font-weight: 800;
   }
   .stats-grid {
     display: grid; grid-template-columns: 1fr auto 1fr;
     gap: 4px 8px; font-size: 0.82rem; align-items: center;
   }
-  .stats-grid .label { text-align: center; color: #8a9582; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stats-grid .label { text-align: center; color: var(--text-4); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
   .stats-grid .val { font-weight: 700; text-align: center; }
   .stats-grid .val.home { text-align: right; }
   .stats-grid .val.away { text-align: left; }
@@ -504,13 +556,13 @@
     font-size: 0.76rem; line-height: 1.4;
     display: flex; flex-direction: column-reverse;
     gap: 4px;
-    border-top: 1px solid #eef1ea; padding-top: 6px;
+    border-top: 1px solid var(--border-1); padding-top: 6px;
   }
   .log-list li { padding: 3px 8px; border-radius: 6px; }
   .log-list li.home { background: rgba(99,141,237,0.08); }
   .log-list li.away { background: rgba(229,90,80,0.08); }
   .log-list li.goal { background: rgba(217,164,65,0.18); font-weight: 700; }
-  .log-list li .turn-tag { color: #9aa491; font-weight: 600; margin-right: 4px; }
+  .log-list li .turn-tag { color: var(--text-4); font-weight: 600; margin-right: 4px; }
 
   /* ---------- Menus / overlays ---------- */
   .menu-screen {
@@ -530,28 +582,28 @@
     display: grid; grid-template-columns: 36px 1fr auto auto;
     align-items: center; gap: 8px;
     padding: 8px 12px; border-radius: 10px;
-    background: rgba(255,255,255,0.7); border: 1px solid #e8ede4;
+    background: var(--surface-2); border: 1px solid var(--border-1);
     font-size: 0.82rem;
   }
-  .lb-row.lb-me { background: #f0f4ff; border-color: var(--accent); font-weight: 700; }
+  .lb-row.lb-me { background: var(--accent-tint); border-color: var(--accent); font-weight: 700; }
   .lb-rank { font-size: 1rem; text-align: center; }
-  .lb-name { font-weight: 600; color: #1c2b22; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lb-name { font-weight: 600; color: var(--text-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .lb-elo { font-weight: 800; color: #1d6b2b; white-space: nowrap; }
-  .lb-record { color: #6b7a64; font-size: 0.74rem; white-space: nowrap; }
+  .lb-record { color: var(--text-3); font-size: 0.74rem; white-space: nowrap; }
   .lb-my-position {
     margin-top: 10px; padding: 8px 12px; border-radius: 10px;
-    background: #f0f4ff; border: 1px solid var(--accent);
-    font-size: 0.82rem; text-align: center; color: #384032;
+    background: var(--accent-tint); border: 1px solid var(--accent);
+    font-size: 0.82rem; text-align: center; color: var(--text-2);
   }
 
   .rules-body {
-    font-size: 0.86rem; line-height: 1.55; color: #384032;
+    font-size: 0.86rem; line-height: 1.55; color: var(--text-2);
     max-height: 58vh; overflow-y: auto; padding-right: 6px;
   }
   .rules-body p { margin: 0 0 10px; }
   .rules-section-title {
-    margin: 4px 0 8px; font-size: 0.95rem; color: #1c2b22;
-    border-bottom: 1.5px solid #eef1ea; padding-bottom: 6px;
+    margin: 4px 0 8px; font-size: 0.95rem; color: var(--text-1);
+    border-bottom: 1.5px solid var(--border-1); padding-bottom: 6px;
   }
   .rules-body .rules-section-title:first-child { margin-top: 0; }
   .rules-list { margin: 0 0 10px; padding-left: 20px; }
@@ -564,32 +616,32 @@
     box-shadow: 0 2px 6px rgba(0,0,0,0.12);
   }
   .rule-diagram-caption {
-    font-size: 0.75rem; color: #6b7a64; margin-top: 5px;
+    font-size: 0.75rem; color: var(--text-3); margin-top: 5px;
     font-style: italic; line-height: 1.4;
   }
   .rules-scroll-hint {
     position: sticky; bottom: -1px; left: 0; right: 0; height: 28px; margin-top: -28px;
-    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.95));
+    background: linear-gradient(to bottom, rgba(0,0,0,0), var(--paper));
     pointer-events: none; transition: opacity 0.2s ease;
   }
-  .league-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1.5px solid #eef1ea; }
+  .league-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1.5px solid var(--border-1); }
   .league-tab {
     flex: 1; padding: 9px 6px; border: none; background: transparent; cursor: pointer;
-    font-family: inherit; font-weight: 700; font-size: 0.78rem; color: #8a9582;
+    font-family: inherit; font-weight: 700; font-size: 0.78rem; color: var(--text-4);
     border-bottom: 2.5px solid transparent; margin-bottom: -1.5px;
   }
   .league-tab.active { color: var(--accent-dark); border-bottom-color: var(--accent); }
   .league-tab-body { max-height: 56vh; overflow-y: auto; }
   .league-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
-  .league-table th { font-size: 0.66rem; text-transform: uppercase; color: #8a9582; padding: 6px 4px; border-bottom: 1.5px solid #eef1ea; }
-  .league-table td { padding: 7px 4px; text-align: center; border-bottom: 1px solid #f4f7f1; }
+  .league-table th { font-size: 0.66rem; text-transform: uppercase; color: var(--text-4); padding: 6px 4px; border-bottom: 1.5px solid var(--border-1); }
+  .league-table td { padding: 7px 4px; text-align: center; border-bottom: 1px solid var(--surface-3); }
   .league-table tr.top { background: rgba(99,141,237,0.08); }
   .league-round { margin-bottom: 16px; }
-  .league-round-title { font-weight: 800; font-size: 0.85rem; margin-bottom: 8px; color: #495a44; }
+  .league-round-title { font-weight: 800; font-size: 0.85rem; margin-bottom: 8px; color: var(--text-2); }
   .league-round-title.current { color: var(--accent-dark); }
   .league-match-row {
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
-    padding: 8px 10px; border-radius: 10px; background: #f8faf6; margin-bottom: 6px;
+    padding: 8px 10px; border-radius: 10px; background: var(--surface-3); margin-bottom: 6px;
     font-size: 0.78rem; font-weight: 600;
   }
   .league-match-team { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
@@ -598,9 +650,9 @@
   .league-match-score { flex-shrink: 0; min-width: 60px; text-align: center; }
   .menu-screen h1 {
     font-size: 2.1rem; margin: 0 0 4px; font-weight: 900;
-    color: #1c2b22; letter-spacing: -0.01em;
+    color: var(--text-1); letter-spacing: -0.01em;
   }
-  .menu-screen .subtitle { color: #6b7a64; font-size: 0.95rem; margin-bottom: 26px; }
+  .menu-screen .subtitle { color: var(--text-3); font-size: 0.95rem; margin-bottom: 26px; }
   .menu-grid { display: grid; gap: 10px; }
   .menu-screen > *, .menu-grid > * {
     animation: staggerIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -620,30 +672,31 @@
   @media (prefers-reduced-motion: reduce) {
     .menu-screen > *, .menu-grid > * { animation: none; }
   }
-  .menu-section-divider { height: 1px; background: #e1e8db; margin: 14px 0; }
+  .menu-section-divider { height: 1px; background: var(--border-1); margin: 14px 0; }
   .menu-btn {
-    appearance: none; border: 1px solid #e1e8db; background: #fbfcf9;
+    appearance: none; border: 1px solid var(--border-1); background: var(--surface-2);
     border-radius: 10px; padding: 16px 20px; text-align: left;
     cursor: pointer; transition: all 0.15s ease;
     font-family: inherit;
     box-shadow: 0 3px 6px -2px rgba(28,43,34,0.10);
+    color: var(--text-1);
   }
-  .menu-btn:hover { border-color: var(--accent); background: #f1f5ff; transform: translateY(-1px); box-shadow: 0 5px 10px -2px rgba(28,43,34,0.14); }
-  .menu-btn .t { font-weight: 800; font-size: 0.98rem; }
-  .menu-btn .d { font-size: 0.8rem; color: #7a8772; margin-top: 2px; }
+  .menu-btn:hover { border-color: var(--accent); background: var(--accent-tint); transform: translateY(-1px); box-shadow: 0 5px 10px -2px rgba(28,43,34,0.14); }
+  .menu-btn .t { font-weight: 800; font-size: 0.98rem; color: var(--text-1); }
+  .menu-btn .d { font-size: 0.8rem; color: var(--text-3); margin-top: 2px; }
 
   .setup-row { display: flex; flex-direction: column; gap: 14px; text-align: left; margin-bottom: 22px; }
-  .field-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: #6b7a64; font-weight: 800; margin-bottom: 6px; display:block; }
+  .field-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); font-weight: 800; margin-bottom: 6px; display:block; }
   .team-select-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   select.team-pick {
     width: 100%; padding: 10px 12px; border-radius: 10px;
-    border: 1.5px solid #e1e8db; font-family: inherit; font-weight: 700; font-size: 0.85rem;
-    background: #fff;
+    border: 1.5px solid var(--border-1); font-family: inherit; font-weight: 700; font-size: 0.85rem;
+    background: var(--surface-1); color: var(--text-1);
   }
   .duration-row { display: flex; gap: 8px; }
   .duration-row button {
-    flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid #e1e8db;
-    background: #fff; font-weight: 700; cursor: pointer; font-family: inherit;
+    flex: 1; padding: 10px; border-radius: 10px; border: 1.5px solid var(--border-1);
+    background: var(--surface-1); font-weight: 700; cursor: pointer; font-family: inherit; color: var(--text-1);
   }
   .duration-row button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
@@ -651,41 +704,41 @@
   .team-picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   @media (max-width: 480px) { .team-picker-grid { grid-template-columns: 1fr; } }
   .team-picker-card {
-    background: #f7f8f4; border: 1.5px solid #e1e8db; border-radius: 12px; padding: 10px 12px;
+    background: var(--surface-3); border: 1.5px solid var(--border-1); border-radius: 12px; padding: 10px 12px;
   }
   .team-picker-toggle { display: flex; gap: 6px; margin-bottom: 8px; }
   .picker-toggle-btn {
-    flex: 1; padding: 6px; border-radius: 8px; border: 1.5px solid #e1e8db;
-    background: #fff; font-weight: 700; font-size: 0.72rem; cursor: pointer; font-family: inherit;
+    flex: 1; padding: 6px; border-radius: 8px; border: 1.5px solid var(--border-1);
+    background: var(--surface-1); font-weight: 700; font-size: 0.72rem; cursor: pointer; font-family: inherit; color: var(--text-1);
   }
   .picker-toggle-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
   .custom-team-summary { display: flex; align-items: center; gap: 10px; padding: 4px 2px; }
   .custom-team-summary-text { display: flex; flex-direction: column; line-height: 1.3; }
-  .custom-team-summary-text strong { font-size: 0.85rem; color: #1c2b22; }
-  .custom-team-summary-text span { font-size: 0.7rem; color: #6b7a64; }
+  .custom-team-summary-text strong { font-size: 0.85rem; color: var(--text-1); }
+  .custom-team-summary-text span { font-size: 0.7rem; color: var(--text-3); }
 
   .kit-editor-preview {
     display: flex; align-items: center; gap: 14px; margin: 10px 0 18px;
-    background: #f7f8f4; border-radius: 12px; padding: 14px;
+    background: var(--surface-3); border-radius: 12px; padding: 14px;
   }
   .online-team-name-input {
-    flex: 1; padding: 10px 14px; border-radius: 10px; border: 1.5px solid #e1e8db;
-    font-family: inherit; font-weight: 700; font-size: 0.9rem; background: #fff;
+    flex: 1; padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--border-1);
+    font-family: inherit; font-weight: 700; font-size: 0.9rem; background: var(--surface-1); color: var(--text-1);
   }
   .online-team-name-input:focus { outline: none; border-color: var(--accent); }
   .kit-editor-section { margin-bottom: 16px; }
   .kit-design-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; }
   .kit-design-btn {
     display: flex; flex-direction: column; align-items: center; gap: 6px;
-    padding: 10px 6px; border-radius: 10px; border: 1.5px solid #e1e8db; background: #fff;
+    padding: 10px 6px; border-radius: 10px; border: 1.5px solid var(--border-1); background: var(--surface-1);
     cursor: pointer; font-family: inherit;
   }
-  .kit-design-btn span { font-size: 0.68rem; font-weight: 700; color: #4a564a; text-align: center; }
-  .kit-design-btn.active { border-color: var(--accent); background: #f0f4ff; }
+  .kit-design-btn span { font-size: 0.68rem; font-weight: 700; color: var(--text-2); text-align: center; }
+  .kit-design-btn.active { border-color: var(--accent); background: var(--accent-tint); }
   .color-swatch-row { display: flex; gap: 8px; flex-wrap: wrap; }
   .color-swatch {
-    width: 30px; height: 30px; border-radius: 50%; border: 2px solid #fff;
-    outline: 1.5px solid #d8ded2; cursor: pointer; padding: 0;
+    width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface-1);
+    outline: 1.5px solid var(--border-2); cursor: pointer; padding: 0;
   }
   .color-swatch.active { outline: 2.5px solid var(--accent); outline-offset: 1px; }
 
@@ -695,12 +748,12 @@
     z-index: 50; padding: 16px;
   }
   .overlay-card {
-    background: #fff; border-radius: 20px; padding: 30px 26px;
+    background: var(--surface-1); border-radius: 20px; padding: 30px 26px;
     max-width: 420px; width: 100%; text-align: center;
     box-shadow: var(--shadow);
   }
   .overlay-card h2 { margin: 0 0 8px; font-size: 1.5rem; font-weight: 900; }
-  .overlay-card p { color: #6b7a64; margin: 0 0 20px; font-size: 0.9rem; }
+  .overlay-card p { color: var(--text-3); margin: 0 0 20px; font-size: 0.9rem; }
 
   .toast {
     position: fixed; top: 18px; left: 50%; transform: translateX(-50%);
@@ -761,14 +814,14 @@
   @keyframes online-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
   .room-code-display {
     font-size: 2.4rem; font-weight: 900; letter-spacing: 0.18em;
-    color: var(--accent-dark); background: #f0f4ff; border-radius: 14px;
+    color: var(--accent-dark); background: var(--accent-tint); border-radius: 14px;
     padding: 14px 24px; margin: 18px 0; display: inline-block;
     border: 2px dashed var(--accent);
   }
   .online-input {
-    width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #e1e8db;
+    width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid var(--border-1);
     font-family: inherit; font-weight: 800; font-size: 1.4rem; text-align: center;
-    letter-spacing: 0.2em; text-transform: uppercase; background: #fff;
+    letter-spacing: 0.2em; text-transform: uppercase; background: var(--surface-1); color: var(--text-1);
     margin: 10px 0;
   }
   .online-input:focus { outline: none; border-color: var(--accent); }
@@ -793,7 +846,7 @@
     border: 1.5px solid #fde68a;
   }
   .rematch-prompt {
-    background: #f0f4ff; border: 1.5px dashed var(--accent); border-radius: 10px;
+    background: var(--accent-tint); border: 1.5px dashed var(--accent); border-radius: 10px;
     padding: 10px 12px; margin: 6px 0; text-align: center;
   }
 
@@ -807,11 +860,11 @@
     width: 72px; height: 72px; margin: 0 auto 4px; display: block;
   }
   .landing-title {
-    font-size: 2.2rem; font-weight: 900; color: #1c2b22; margin: 0 0 6px;
+    font-size: 2.2rem; font-weight: 900; color: var(--text-1); margin: 0 0 6px;
     letter-spacing: -0.02em;
   }
   .landing-subtitle {
-    font-size: 1rem; color: #6b7a64; margin: 0 0 28px; font-weight: 500;
+    font-size: 1rem; color: var(--text-3); margin: 0 0 28px; font-weight: 500;
   }
   .landing-preview {
     width: min(340px, 90vw); border-radius: 16px; overflow: hidden;
@@ -828,33 +881,33 @@
   .landing-btn:hover { opacity: 0.88; }
   .landing-btn-google { background: #fff; color: #1c2b22; box-shadow: 0 2px 8px rgba(0,0,0,0.14); }
   .landing-btn-email { background: var(--accent); color: #fff; }
-  .landing-btn-guest { background: transparent; color: #6b7a64; border: 1.5px solid #d8ded2; font-size: 0.88rem; }
-  .landing-divider { display: flex; align-items: center; gap: 10px; color: #b0bba8; font-size: 0.8rem; }
-  .landing-divider::before, .landing-divider::after { content:''; flex:1; height:1px; background:#e1e8db; }
+  .landing-btn-guest { background: transparent; color: var(--text-3); border: 1.5px solid #d8ded2; font-size: 0.88rem; }
+  .landing-divider { display: flex; align-items: center; gap: 10px; color: var(--text-4); font-size: 0.8rem; }
+  .landing-divider::before, .landing-divider::after { content:''; flex:1; height:1px; background:var(--border-1); }
   .landing-features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 24px; width: min(380px, 92vw); }
-  .landing-feature { background: rgba(255,255,255,0.7); border-radius: 12px; padding: 12px 8px; }
+  .landing-feature { background: var(--surface-2); border: 1px solid var(--border-1); border-radius: 12px; padding: 12px 8px; }
   .landing-feature-icon { display: flex; align-items: center; justify-content: center; color: var(--accent-dark); margin-bottom: 4px; }
-  .landing-feature-label { font-size: 0.72rem; font-weight: 700; color: #384032; line-height: 1.3; }
+  .landing-feature-label { font-size: 0.72rem; font-weight: 700; color: var(--text-2); line-height: 1.3; }
 
   /* ── Auth forms ── */
   .auth-screen { max-width: 360px; margin: 0 auto; padding: 24px 16px; }
   .auth-form { display: flex; flex-direction: column; gap: 12px; margin-top: 16px; }
   .auth-input {
-    padding: 11px 14px; border: 1.5px solid #e1e8db; border-radius: 10px;
-    font-size: 0.95rem; font-family: inherit; background: #fff;
+    padding: 11px 14px; border: 1.5px solid var(--border-1); border-radius: 10px;
+    font-size: 0.95rem; font-family: inherit; background: var(--surface-1); color: var(--text-1);
     transition: border-color 0.15s;
   }
   .auth-input:focus { outline: none; border-color: var(--accent); }
   .auth-error { color: #dc2626; font-size: 0.8rem; text-align: center; margin-top: -4px; }
-  .auth-switch { text-align: center; font-size: 0.82rem; color: #6b7a64; margin-top: 8px; }
+  .auth-switch { text-align: center; font-size: 0.82rem; color: var(--text-3); margin-top: 8px; }
   .auth-switch button { background: none; border: none; color: var(--accent); font-weight: 700; cursor: pointer; font-family: inherit; font-size: inherit; }
 
   /* ── User profile chip in main menu ── */
   .user-chip {
     display: flex; align-items: center; gap: 8px;
-    background: rgba(255,255,255,0.8); border-radius: 999px;
+    background: var(--surface-2); border-radius: 999px;
     padding: 6px 12px 6px 6px; margin-bottom: 12px;
-    border: 1px solid #e1e8db; font-size: 0.82rem;
+    border: 1px solid var(--border-1); font-size: 0.82rem;
   }
   .user-chip-avatar {
     width: 28px; height: 28px; border-radius: 50%;
@@ -863,18 +916,18 @@
     overflow: hidden; flex-shrink: 0;
   }
   .user-chip-avatar img { width: 100%; height: 100%; object-fit: cover; }
-  .user-chip-name { font-weight: 700; color: #1c2b22; }
-  .user-chip-elo { color: #6b7a64; font-size: 0.75rem; }
-  .user-chip-logout { margin-left: auto; background: none; border: none; color: #b0bba8; cursor: pointer; font-size: 0.8rem; padding: 0 0 0 8px; }
+  .user-chip-name { font-weight: 700; color: var(--text-1); }
+  .user-chip-elo { color: var(--text-3); font-size: 0.75rem; }
+  .user-chip-logout { margin-left: auto; background: none; border: none; color: var(--text-4); cursor: pointer; font-size: 0.8rem; padding: 0 0 0 8px; }
 
   .rematch-prompt {
-    background: #f0f4ff; border: 1.5px dashed var(--accent); border-radius: 10px;
+    background: var(--accent-tint); border: 1.5px dashed var(--accent); border-radius: 10px;
     padding: 10px 12px; margin: 6px 0; text-align: center;
   }
-  .rematch-prompt p { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; color: #2a3a6b; }
+  .rematch-prompt p { margin: 0 0 8px; font-size: 0.82rem; font-weight: 700; color: var(--accent-dark); }
   .rematch-prompt-actions { display: flex; gap: 6px; }
   .rematch-waiting {
-    text-align: center; font-size: 0.78rem; font-weight: 700; color: #6b7a64;
+    text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--text-3);
     margin: 6px 0; padding: 8px; background: #f5f7f2; border-radius: 8px;
   }
 
@@ -889,18 +942,18 @@
     position: absolute; top: -4px; right: -4px; background: #d9374a; color: #fff;
     font-size: 0.65rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 999px;
     display: flex; align-items: center; justify-content: center; padding: 0 4px;
-    border: 2px solid #fff;
+    border: 2px solid var(--surface-1);
   }
   .chat-panel {
     position: fixed; bottom: 0; right: 0; z-index: 50;
     width: min(340px, 100vw); height: min(480px, 80vh);
-    background: #fff; border-radius: 14px 14px 0 0; box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
+    background: var(--surface-1); border-radius: 14px 14px 0 0; box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
     display: flex; flex-direction: column; overflow: hidden;
     transform: translateY(110%); transition: transform 0.25s ease;
   }
   .chat-panel.open { transform: translateY(0); }
   .chat-header {
-    background: var(--accent-dark, #1c2b22); color: #fff; padding: 10px 14px;
+    background: var(--accent-dark, var(--text-1)); color: #fff; padding: 10px 14px;
     display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.85rem;
     flex-shrink: 0;
   }
@@ -910,7 +963,7 @@
     flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px;
     background: #f7f8f4;
   }
-  .chat-empty { text-align: center; color: #9aa593; font-size: 0.78rem; margin-top: 20px; }
+  .chat-empty { text-align: center; color: var(--text-4); font-size: 0.78rem; margin-top: 20px; }
   .chat-msg {
     max-width: 78%; padding: 7px 11px; border-radius: 14px; font-size: 0.82rem; line-height: 1.35;
     word-wrap: break-word;
@@ -919,14 +972,14 @@
   .chat-msg.theirs { align-self: flex-start; background: #e7ebe2; color: #2a3322; border-bottom-left-radius: 4px; }
   .chat-quick-row {
     display: flex; gap: 5px; padding: 6px 10px; overflow-x: auto; flex-shrink: 0;
-    border-top: 1px solid #eee;
+    border-top: 1px solid var(--border-1);
   }
   .chat-quick-btn {
-    flex-shrink: 0; background: #f0f4ff; border: 1px solid #dde4f5; border-radius: 999px;
-    padding: 4px 10px; font-size: 0.72rem; color: #2a3a6b; cursor: pointer; white-space: nowrap;
+    flex-shrink: 0; background: var(--accent-tint); border: 1px solid #dde4f5; border-radius: 999px;
+    padding: 4px 10px; font-size: 0.72rem; color: var(--accent-dark); cursor: pointer; white-space: nowrap;
   }
   .chat-quick-btn:hover { background: #e3e9fb; }
-  .chat-input-row { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid #eee; flex-shrink: 0; }
+  .chat-input-row { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border-1); flex-shrink: 0; }
   .chat-input {
     flex: 1; border: 1px solid #ddd; border-radius: 999px; padding: 8px 14px;
     font-size: 0.82rem; font-family: inherit; outline: none;
@@ -971,6 +1024,15 @@
     .landing-feature-label { font-size: 0.62rem; }
   }
 </style>
+<script>
+  // Runs before the DOM paints anything, so there's no flash of the wrong
+  // theme. Priority: explicit user choice in localStorage > OS preference.
+  (function() {
+    var saved = localStorage.getItem('hexagol_theme');
+    var theme = saved || (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
 </head>
 <body>
 <div id="app"></div>
@@ -1003,6 +1065,22 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 // MÓDULO: I18N — Sistema de traducciones ES/EN
 // ═══════════════════════════════════════════════════════════
 let lang = localStorage.getItem('hexagol_lang') || 'es';
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO: Theme — light/dark, mirrors the inline early-init script
+// ═══════════════════════════════════════════════════════════
+let currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+function setTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('hexagol_theme', theme);
+  render();
+}
+
+function toggleTheme() {
+  setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+}
 
 function setLang(l) {
   lang = l;
@@ -7757,13 +7835,18 @@ function renderLanding() {
         <div class="landing-feature-label">${t('landing.feature.league')}</div>
       </div>
     </div>
-    <button id="lang-toggle-btn" style="margin-top:16px;background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
-      ${t('landing.lang')}
-    </button>
-    <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
+    <div style="display:flex; gap:8px; margin-top:16px; justify-content:center;">
+      <button id="lang-toggle-btn" style="background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+        ${t('landing.lang')}
+      </button>
+      <button id="theme-toggle-btn" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:8px;padding:6px 16px;font-size:0.8rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;">
+        ${currentTheme === 'dark' ? (lang === 'en' ? 'Light mode' : lang === 'pt' ? 'Modo claro' : 'Modo claro') : (lang === 'en' ? 'Dark mode' : lang === 'pt' ? 'Modo escuro' : 'Modo oscuro')}
+      </button>
+    </div>
+    <div style="margin-top:16px;text-align:center;font-size:0.7rem;color:var(--text-4);line-height:2;">
       ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : lang === 'pt' ? '© 2026 Hexagol. Todos os direitos reservados.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
-      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : lang === 'pt' ? 'Termos de Uso' : 'Términos de Uso'}</button> ·
-      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : 'Política de Privacidad'}</button>
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : lang === 'pt' ? 'Termos de Uso' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -7795,7 +7878,7 @@ function renderAuthScreen() {
       <button id="auth-switch-btn">${isRegister ? t('auth.switch.login') : t('auth.switch.register')}</button>
     </div>
     <div class="auth-switch" style="margin-top:4px;">
-      <button id="auth-back-btn" style="color:#b0bba8;">${t('auth.back')}</button>
+      <button id="auth-back-btn" style="color:var(--text-4);">${t('auth.back')}</button>
     </div>
   </div>`;
 }
@@ -7816,16 +7899,16 @@ function renderMainMenu() {
         <div class="user-chip-name">${userProfile.username}</div>
         <div class="user-chip-elo">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V'} ${userProfile.losses}${lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D'}</div>
       </div>
-      <button data-menu="match-history" title="${lang === 'en' ? 'History' : lang === 'pt' ? 'Histórico' : 'Historial'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;margin-left:auto;">
+      <button data-menu="match-history" title="${lang === 'en' ? 'History' : lang === 'pt' ? 'Histórico' : 'Historial'}" style="background:none;border:1px solid var(--border-1);border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer;font-family:inherit;margin-left:auto;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg>
       </button>
-      <button data-menu="achievements" title="${lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;">
+      <button data-menu="achievements" title="${lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros'}" style="background:none;border:1px solid var(--border-1);border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer;font-family:inherit;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8"/><path d="M12 17v4"/><path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M17 4h3a2 2 0 0 1-2 4h-1"/><path d="M7 4H4a2 2 0 0 0 2 4h1"/></svg>
       </button>
-      <button id="view-my-profile-btn" title="${lang === 'en' ? 'Profile' : 'Perfil'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;">
+      <button id="view-my-profile-btn" title="${lang === 'en' ? 'Profile' : 'Perfil'}" style="background:none;border:1px solid var(--border-1);border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer;font-family:inherit;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
       </button>
-      <button id="friends-btn" title="${lang === 'en' ? 'Friends' : 'Amigos'}" style="background:none;border:1px solid #e1e8db;border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:#6b7a64;cursor:pointer;font-family:inherit;position:relative;">
+      <button id="friends-btn" title="${lang === 'en' ? 'Friends' : 'Amigos'}" style="background:none;border:1px solid var(--border-1);border-radius:8px;padding:6px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;color:var(--text-3);cursor:pointer;font-family:inherit;position:relative;">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20c0-3.3 3-5 7-5s7 1.7 7 5"/><circle cx="17" cy="8" r="2.5"/><path d="M17 13c2.8.3 5 1.8 5 5"/></svg>
         <span id="friends-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;border-radius:999px;font-size:0.6rem;padding:1px 4px;min-width:14px;text-align:center;"></span>
       </button>
@@ -7844,7 +7927,7 @@ function renderMainMenu() {
     </div>
     <div class="subtitle">${t('menu.subtitle')}</div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" data-menu="play" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</div>
         <div class="d">${lang === 'en' ? 'Online, local, vs AI, league and more.' : lang === 'pt' ? 'Online, local, vs IA, liga e mais.' : 'Online, local, vs IA, liga y más.'}</div>
       </button>
@@ -7855,7 +7938,7 @@ function renderMainMenu() {
     </div>
     <div class="menu-section-divider"></div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="quick-tutorial" style="border-color:#e8a020;background:#fffbf0;">
+      <button class="menu-btn" data-menu="quick-tutorial" style="border-color:#e8a020;background:var(--surface-3);">
         <div class="t">${t('menu.quicktutorial')}</div>
         <div class="d">${t('menu.quicktutorial.desc')}</div>
       </button>
@@ -7897,11 +7980,14 @@ function renderMainMenu() {
       <button id="menu-lang-btn" style="background:var(--accent);border:1px solid var(--accent);border-radius:8px;padding:6px 14px;font-size:0.78rem;color:#fff;font-weight:600;cursor:pointer;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
         ${t('landing.lang')}
       </button>
+      <button id="menu-theme-btn" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:8px;padding:6px 14px;font-size:0.78rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;">
+        ${currentTheme === 'dark' ? (lang === 'en' ? 'Light mode' : lang === 'pt' ? 'Modo claro' : 'Modo claro') : (lang === 'en' ? 'Dark mode' : lang === 'pt' ? 'Modo escuro' : 'Modo oscuro')}
+      </button>
     </div>
-    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:#9aa593;line-height:2;">
+    <div style="margin-top:12px;text-align:center;font-size:0.7rem;color:var(--text-4);line-height:2;">
       ${lang === 'en' ? '© 2026 Hexagol. All rights reserved.' : lang === 'pt' ? '© 2026 Hexagol. Todos os direitos reservados.' : '© 2026 Hexagol. Todos los derechos reservados.'} ·
-      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : lang === 'pt' ? 'Termos de Uso' : 'Términos de Uso'}</button> ·
-      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:#9aa593;cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : 'Política de Privacidad'}</button>
+      <button onclick="showLegalModal('terms')" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Terms of Use' : lang === 'pt' ? 'Termos de Uso' : 'Términos de Uso'}</button> ·
+      <button onclick="showLegalModal('privacy')" style="background:none;border:none;color:var(--text-4);cursor:pointer;font-size:0.7rem;text-decoration:underline;padding:0;">${lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : 'Política de Privacidad'}</button>
     </div>
   </div>`;
 }
@@ -7912,7 +7998,7 @@ function renderPlayMenu() {
     <h1>${lang === 'en' ? 'Play' : lang === 'pt' ? 'Jogar' : 'Jugar'}</h1>
     <div class="subtitle">${lang === 'en' ? 'Choose a game variant.' : lang === 'pt' ? 'Escolha uma variante do jogo.' : 'Elegí una variante de juego.'}</div>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="variant-classic" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" data-menu="variant-classic" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">${lang === 'en' ? 'Classic' : lang === 'pt' ? 'Clássico' : 'Clásico'}</div>
         <div class="d">${lang === 'en' ? 'The original game. 11vs11, full board, all rules.' : lang === 'pt' ? 'O jogo original. 11vs11, campo completo, todas as regras.' : 'El juego original. 11vs11, cancha completa, todas las reglas.'}</div>
       </button>
@@ -7948,7 +8034,7 @@ function renderVariantMenu(variant) {
   <div class="menu-screen">
     <h1>${name}</h1>
     <div class="menu-grid">
-      <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" data-menu="online-setup" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">${t('menu.online')}</div>
         <div class="d">${t('menu.online.desc')}</div>
       </button>
@@ -8171,7 +8257,7 @@ function renderOnlineWaiting() {
       <div class="subtitle">${lang === 'en' ? 'Share this code or link with your opponent.' : lang === 'pt' ? 'Compartilhe este código ou link com seu adversário.' : 'Compartí este código o link con tu rival.'}</div>
       <div class="room-code-display" id="room-code-display">${onlineRoomId || '...'}</div>
       <div style="display:flex;gap:8px;justify-content:center;margin:12px 0 16px;flex-wrap:wrap;">
-        <button id="copy-link-btn" style="display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid #c8d5c0;border-radius:999px;padding:8px 16px;font-size:0.8rem;color:#384032;cursor:pointer;font-family:inherit;font-weight:600;">
+        <button id="copy-link-btn" style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1.5px solid var(--border-2);border-radius:999px;padding:8px 16px;font-size:0.8rem;color:var(--text-2);cursor:pointer;font-family:inherit;font-weight:600;">
           🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}
         </button>
         <a href="https://wa.me/?text=${whatsappMsg}" target="_blank" rel="noopener"
@@ -8179,7 +8265,7 @@ function renderOnlineWaiting() {
           📲 WhatsApp
         </a>
       </div>
-      <p style="font-size:0.85rem; color:#6b7a64; margin: 0 0 20px;">${t('online.waiting.hint')}<br>${expiryNote}</p>
+      <p style="font-size:0.85rem; color:var(--text-3); margin: 0 0 20px;">${t('online.waiting.hint')}<br>${expiryNote}</p>
       <span class="online-badge waiting"><span class="online-dot"></span> ${t('online.waiting')}</span>
       <div class="menu-grid" style="margin-top:20px;">
         <button class="menu-btn" id="online-cancel-btn"><div class="t">${t('online.cancel')}</div></button>
@@ -8520,10 +8606,10 @@ function showAchievementToast(ach) {
   `;
   const title = lang === 'en' ? 'Achievement unlocked!' : lang === 'pt' ? 'Conquista desbloqueada!' : '¡Logro desbloqueado!';
   el.innerHTML = `
-    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;letter-spacing:0.05em;text-transform:uppercase;">${title}</div>
+    <div style="font-size:0.72rem;color:var(--text-4);margin-bottom:4px;letter-spacing:0.05em;text-transform:uppercase;">${title}</div>
     <div style="font-size:2rem;line-height:1;margin-bottom:4px;">${ach.icon}</div>
     <div style="font-weight:700;font-size:0.95rem;">${getAchievementText(ach, 'title')}</div>
-    <div style="font-size:0.75rem;color:#9aa593;margin-top:2px;">${getAchievementText(ach, 'desc')}</div>
+    <div style="font-size:0.75rem;color:var(--text-4);margin-top:2px;">${getAchievementText(ach, 'desc')}</div>
   `;
   document.body.appendChild(el);
   setTimeout(() => {
@@ -8608,11 +8694,11 @@ function renderAchievementsScreen() {
     const ts = localStorage.getItem(`hx_ach_${ach.id}`);
     const date = ts ? new Date(parseInt(ts)).toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'pt' ? 'pt-BR' : 'es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '';
     return `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #e1e8db;opacity:${unlocked ? '1' : '0.4'};">
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-1);opacity:${unlocked ? '1' : '0.4'};">
       <div style="font-size:2rem;min-width:40px;text-align:center;">${ach.icon}</div>
       <div style="flex:1;">
-        <div style="font-weight:700;font-size:0.88rem;color:#1c2b22;">${getAchievementText(ach, 'title')}${ach.onlineOnly ? ` <span style="font-size:0.65rem;color:#6b7a64;background:#f0f4ee;border-radius:999px;padding:1px 6px;">online</span>` : ''}</div>
-        <div style="font-size:0.75rem;color:#6b7a64;margin-top:2px;">${getAchievementText(ach, 'desc')}</div>
+        <div style="font-weight:700;font-size:0.88rem;color:var(--text-1);">${getAchievementText(ach, 'title')}${ach.onlineOnly ? ` <span style="font-size:0.65rem;color:var(--text-3);background:var(--surface-3);border-radius:999px;padding:1px 6px;">online</span>` : ''}</div>
+        <div style="font-size:0.75rem;color:var(--text-3);margin-top:2px;">${getAchievementText(ach, 'desc')}</div>
         ${unlocked ? `<div style="font-size:0.68rem;color:#2a6e3f;margin-top:2px;">✓ ${date}</div>` : ''}
       </div>
     </div>`;
@@ -8621,7 +8707,7 @@ function renderAchievementsScreen() {
   return `
   <div class="menu-screen" style="max-width:520px;">
     <h1>${title}</h1>
-    <div style="font-size:0.78rem;color:#6b7a64;margin-bottom:16px;text-align:center;">${progress}</div>
+    <div style="font-size:0.78rem;color:var(--text-3);margin-bottom:16px;text-align:center;">${progress}</div>
     <div>${rows}</div>
     <div class="menu-grid" style="margin-top:16px;">
       <button class="menu-btn" id="achievements-back-btn"><div class="t">${t('setup.back')}</div></button>
@@ -8671,15 +8757,15 @@ function renderQuickTutorial() {
 
   return `
   <div class="menu-screen" style="max-width:480px;text-align:center;">
-    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:16px;">
+    <div style="font-size:0.72rem;color:var(--text-4);margin-bottom:16px;">
       ${lang === 'en' ? 'First match' : lang === 'pt' ? 'Primeira partida' : 'Primera partida'} · ${quickTutorialStep + 1}/${QUICK_TUTORIAL_STEPS.length}
     </div>
-    <div style="background:#f0f4ee;border-radius:16px;height:4px;margin-bottom:24px;">
+    <div style="background:var(--surface-3);border-radius:16px;height:4px;margin-bottom:24px;">
       <div style="background:var(--accent);border-radius:16px;height:4px;width:${progress}%;transition:width 0.3s;"></div>
     </div>
     <div style="font-size:3.5rem;line-height:1;margin-bottom:16px;">${step.icon}</div>
     <h2 style="margin:0 0 12px;font-size:1.4rem;">${lang === 'en' ? step.title.en : lang === 'pt' ? step.title.pt : step.title.es}</h2>
-    <p style="color:#384032;font-size:0.92rem;line-height:1.6;margin:0 0 32px;">${lang === 'en' ? step.desc.en : lang === 'pt' ? step.desc.pt : step.desc.es}</p>
+    <p style="color:var(--text-2);font-size:0.92rem;line-height:1.6;margin:0 0 32px;">${lang === 'en' ? step.desc.en : lang === 'pt' ? step.desc.pt : step.desc.es}</p>
     <div style="display:flex;gap:10px;justify-content:center;">
       ${quickTutorialStep > 0 ? `<button class="btn ghost" id="qt-prev-btn" style="padding:10px 20px;">← ${lang === 'en' ? 'Back' : lang === 'pt' ? 'Voltar' : 'Atrás'}</button>` : `<button class="btn ghost" id="qt-skip-btn" style="padding:10px 20px;">${skipLabel}</button>`}
       <button class="btn" id="qt-next-btn" style="padding:10px 24px;background:var(--accent);border-color:var(--accent);color:#fff;">${nextLabel}</button>
@@ -8798,12 +8884,12 @@ function renderChooseUsername() {
   <div class="menu-screen" style="max-width:420px;text-align:center;">
     <div style="font-size:2.5rem;margin-bottom:12px;">👤</div>
     <h2 style="margin:0 0 8px;">${lang === 'en' ? 'Choose your username' : lang === 'pt' ? 'Escolha seu nome de usuário' : 'Elegí tu nombre de usuario'}</h2>
-    <p style="color:#6b7a64;font-size:0.85rem;margin:0 0 24px;line-height:1.5;">
+    <p style="color:var(--text-3);font-size:0.85rem;margin:0 0 24px;line-height:1.5;">
       ${lang === 'en' ? 'This is how other players will see you.' : lang === 'pt' ? 'É assim que os outros jogadores vão te ver.' : 'Así te van a ver los demás jugadores.'}
     </p>
     <input type="text" id="choose-username-input" maxlength="20" placeholder="${lang === 'en' ? 'Username' : lang === 'pt' ? 'Nome de usuário' : 'Nombre de usuario'}"
       value="${suggested}"
-      style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:1rem;font-family:inherit;margin-bottom:8px;outline:none;">
+      style="width:100%;box-sizing:border-box;padding:10px 14px;border:1.5px solid var(--border-2);border-radius:10px;font-size:1rem;font-family:inherit;margin-bottom:8px;outline:none;">
     <div id="choose-username-error" style="color:#9a2f24;font-size:0.78rem;min-height:18px;margin-bottom:12px;"></div>
     <button class="btn" id="choose-username-btn" style="width:100%;background:var(--accent);border-color:var(--accent);color:#fff;padding:12px;">
       ${lang === 'en' ? 'Start playing' : lang === 'pt' ? 'Começar a jogar!' : '¡Empezar a jugar!'}
@@ -8813,11 +8899,11 @@ function renderChooseUsername() {
 
 async function renderMatchHistory() {
   const app = document.getElementById('app');
-  app.innerHTML = `<div class="menu-screen"><h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1><div style="text-align:center;color:#6b7a64;padding:20px;">${lang === 'en' ? 'Loading...' : lang === 'pt' ? 'Carregando...' : 'Cargando...'}</div></div>`;
+  app.innerHTML = `<div class="menu-screen"><h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1><div style="text-align:center;color:var(--text-3);padding:20px;">${lang === 'en' ? 'Loading...' : lang === 'pt' ? 'Carregando...' : 'Cargando...'}</div></div>`;
 
   if (!currentUser || currentUser.isAnonymous) {
     app.innerHTML = `<div class="menu-screen"><h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
-      <p style="color:#6b7a64;text-align:center;">${lang === 'en' ? 'You need an account to see your match history.' : lang === 'pt' ? 'Você precisa de uma conta para ver seu histórico.' : 'Necesitás una cuenta para ver tu historial.'}</p>
+      <p style="color:var(--text-3);text-align:center;">${lang === 'en' ? 'You need an account to see your match history.' : lang === 'pt' ? 'Você precisa de uma conta para ver seu histórico.' : 'Necesitás una cuenta para ver tu historial.'}</p>
       <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button></div>`;
     document.getElementById('match-history-back-btn')?.addEventListener('click', () => { currentMenuView = 'main'; render(); });
     return;
@@ -8830,20 +8916,20 @@ async function renderMatchHistory() {
     const matches = snap ? snap.docs.map(doc => doc.data()) : [];
 
     const rows = matches.length === 0
-      ? `<p style="text-align:center;color:#8a9582;padding:20px 0;">${lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda não há partidas.' : 'Todavía no jugaste ninguna partida.'}</p>`
+      ? `<p style="text-align:center;color:var(--text-4);padding:20px 0;">${lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda não há partidas.' : 'Todavía no jugaste ninguna partida.'}</p>`
       : matches.map(m => {
-          const resultColor = m.result === 'win' ? '#2a6e3f' : m.result === 'loss' ? '#9a2f24' : '#6b7a64';
+          const resultColor = m.result === 'win' ? '#2a6e3f' : m.result === 'loss' ? '#9a2f24' : 'var(--text-3)';
           const resultLabel = m.result === 'win' ? (lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'G') : m.result === 'loss' ? (lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D') : (lang === 'en' ? 'D' : lang === 'pt' ? 'E' : 'E');
           const eloSign = m.eloChange >= 0 ? '+' : '';
           const date = m.playedAt?.toDate?.() ? m.playedAt.toDate().toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'pt' ? 'pt-BR' : 'es-AR', { day: '2-digit', month: '2-digit' }) : '';
           return `
-          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #e1e8db;">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-1);">
             <div style="font-size:1.1rem;font-weight:900;color:${resultColor};min-width:20px;text-align:center;">${resultLabel}</div>
             <div style="flex:1;min-width:0;">
-              <div style="font-size:0.82rem;font-weight:600;color:#1c2b22;">${m.myTeam} <span style="color:#9aa593;">vs</span> ${m.oppTeam}</div>
-              <div style="font-size:0.72rem;color:#6b7a64;">${m.opponentName || '?'} · ${date}</div>
+              <div style="font-size:0.82rem;font-weight:600;color:var(--text-1);">${m.myTeam} <span style="color:var(--text-4);">vs</span> ${m.oppTeam}</div>
+              <div style="font-size:0.72rem;color:var(--text-3);">${m.opponentName || '?'} · ${date}</div>
             </div>
-            <div style="font-size:1rem;font-weight:700;color:#1c2b22;min-width:36px;text-align:center;">${m.myScore}-${m.oppScore}</div>
+            <div style="font-size:1rem;font-weight:700;color:var(--text-1);min-width:36px;text-align:center;">${m.myScore}-${m.oppScore}</div>
             <div style="font-size:0.75rem;font-weight:600;color:${m.eloChange >= 0 ? '#2a6e3f' : '#9a2f24'};min-width:36px;text-align:right;">${eloSign}${m.eloChange}</div>
           </div>`;
         }).join('');
@@ -8851,7 +8937,7 @@ async function renderMatchHistory() {
     app.innerHTML = `
     <div class="menu-screen" style="max-width:560px;">
       <h1>${lang === 'en' ? 'Match History' : lang === 'pt' ? 'Histórico de partidas' : 'Historial de partidas'}</h1>
-      <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;text-align:center;">${lang === 'en' ? 'Last 20 matches' : lang === 'pt' ? 'Últimas 20 partidas' : 'Últimas 20 partidas'}</div>
+      <div style="font-size:0.75rem;color:var(--text-4);margin-bottom:12px;text-align:center;">${lang === 'en' ? 'Last 20 matches' : lang === 'pt' ? 'Últimas 20 partidas' : 'Últimas 20 partidas'}</div>
       <div>${rows}</div>
       <div class="menu-grid" style="margin-top:16px;">
         <button class="menu-btn" id="match-history-back-btn"><div class="t">${t('setup.back')}</div></button>
@@ -9081,7 +9167,7 @@ function renderChallengeSetup() {
       </div>
     </div>
     <div class="menu-grid" style="margin-top:20px;">
-      <button class="menu-btn" id="send-challenge-btn" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" id="send-challenge-btn" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">️ ${lang === 'en' ? 'Send challenge' : lang === 'pt' ? 'Enviar desafio' : 'Enviar desafío'}</div>
       </button>
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -9107,15 +9193,15 @@ function renderChallengeGuestSetup() {
   return `
   <div class="menu-screen" style="max-width:480px;">
     <h1>️ ${lang === 'en' ? 'Accept challenge' : lang === 'pt' ? 'Aceitar desafio' : 'Aceptar desafío'}</h1>
-    <div style="background:#f0f4ee;border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:0.85rem;">
+    <div style="background:var(--surface-3);border-radius:12px;padding:12px 16px;margin-bottom:20px;font-size:0.85rem;">
       <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(d.fromUsername)} ${lang === 'en' ? 'challenged you' : lang === 'pt' ? 'te desafiou' : 'te desafió'}</div>
-      <div style="color:#6b7a64;">${variantNames[d.gameVariant] || 'Clásico'} · ${modeLabel}</div>
+      <div style="color:var(--text-3);">${variantNames[d.gameVariant] || 'Clásico'} · ${modeLabel}</div>
     </div>
     <div class="setup-fields">
       ${renderTeamPickerCard('away')}
     </div>
     <div class="menu-grid" style="margin-top:20px;">
-      <button class="menu-btn" id="accept-challenge-btn" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" id="accept-challenge-btn" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">${lang === 'en' ? 'Join match' : lang === 'pt' ? 'Entrar na partida' : 'Entrar a la partida'}</div>
       </button>
       <button class="menu-btn" id="decline-challenge-btn">
@@ -9134,36 +9220,36 @@ function showFriendsModal() {
   const sent = friendsData.filter(f => f.status === 'pending' && f.requestedBy === currentUser?.uid);
   const title = lang === 'en' ? 'Friends' : lang === 'pt' ? 'Amigos' : 'Amigos';
 
-  const sectionTitle = (text) => `<div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin:12px 0 6px;">${text}</div>`;
-  const row = (content) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e1e8db;">${content}</div>`;
+  const sectionTitle = (text) => `<div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin:12px 0 6px;">${text}</div>`;
+  const row = (content) => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">${content}</div>`;
   const btnGreen = (onclick, text) => `<button onclick="${onclick}" style="background:#2a6e3f;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
-  const btnGhost = (onclick, text) => `<button onclick="${onclick}" style="background:#f0f4ee;border:1px solid #c8d5c0;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
+  const btnGhost = (onclick, text) => `<button onclick="${onclick}" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
   const btnAccent = (onclick, text) => `<button onclick="${onclick}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.75rem;cursor:pointer;">${text}</button>`;
 
   const pendingHtml = pending.length > 0 ? sectionTitle(`${lang === 'en' ? 'Requests' : lang === 'pt' ? 'Solicitações' : 'Solicitudes'} (${pending.length})`) +
     pending.map(f => row(`<span style="flex:1;font-weight:600;font-size:0.85rem;">${escapeHtml(f.username)}</span>${btnGreen(`acceptFriendRequest('${f.uid}')`, '✓')}${btnGhost(`declineFriendRequest('${f.uid}')`, '✕')}`)).join('') : '';
 
   const acceptedHtml = accepted.length > 0 ? sectionTitle(`${title} (${accepted.length})`) +
-    accepted.map(f => row(`<div style="flex:1;"><div style="font-weight:600;font-size:0.85rem;">${escapeHtml(f.username)}</div><div style="font-size:0.72rem;color:#6b7a64;">⚡ ${f.elo} ELO</div></div>${btnAccent(`challengeFriend('${f.uid}')`, `⚔️ ${lang === 'en' ? 'Challenge' : lang === 'pt' ? 'Desafiar' : 'Desafiar'}`)}${btnGhost(`removeFriend('${f.uid}')`, '✕')}`)).join('') : '';
+    accepted.map(f => row(`<div style="flex:1;"><div style="font-weight:600;font-size:0.85rem;">${escapeHtml(f.username)}</div><div style="font-size:0.72rem;color:var(--text-3);">⚡ ${f.elo} ELO</div></div>${btnAccent(`challengeFriend('${f.uid}')`, `⚔️ ${lang === 'en' ? 'Challenge' : lang === 'pt' ? 'Desafiar' : 'Desafiar'}`)}${btnGhost(`removeFriend('${f.uid}')`, '✕')}`)).join('') : '';
 
   const sentHtml = sent.length > 0 ? sectionTitle(lang === 'en' ? 'Sent' : lang === 'pt' ? 'Enviadas' : 'Enviadas') +
-    sent.map(f => row(`<span style="flex:1;font-size:0.85rem;">${escapeHtml(f.username)}</span><span style="font-size:0.72rem;color:#9aa593;">⏳</span>`)).join('') : '';
+    sent.map(f => row(`<span style="flex:1;font-size:0.85rem;">${escapeHtml(f.username)}</span><span style="font-size:0.72rem;color:var(--text-4);">⏳</span>`)).join('') : '';
 
   const emptyHtml = !pending.length && !accepted.length && !sent.length
-    ? `<div style="text-align:center;padding:24px;color:#9aa593;font-size:0.85rem;">${lang === 'en' ? 'No friends yet. Search for players to add them.' : lang === 'pt' ? 'Nenhum amigo ainda. Busque jogadores para adicioná-los.' : 'Sin amigos aún. Buscá jugadores para agregarlos.'}</div>` : '';
+    ? `<div style="text-align:center;padding:24px;color:var(--text-4);font-size:0.85rem;">${lang === 'en' ? 'No friends yet. Search for players to add them.' : lang === 'pt' ? 'Nenhum amigo ainda. Busque jogadores para adicioná-los.' : 'Sin amigos aún. Buscá jugadores para agregarlos.'}</div>` : '';
 
   const modal = document.createElement('div');
   modal.id = 'friends-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9000;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
+    <div style="background:var(--surface-1);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.2);">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
         <h2 style="margin:0;font-size:1.1rem;">👥 ${title}</h2>
-        <button id="friends-modal-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#6b7a64;">✕</button>
+        <button id="friends-modal-close" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:var(--text-3);">✕</button>
       </div>
       <div style="display:flex;gap:8px;margin-bottom:12px;">
         <input id="friends-search-input" type="text" placeholder="${lang === 'en' ? 'Search by username...' : lang === 'pt' ? 'Buscar por nome...' : 'Buscar por nombre...'}"
-          style="flex:1;padding:8px 12px;border:1.5px solid #c8d5c0;border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;">
+          style="flex:1;padding:8px 12px;border:1.5px solid var(--border-2);border-radius:8px;font-size:0.85rem;font-family:inherit;outline:none;">
         <button id="friends-search-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">
           ${lang === 'en' ? 'Search' : lang === 'pt' ? 'Buscar' : 'Buscar'}
         </button>
@@ -9183,7 +9269,7 @@ function showFriendsModal() {
   const doSearch = async () => {
     const q = searchInput.value.trim();
     if (!q) return;
-    resultDiv.innerHTML = `<div style="padding:8px;color:#6b7a64;font-size:0.8rem;">...</div>`;
+    resultDiv.innerHTML = `<div style="padding:8px;color:var(--text-3);font-size:0.8rem;">...</div>`;
     try {
       const snap = await db.collection('users').where('username', '==', q).limit(1).get();
       if (snap.empty) {
@@ -9192,7 +9278,7 @@ function showFriendsModal() {
       }
       const doc = snap.docs[0];
       if (doc.id === currentUser.uid) {
-        resultDiv.innerHTML = `<div style="padding:8px;color:#9aa593;font-size:0.8rem;">${lang === 'en' ? "That's you!" : lang === 'pt' ? 'Esse é você!' : '¡Eso sos vos!'}</div>`;
+        resultDiv.innerHTML = `<div style="padding:8px;color:var(--text-4);font-size:0.8rem;">${lang === 'en' ? "That's you!" : lang === 'pt' ? 'Esse é você!' : '¡Eso sos vos!'}</div>`;
         return;
       }
       const alreadyFriend = friendsData.some(f => f.uid === doc.id);
@@ -9201,10 +9287,10 @@ function showFriendsModal() {
         ? `<span style="font-size:0.75rem;color:#2a6e3f;">✓ ${lang === 'en' ? 'Already friends' : lang === 'pt' ? 'Já são amigos' : 'Ya son amigos'}</span>`
         : `<button id="add-friend-search-btn" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:0.75rem;cursor:pointer;">+ ${lang === 'en' ? 'Add' : lang === 'pt' ? 'Adicionar' : 'Agregar'}</button>`;
       resultDiv.innerHTML = `
-        <div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f0f4ee;border-radius:8px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--surface-3);border-radius:8px;margin-bottom:8px;">
           <div style="flex:1;">
             <div style="font-weight:600;font-size:0.85rem;">${escapeHtml(u.username)}</div>
-            <div style="font-size:0.72rem;color:#6b7a64;">⚡ ${u.elo || 1200} ELO</div>
+            <div style="font-size:0.72rem;color:var(--text-3);">⚡ ${u.elo || 1200} ELO</div>
           </div>
           ${addBtn}
         </div>`;
@@ -9260,9 +9346,9 @@ function showChallengePopup(data, docId) {
     ? `🏆 ${data.tournamentName ? escapeHtml(data.tournamentName) : (lang === 'en' ? 'Tournament match' : lang === 'pt' ? 'Partida de torneio' : 'Partido de torneo')}`
     : `⚔️ ${lang === 'en' ? 'Challenge!' : lang === 'pt' ? 'Desafio!' : '¡Desafío!'}`;
   el.innerHTML = `
-    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${headerLabel}</div>
+    <div style="font-size:0.72rem;color:var(--text-4);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${headerLabel}</div>
     <div style="font-weight:700;font-size:0.95rem;margin-bottom:2px;">${escapeHtml(data.fromUsername || '?')} ${lang === 'en' ? 'challenged you' : lang === 'pt' ? 'te desafiou' : 'te desafió'}</div>
-    <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;">${variantNames[data.gameVariant] || 'Clásico'}</div>
+    <div style="font-size:0.75rem;color:var(--text-4);margin-bottom:12px;">${variantNames[data.gameVariant] || 'Clásico'}</div>
     <div style="display:flex;gap:8px;justify-content:center;">
       <button id="challenge-accept-btn" style="background:#2a6e3f;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✓ ${lang === 'en' ? 'Accept' : lang === 'pt' ? 'Aceitar' : 'Aceptar'}</button>
       <button id="challenge-decline-btn" style="background:#3a3a3a;color:#ccc;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✕ ${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</button>
@@ -9439,9 +9525,9 @@ function showTournamentInvitePopup(data) {
   el.id = 'tournament-invite-popup';
   el.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#1c2b22;color:#fff;border-radius:14px;padding:16px 20px;max-width:320px;width:90%;z-index:9500;box-shadow:0 4px 24px rgba(0,0,0,0.4);text-align:center;border:1.5px solid #3a5a3a;`;
   el.innerHTML = `
-    <div style="font-size:0.72rem;color:#9aa593;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${lang === 'en' ? 'Tournament invite' : lang === 'pt' ? 'Convite de torneio' : 'Invitación a torneo'}</div>
+    <div style="font-size:0.72rem;color:var(--text-4);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em;">${lang === 'en' ? 'Tournament invite' : lang === 'pt' ? 'Convite de torneio' : 'Invitación a torneo'}</div>
     <div style="font-weight:700;font-size:0.95rem;margin-bottom:2px;">${escapeHtml(data.name)}</div>
-    <div style="font-size:0.75rem;color:#9aa593;margin-bottom:12px;">${formatLabel} · ${escapeHtml(data.fromUsername)}</div>
+    <div style="font-size:0.75rem;color:var(--text-4);margin-bottom:12px;">${formatLabel} · ${escapeHtml(data.fromUsername)}</div>
     <div style="display:flex;gap:8px;justify-content:center;">
       <button id="tournament-invite-accept" style="background:#2a6e3f;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✓ ${lang === 'en' ? 'Accept' : lang === 'pt' ? 'Aceitar' : 'Aceptar'}</button>
       <button id="tournament-invite-decline" style="background:#3a3a3a;color:#ccc;border:none;border-radius:8px;padding:8px 16px;font-size:0.82rem;cursor:pointer;font-family:inherit;">✕ ${lang === 'en' ? 'Decline' : lang === 'pt' ? 'Recusar' : 'Rechazar'}</button>
@@ -9462,7 +9548,7 @@ function renderTournamentCreate() {
   const invitedRows = tournamentSetupInvited.map(f => `
     <div style="display:flex;align-items:center;gap:8px;padding:6px 0;">
       <span style="flex:1;font-size:0.85rem;">${escapeHtml(f.username)}</span>
-      <button data-remove-invite="${f.uid}" style="background:#f0f4ee;border:1px solid #c8d5c0;border-radius:6px;padding:2px 8px;font-size:0.72rem;cursor:pointer;">✕</button>
+      <button data-remove-invite="${f.uid}" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:6px;padding:2px 8px;font-size:0.72rem;cursor:pointer;">✕</button>
     </div>`).join('');
   const friendOptions = friendsData
     .filter(f => f.status === 'accepted' && !tournamentSetupInvited.some(i => i.uid === f.uid))
@@ -9476,7 +9562,7 @@ function renderTournamentCreate() {
         <span class="field-label">${lang === 'en' ? 'Name' : lang === 'pt' ? 'Nome' : 'Nombre'}</span>
         <input id="tournament-name-input" type="text" maxlength="40" value="${escapeHtml(tournamentSetupName)}"
           placeholder="${lang === 'en' ? 'e.g. Friday League' : lang === 'pt' ? 'ex: Liga de sexta' : 'ej: Liga de los viernes'}"
-          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:0.9rem;font-family:inherit;">
+          style="width:100%;box-sizing:border-box;padding:10px 12px;border:1.5px solid var(--border-2);border-radius:10px;font-size:0.9rem;font-family:inherit;">
       </div>
       <div>
         <span class="field-label">${lang === 'en' ? 'Format' : lang === 'pt' ? 'Formato' : 'Formato'}</span>
@@ -9506,17 +9592,17 @@ function renderTournamentCreate() {
       <div>
         <span class="field-label">${lang === 'en' ? 'Invite friends' : lang === 'pt' ? 'Convidar amigos' : 'Invitar amigos'} (${tournamentSetupInvited.length + 1}/${maxP})</span>
         <div style="display:flex;gap:8px;">
-          <select id="tournament-invite-select" style="flex:1;padding:8px 12px;border:1.5px solid #c8d5c0;border-radius:10px;font-size:0.85rem;font-family:inherit;background:#fff;">
+          <select id="tournament-invite-select" style="flex:1;padding:8px 12px;border:1.5px solid var(--border-2);border-radius:10px;font-size:0.85rem;font-family:inherit;background:var(--surface-1);">
             <option value="">${lang === 'en' ? 'Choose a friend...' : lang === 'pt' ? 'Escolha um amigo...' : 'Elegí un amigo...'}</option>
             ${friendOptions}
           </select>
           <button id="tournament-invite-add-btn" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:0.85rem;cursor:pointer;">+</button>
         </div>
-        <div style="margin-top:4px;">${invitedRows || `<div style="color:#9aa593;font-size:0.78rem;padding:6px 0;">${lang === 'en' ? 'No one invited yet.' : lang === 'pt' ? 'Ninguém convidado ainda.' : 'Nadie invitado todavía.'}</div>`}</div>
+        <div style="margin-top:4px;">${invitedRows || `<div style="color:var(--text-4);font-size:0.78rem;padding:6px 0;">${lang === 'en' ? 'No one invited yet.' : lang === 'pt' ? 'Ninguém convidado ainda.' : 'Nadie invitado todavía.'}</div>`}</div>
       </div>
     </div>
     <div class="menu-grid" style="margin-top:20px;">
-      <button class="menu-btn" id="create-tournament-btn" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" id="create-tournament-btn" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">${lang === 'en' ? 'Create tournament' : lang === 'pt' ? 'Criar torneio' : 'Crear torneo'}</div>
       </button>
       <button class="menu-btn" data-menu="tournaments"><div class="t">${t('setup.back')}</div></button>
@@ -9839,7 +9925,7 @@ async function reportTournamentResult(tournamentId, matchId, isLeague, homeScore
 }
 
 function renderTournamentDetail() {
-  if (currentTournamentLoading) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:#6b7a64;">${lang === 'en' ? 'Loading...' : 'Cargando...'}</div></div>`;
+  if (currentTournamentLoading) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:var(--text-3);">${lang === 'en' ? 'Loading...' : 'Cargando...'}</div></div>`;
   const t = currentTournamentData;
   if (!t) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:#dc2626;">${lang === 'en' ? 'Not found.' : 'No encontrado.'}</div></div>`;
 
@@ -9850,9 +9936,9 @@ function renderTournamentDetail() {
   let bodyHtml = '';
   if (t.status === 'inviting') {
     const rows = t.participants.map(p => `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e1e8db;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">
         <span style="flex:1;font-size:0.85rem;">${escapeHtml(p.username)}</span>
-        <span style="font-size:0.72rem;color:${p.status === 'accepted' ? '#2a6e3f' : p.status === 'declined' ? '#9a2f24' : '#9aa593'};">
+        <span style="font-size:0.72rem;color:${p.status === 'accepted' ? '#2a6e3f' : p.status === 'declined' ? '#9a2f24' : 'var(--text-4)'};">
           ${p.status === 'accepted' ? (lang === 'en' ? 'Accepted' : 'Aceptó') : p.status === 'declined' ? (lang === 'en' ? 'Declined' : 'Rechazó') : (lang === 'en' ? 'Pending' : 'Pendiente')}
         </span>
       </div>`).join('');
@@ -9860,17 +9946,17 @@ function renderTournamentDetail() {
       <div style="margin-bottom:16px;">${rows}</div>
       ${isCreator ? `
       <div class="menu-grid">
-        <button class="menu-btn" id="start-tournament-btn" style="border-color:var(--accent);background:#f0f4ff;">
+        <button class="menu-btn" id="start-tournament-btn" style="border-color:var(--accent);background:var(--accent-tint);">
           <div class="t">${lang === 'en' ? 'Start tournament' : lang === 'pt' ? 'Começar torneio' : 'Comenzar torneo'}</div>
           <div class="d">${acceptedCount} ${lang === 'en' ? 'accepted so far' : 'aceptaron hasta ahora'}</div>
         </button>
-      </div>` : `<div style="text-align:center;color:#9aa593;font-size:0.85rem;">${lang === 'en' ? 'Waiting for the creator to start the tournament.' : 'Esperando a que el creador comience el torneo.'}</div>`}
+      </div>` : `<div style="text-align:center;color:var(--text-4);font-size:0.85rem;">${lang === 'en' ? 'Waiting for the creator to start the tournament.' : 'Esperando a que el creador comience el torneo.'}</div>`}
     `;
   } else if (isLeague) {
     const standings = computeLeagueStandings(t);
     const standingsRows = standings.map((r, i) => `
-      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:6px 0;border-bottom:1px solid #e1e8db;font-size:0.76rem;align-items:center;">
-        <span style="color:#9aa593;">${i + 1}</span>
+      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:6px 0;border-bottom:1px solid var(--border-1);font-size:0.76rem;align-items:center;">
+        <span style="color:var(--text-4);">${i + 1}</span>
         <span style="font-weight:600;">${escapeHtml(r.username)}</span>
         <span style="text-align:center;">${r.played}</span>
         <span style="text-align:center;color:#2a6e3f;">${r.won}</span>
@@ -9886,20 +9972,20 @@ function renderTournamentDetail() {
       const canPlay = m.status === 'pending' && oppUid;
       const scoreText = m.status === 'finished' ? `${m.homeScore} - ${m.awayScore}` : (lang === 'en' ? 'Pending' : 'Pendiente');
       return `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #e1e8db;">
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">
         <span style="flex:1;font-size:0.82rem;">${lang === 'en' ? 'Round' : 'Jornada'} ${m.round} vs ${escapeHtml(opp?.username || '?')}</span>
-        <span style="font-size:0.78rem;color:#6b7a64;">${scoreText}</span>
+        <span style="font-size:0.78rem;color:var(--text-3);">${scoreText}</span>
         ${canPlay ? `<button data-play-tournament-match="${m.id}" style="background:var(--accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play' : 'Jugar'}</button>` : ''}
       </div>`;
     }).join('');
     bodyHtml = `
-      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'Standings' : 'Posiciones'}</div>
-      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:4px 0;font-size:0.68rem;color:#9aa593;font-weight:700;">
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'Standings' : 'Posiciones'}</div>
+      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:4px 0;font-size:0.68rem;color:var(--text-4);font-weight:700;">
         <span></span><span></span><span style="text-align:center;">PJ</span><span style="text-align:center;">G</span><span style="text-align:center;">E</span><span style="text-align:center;">P</span><span style="text-align:center;">DG</span><span style="text-align:center;">Pts</span>
       </div>
       ${standingsRows}
-      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;">${lang === 'en' ? 'My matches' : 'Mis partidos'}</div>
-      ${matchRows || `<div style="color:#9aa593;font-size:0.8rem;">${lang === 'en' ? 'No matches.' : 'Sin partidos.'}</div>`}
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;">${lang === 'en' ? 'My matches' : 'Mis partidos'}</div>
+      ${matchRows || `<div style="color:var(--text-4);font-size:0.8rem;">${lang === 'en' ? 'No matches.' : 'Sin partidos.'}</div>`}
     `;
   } else {
     const roundLabel = (idx, total) => {
@@ -9917,10 +10003,10 @@ function renderTournamentDetail() {
         const canPlay = isMine && !m.winner && m.home && m.away && ridx === t.bracket.rounds.length - 1;
         const scoreText = m.status === 'finished' ? `${m.homeScore} - ${m.awayScore}` : (m.away === null ? 'Bye' : '');
         return `
-        <div style="padding:8px;background:#f0f4ee;border-radius:8px;margin-bottom:6px;font-size:0.78rem;">
+        <div style="padding:8px;background:var(--surface-3);border-radius:8px;margin-bottom:6px;font-size:0.78rem;">
           <div style="display:flex;justify-content:space-between;">
             <span style="font-weight:${m.winner === m.home ? '700' : '400'};">${escapeHtml(homeP?.username || '—')}</span>
-            <span style="color:#6b7a64;">${scoreText}</span>
+            <span style="color:var(--text-3);">${scoreText}</span>
           </div>
           <div style="display:flex;justify-content:space-between;">
             <span style="font-weight:${m.winner === m.away ? '700' : '400'};">${escapeHtml(awayP?.username || '—')}</span>
@@ -9930,17 +10016,17 @@ function renderTournamentDetail() {
       }).join('');
       return `
       <div style="margin-bottom:16px;">
-        <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${roundLabel(ridx, t.bracket.rounds.length)}</div>
+        <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${roundLabel(ridx, t.bracket.rounds.length)}</div>
         ${matches}
       </div>`;
     }).join('');
     bodyHtml = roundsHtml;
     if (t.champion) {
       const champ = t.participants.find(p => p.uid === t.champion);
-      bodyHtml = `<div style="text-align:center;padding:16px;background:#fffbf0;border:1.5px solid #e8a020;border-radius:12px;margin-bottom:16px;">
+      bodyHtml = `<div style="text-align:center;padding:16px;background:var(--surface-3);border:1.5px solid #e8a020;border-radius:12px;margin-bottom:16px;">
         <div style="font-size:1.5rem;margin-bottom:4px;">🏆</div>
         <div style="font-weight:700;">${escapeHtml(champ?.username || '?')}</div>
-        <div style="font-size:0.75rem;color:#6b7a64;">${lang === 'en' ? 'Champion' : 'Campeón'}</div>
+        <div style="font-size:0.75rem;color:var(--text-3);">${lang === 'en' ? 'Champion' : 'Campeón'}</div>
       </div>` + bodyHtml;
     }
   }
@@ -10001,7 +10087,7 @@ function renderTournamentsScreen() {
     return `
     <div class="menu-screen" style="text-align:center;">
       <h1>${lang === 'en' ? 'Tournaments' : lang === 'pt' ? 'Torneios' : 'Torneos'}</h1>
-      <div style="padding:24px 16px;color:#9aa593;font-size:0.9rem;">
+      <div style="padding:24px 16px;color:var(--text-4);font-size:0.9rem;">
         ${lang === 'en' ? 'Create an account to join or create tournaments.' : lang === 'pt' ? 'Crie uma conta para participar ou criar torneios.' : 'Creá una cuenta para participar o crear torneos.'}
       </div>
       <div class="menu-grid">
@@ -10031,7 +10117,7 @@ function renderTournamentsScreen() {
         <div class="t">${escapeHtml(t.name)}</div>
         <div class="d">${formatLabel(t.format)} · ${acceptedCount}/${t.maxPlayers} · ${statusLabel(t.status)}</div>
       </div>
-      <button data-remove-tournament="${t.id}" style="background:#f0f4ee;border:1px solid #c8d5c0;border-radius:6px;padding:6px 10px;font-size:0.7rem;color:#9a2f24;cursor:pointer;white-space:nowrap;">${removeLabel}</button>
+      <button data-remove-tournament="${t.id}" style="background:var(--surface-3);border:1px solid var(--border-2);border-radius:6px;padding:6px 10px;font-size:0.7rem;color:#9a2f24;cursor:pointer;white-space:nowrap;">${removeLabel}</button>
     </div>`;
   }).join('');
 
@@ -10044,14 +10130,14 @@ function renderTournamentsScreen() {
     <h1 style="text-align:center;">${lang === 'en' ? 'Tournaments' : lang === 'pt' ? 'Torneios' : 'Torneos'}</h1>
     <div class="subtitle" style="text-align:center;">${lang === 'en' ? 'Official cups and private leagues with friends.' : lang === 'pt' ? 'Copas oficiais e ligas privadas com amigos.' : 'Copas oficiales y ligas privadas con amigos.'}</div>
     <div class="menu-grid" style="margin-bottom:16px;">
-      <button class="menu-btn" id="open-tournament-create-btn" style="border-color:var(--accent);background:#f0f4ff;">
+      <button class="menu-btn" id="open-tournament-create-btn" style="border-color:var(--accent);background:var(--accent-tint);">
         <div class="t">${lang === 'en' ? 'Create private tournament' : lang === 'pt' ? 'Criar torneio privado' : 'Crear torneo privado'}</div>
         <div class="d">${lang === 'en' ? 'League or cup, invite your friends.' : lang === 'pt' ? 'Liga ou copa, convide seus amigos.' : 'Liga o copa, invitá a tus amigos.'}</div>
       </button>
     </div>
-    <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'My tournaments' : lang === 'pt' ? 'Meus torneios' : 'Mis torneos'}</div>
+    <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'My tournaments' : lang === 'pt' ? 'Meus torneios' : 'Mis torneos'}</div>
     <div class="menu-grid">
-      ${rows || `<div style="color:#9aa593;font-size:0.85rem;padding:12px 0;text-align:center;">${emptyMsg}</div>`}
+      ${rows || `<div style="color:var(--text-4);font-size:0.85rem;padding:12px 0;text-align:center;">${emptyMsg}</div>`}
     </div>
     <div class="menu-grid" style="margin-top:16px;">
       <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -10063,11 +10149,11 @@ function renderLeaderboard() {
   const myUid = currentUser?.uid;
   const playerLabel = lang === 'en' ? 'Player' : lang === 'pt' ? 'Jogador' : 'Jugador';
   const rows = leaderboardLoading
-    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">${t('lb.loading')}</div>`
+    ? `<div style="text-align:center; padding:24px; color:var(--text-3);">${t('lb.loading')}</div>`
     : leaderboardError
     ? `<div style="text-align:center; padding:24px; color:#dc2626;">${leaderboardError}</div>`
     : !leaderboardData || leaderboardData.length === 0
-    ? `<div style="text-align:center; padding:24px; color:#6b7a64;">${t('lb.empty')}</div>`
+    ? `<div style="text-align:center; padding:24px; color:var(--text-3);">${t('lb.empty')}</div>`
     : leaderboardData.map((u, i) => {
         const isMe = u.uid === myUid;
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
@@ -10136,7 +10222,7 @@ async function loadPublicProfile(username) {
 }
 
 function renderPublicProfile() {
-  if (publicProfileLoading) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:#6b7a64;">${t('lb.loading')}</div></div>`;
+  if (publicProfileLoading) return `<div class="menu-screen" style="text-align:center;"><div style="padding:40px;color:var(--text-3);">${t('lb.loading')}</div></div>`;
   if (publicProfileError) return `<div class="menu-screen" style="text-align:center;">
     <div style="padding:40px;color:#dc2626;">${publicProfileError}</div>
     <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
@@ -10162,12 +10248,12 @@ function renderPublicProfile() {
     const score = `${m.myScore ?? '-'} - ${m.oppScore ?? '-'}`;
     const eloChange = m.eloChange > 0 ? `+${m.eloChange}` : m.eloChange;
     const date = m.playedAt?.toDate?.() ? m.playedAt.toDate().toLocaleDateString(lang === 'en' ? 'en-US' : lang === 'pt' ? 'pt-BR' : 'es-AR', { day: '2-digit', month: '2-digit' }) : '';
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e1e8db;font-size:0.8rem;">
-      <span>${result}<span style="color:#9aa593;font-size:0.72rem;"> vs ${escapeHtml(m.opponentName || '?')}${date ? ' · ' + date : ''}</span></span>
-      <span style="color:#6b7a64;">${score}</span>
-      <span style="color:${m.eloChange > 0 ? '#2a6e3f' : m.eloChange < 0 ? '#9a2f24' : '#6b7a64'};">${eloChange} ELO</span>
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border-1);font-size:0.8rem;">
+      <span>${result}<span style="color:var(--text-4);font-size:0.72rem;"> vs ${escapeHtml(m.opponentName || '?')}${date ? ' · ' + date : ''}</span></span>
+      <span style="color:var(--text-3);">${score}</span>
+      <span style="color:${m.eloChange > 0 ? '#2a6e3f' : m.eloChange < 0 ? '#9a2f24' : 'var(--text-3)'};">${eloChange} ELO</span>
     </div>`;
-  }).join('') || `<div style="color:#6b7a64;font-size:0.8rem;padding:8px 0;">${lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda não há partidas.' : 'Sin partidas aún.'}</div>`;
+  }).join('') || `<div style="color:var(--text-3);font-size:0.8rem;padding:8px 0;">${lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda não há partidas.' : 'Sin partidas aún.'}</div>`;
 
   // Share URL
   const profileUrl = `https://hexagol.com.ar?perfil=${encodeURIComponent(u.username)}`;
@@ -10180,29 +10266,29 @@ function renderPublicProfile() {
       <div style="font-size:1.2rem;font-weight:700;color:var(--accent);">⚡ ${u.elo || 1200} ELO</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;text-align:center;">
-      <div style="background:#f0f4ee;border-radius:10px;padding:12px;">
+      <div style="background:var(--surface-3);border-radius:10px;padding:12px;">
         <div style="font-size:1.3rem;font-weight:700;color:#2a6e3f;">${u.wins || 0}</div>
-        <div style="font-size:0.7rem;color:#6b7a64;">${wLabel}</div>
+        <div style="font-size:0.7rem;color:var(--text-3);">${wLabel}</div>
       </div>
-      <div style="background:#f0f4ee;border-radius:10px;padding:12px;">
+      <div style="background:var(--surface-3);border-radius:10px;padding:12px;">
         <div style="font-size:1.3rem;font-weight:700;color:#9a2f24;">${u.losses || 0}</div>
-        <div style="font-size:0.7rem;color:#6b7a64;">${lLabel}</div>
+        <div style="font-size:0.7rem;color:var(--text-3);">${lLabel}</div>
       </div>
-      <div style="background:#f0f4ee;border-radius:10px;padding:12px;">
+      <div style="background:var(--surface-3);border-radius:10px;padding:12px;">
         <div style="font-size:1.3rem;font-weight:700;">${u.draws || 0}</div>
-        <div style="font-size:0.7rem;color:#6b7a64;">${dLabel}</div>
+        <div style="font-size:0.7rem;color:var(--text-3);">${dLabel}</div>
       </div>
     </div>
     <div style="margin-bottom:20px;">
-      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">🏅 ${lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros'}</div>
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">🏅 ${lang === 'en' ? 'Achievements' : lang === 'pt' ? 'Conquistas' : 'Logros'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">${achRows}</div>
     </div>
     <div style="margin-bottom:20px;">
-      <div style="font-size:0.72rem;font-weight:700;color:#6b7a64;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">⚽ ${lang === 'en' ? 'Recent matches' : lang === 'pt' ? 'Partidas recentes' : 'Últimas partidas'}</div>
+      <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">⚽ ${lang === 'en' ? 'Recent matches' : lang === 'pt' ? 'Partidas recentes' : 'Últimas partidas'}</div>
       ${matchRows}
     </div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
-      <button id="copy-profile-btn" style="flex:1;background:#f0f4ee;border:1.5px solid #c8d5c0;border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
+      <button id="copy-profile-btn" style="flex:1;background:var(--surface-3);border:1.5px solid var(--border-2);border-radius:10px;padding:10px;font-size:0.8rem;cursor:pointer;font-family:inherit;">
         🔗 ${lang === 'en' ? 'Copy link' : lang === 'pt' ? 'Copiar link' : 'Copiar link'}
       </button>
       ${currentUser && !currentUser.isAnonymous && publicProfileData && currentUser.uid !== publicProfileData.uid && !friendsData.some(f => f.uid === publicProfileData?.uid) ? `
@@ -10230,7 +10316,7 @@ function renderRules() {
       ${diagramMovement()}
 
       <h3 class="rules-section-title">⚽ Kick & drag</h3>
-      <p>If your player is next to the ball, they can <b>kick it</b> <span style="color:#dc2626">●</span> (red icon). Otherwise, they can <b>drag it</b> by moving toward it <span style="color:#1c2b22">●</span> (dark icon). There are also <b>lofted</b> versions that jump over obstacles.</p>
+      <p>If your player is next to the ball, they can <b>kick it</b> <span style="color:#dc2626">●</span> (red icon). Otherwise, they can <b>drag it</b> by moving toward it <span style="color:var(--text-1)">●</span> (dark icon). There are also <b>lofted</b> versions that jump over obstacles.</p>
       ${diagramKick()}
 
       <h3 class="rules-section-title">⛓ Chain pass</h3>
@@ -10275,7 +10361,7 @@ function renderRules() {
       ${diagramMovement()}
 
       <h3 class="rules-section-title">⚽ Patear y arrastrar</h3>
-      <p>Si tu jugador está junto al balón, puede <b>patearlo</b> <span style="color:#dc2626">●</span> (ícono rojo). Si no, puede <b>arrastrarlo</b> al moverse hacia él <span style="color:#1c2b22">●</span> (ícono negro/dorado). También hay versiones <b>elevadas</b> que saltan sobre obstáculos.</p>
+      <p>Si tu jugador está junto al balón, puede <b>patearlo</b> <span style="color:#dc2626">●</span> (ícono rojo). Si no, puede <b>arrastrarlo</b> al moverse hacia él <span style="color:var(--text-1)">●</span> (ícono negro/dorado). También hay versiones <b>elevadas</b> que saltan sobre obstáculos.</p>
       ${diagramKick()}
 
       <h3 class="rules-section-title">⛓ Pase en cadena</h3>
@@ -10338,9 +10424,9 @@ function renderSetup() {
       </div>
 
       <div style="margin-top:10px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:var(--text-2);">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
-          ${t('setup.notimer')} <span style="font-size:0.75rem;color:#8a9582;">${t('setup.notimer.desc')}</span>
+          ${t('setup.notimer')} <span style="font-size:0.75rem;color:var(--text-4);">${t('setup.notimer.desc')}</span>
         </label>
       </div>
     </div>
@@ -10400,9 +10486,9 @@ function renderAiSetup() {
         </div>
       </div>
       <div style="margin-top:10px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#384032;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:var(--text-2);">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
-          ${t('setup.notimer')} <span style="font-size:0.75rem;color:#8a9582;">${t('setup.notimer.desc')}</span>
+          ${t('setup.notimer')} <span style="font-size:0.75rem;color:var(--text-4);">${t('setup.notimer.desc')}</span>
         </label>
       </div>
     </div>
@@ -10579,7 +10665,7 @@ function renderLeagueView(s) {
   } else if (leagueViewTab === 'scorers') {
     const topScorers = ls.playerStats.filter(p => p.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 10);
     const topAssists = ls.playerStats.filter(p => p.assists > 0).sort((a, b) => b.assists - a.assists).slice(0, 10);
-    const renderStatTable = (list, key, label) => list.length === 0 ? `<p style="text-align:center; color:#8a9582; padding:14px 0;">${noStats}</p>` : `
+    const renderStatTable = (list, key, label) => list.length === 0 ? `<p style="text-align:center; color:var(--text-4); padding:14px 0;">${noStats}</p>` : `
       <table class="league-table" style="margin-bottom:16px;">
         <thead><tr><th>#</th><th style="text-align:left;">${thPlayer}</th><th style="text-align:left;">${thTeam}</th><th>${label}</th></tr></thead>
         <tbody>${list.map((p, i) => `<tr><td>${i+1}</td><td style="text-align:left;">${p.name}</td><td style="text-align:left;"><div style="display:flex; align-items:center; gap:6px;">${jerseyDot(p.teamId, 14)} ${TEAMS.find(t=>t.id===p.teamId)?.name}</div></td><td><b>${p[key]}</b></td></tr>`).join('')}</tbody>
@@ -10767,7 +10853,7 @@ function renderTutorialPanel(s) {
   }
 
   return `
-  <div class="dice-panel" style="background:#eef5ff; border-color:#cfe0fb;">
+  <div class="dice-panel" style="background:var(--accent-tint); border-color:#cfe0fb;">
     <h3>🎓 Tutorial · ${stepLabel}</h3>
     <div class="tutorial-progress-bar"><div class="tutorial-progress-fill" style="width:${progress}%;"></div></div>
     ${actionHtml}
@@ -10802,7 +10888,7 @@ function renderSandboxPanel(s) {
         ${DICE_VALUES.map(v => `<button class="training-dice-btn" data-training-dice="${v}">${v}</button>`).join('')}
       </div>
     </div>
-    ` : `<p style="font-size:0.76rem; color:#6b7a64; text-align:center; margin:8px 0;">${moveHint}</p>`}
+    ` : `<p style="font-size:0.76rem; color:var(--text-3); text-align:center; margin:8px 0;">${moveHint}</p>`}
     ${s.gamePhase === 'goalkeeper-swap' ? `<button class="btn ghost" id="skip-swap-btn" style="width:100%;">${skipSwapSandbox}</button>` : ''}
     ${s.gamePhase === 'chain-pass' ? `<button class="btn ghost" id="cancel-chain-btn" style="width:100%;">${stopChain}</button>` : ''}
     <hr style="border:none; border-top:1px solid rgba(255,255,255,0.12); margin:10px 0;" />
@@ -10824,12 +10910,12 @@ function renderDicePanel(s) {
     return `
     <div class="dice-panel">
       <h3>${t('pregame.title')}</h3>
-      <div style="font-size:0.78rem; color:#6b7a64; margin:2px 0 6px;">${t('pregame.subtitle')}</div>
+      <div style="font-size:0.78rem; color:var(--text-3); margin:2px 0 6px;">${t('pregame.subtitle')}</div>
       <div class="btn-row pregame-roll-row">
         <button class="btn team-btn pregame-roll-btn" id="roll-pre-home" style="${teamButtonStyle(s.homeTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='home') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${homeName}${s.homeRoll !== null ? ` — ${s.homeRoll}` : ''}</button>
         <button class="btn team-btn pregame-roll-btn" id="roll-pre-away" style="${teamButtonStyle(s.awayTeam)}" ${(s.gameMode==='vs-ai' && s.aiTeam==='away') || s.isResolvingKickoff ? 'disabled' : ''}>🎲 ${awayName}${s.awayRoll !== null ? ` — ${s.awayRoll}` : ''}</button>
       </div>
-      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ ${lang === 'en' ? 'Starting match...' : lang === 'pt' ? 'Iniciando partida...' : 'Empezando partido...'}</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:#8a9582; margin-top:4px;">🤖 ${lang === 'en' ? 'The computer rolls automatically.' : lang === 'pt' ? 'O computador lança automaticamente.' : 'La computadora tira automáticamente.'}</div>` : '')}
+      ${s.isResolvingKickoff ? `<div style="font-size:0.74rem; color:#1d6b2b; font-weight:700; margin-top:6px;">⏳ ${lang === 'en' ? 'Starting match...' : lang === 'pt' ? 'Iniciando partida...' : 'Empezando partido...'}</div>` : (s.gameMode === 'vs-ai' ? `<div style="font-size:0.72rem; color:var(--text-4); margin-top:4px;">🤖 ${lang === 'en' ? 'The computer rolls automatically.' : lang === 'pt' ? 'O computador lança automaticamente.' : 'La computadora tira automáticamente.'}</div>` : '')}
     </div>`;
   }
 
@@ -10838,7 +10924,7 @@ function renderDicePanel(s) {
     const timerLow = s.offsideTimer <= 5;
     return `<div class="dice-panel">
       <h3>🚩 ${lang === 'en' ? 'Offside!' : lang === 'pt' ? 'Impedimento!' : '¡Fuera de juego!'}</h3>
-      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:8px;text-align:center;">${lang === 'en' ? `${offsideTeamName} must move the marked player.` : lang === 'pt' ? `${offsideTeamName} deve mover o jogador marcado.` : `${offsideTeamName} debe mover al jugador marcado.`}</div>
+      <div style="font-size:0.8rem;color:var(--text-3);margin-bottom:8px;text-align:center;">${lang === 'en' ? `${offsideTeamName} must move the marked player.` : lang === 'pt' ? `${offsideTeamName} deve mover o jogador marcado.` : `${offsideTeamName} debe mover al jugador marcado.`}</div>
       <div class="turn-timer-row">
         <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" style="width:${Math.round((s.offsideTimer / 15) * 100)}%;"></div></div>
         <span class="turn-timer-label ${timerLow ? 'low' : ''}">⏳ ${s.offsideTimer}s</span>
@@ -10852,23 +10938,23 @@ function renderDicePanel(s) {
     const extraTimeLabel = lang === 'en' ? `⏱ Extra time (${s.halfDurationMinutes} min)` : lang === 'pt' ? `⏱ Prorrogação (${s.halfDurationMinutes} min)` : `⏱ Prórroga (${s.halfDurationMinutes} min)`;
     const goldenGoalLabel = lang === 'en' ? '⚽ Golden goal' : lang === 'pt' ? '⚽ Gol de ouro' : '⚽ Gol de oro';
     const drawLabel = lang === 'en' ? 'End as draw' : lang === 'pt' ? 'Terminar em empate' : 'Terminar en empate';
-    const countdownHtml = isOnline ? `<div style="font-size:0.75rem;color:#9aa593;text-align:center;margin-bottom:8px;">⏳ <span id="overtime-countdown">${s.timer}</span>s</div>` : '';
+    const countdownHtml = isOnline ? `<div style="font-size:0.75rem;color:var(--text-4);text-align:center;margin-bottom:8px;">⏳ <span id="overtime-countdown">${s.timer}</span>s</div>` : '';
     const waitingLabel = lang === 'en' ? 'Waiting for host to decide...' : lang === 'pt' ? 'Aguardando o anfitrião decidir...' : 'Esperando que el anfitrión decida...';
     const continueLabel = lang === 'en' ? 'How do you want to continue?' : lang === 'pt' ? 'Como você quer continuar?' : '¿Cómo querés continuar?';
     return `<div class="dice-panel">
       <h3>${title}</h3>
       ${countdownHtml}
       ${(s.gameMode === 'online' && onlineMyTeam !== 'home')
-        ? `<div style="font-size:0.82rem;color:#6b7a64;text-align:center;padding:10px 0;">${waitingLabel}</div>`
+        ? `<div style="font-size:0.82rem;color:var(--text-3);text-align:center;padding:10px 0;">${waitingLabel}</div>`
         : `
         <div class="undo-desktop">
-          <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:10px;text-align:center;">${continueLabel}</div>
+          <div style="font-size:0.8rem;color:var(--text-3);margin-bottom:10px;text-align:center;">${continueLabel}</div>
           <button class="btn" id="overtime-extra-btn-d" style="width:100%;margin-bottom:6px;">${extraTimeLabel}</button>
           <button class="btn" id="overtime-golden-btn-d" style="width:100%;margin-bottom:6px;background:#d4a017;border-color:#d4a017;">${goldenGoalLabel}</button>
           <button class="btn ghost" id="overtime-draw-btn-d" style="width:100%;">${drawLabel}</button>
         </div>
         <div class="mobile-action-row" style="padding-right:44px;">
-          <span style="font-size:0.75rem;color:#6b7a64;margin-right:auto;">${continueLabel}</span>
+          <span style="font-size:0.75rem;color:var(--text-3);margin-right:auto;">${continueLabel}</span>
           <button class="btn ghost" id="overtime-draw-btn-m" style="padding:2px 7px;font-size:0.72rem;" title="${drawLabel}">🤝</button>
           <button class="btn ghost" id="overtime-golden-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${goldenGoalLabel}">⚽</button>
           <button class="btn ghost" id="overtime-extra-btn-m" style="padding:2px 7px;font-size:0.72rem;margin-left:4px;" title="${extraTimeLabel}">⏱</button>
@@ -10882,7 +10968,7 @@ function renderDicePanel(s) {
         ? `<div class="rematch-waiting">⏳ ${t('halftime.waiting')} <span id="halftime-countdown" style="font-weight:800;">${state.timer}s</span></div>`
         : state.gameMode === 'online' && onlineIsHost
         ? `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">${t('halftime.start2nd')}</button>
-           <div style="font-size:0.72rem; color:#6b7a64; text-align:center; margin-top:6px;">${t('halftime.autoinicio')} <b id="halftime-countdown">${state.timer}s</b></div>`
+           <div style="font-size:0.72rem; color:var(--text-3); text-align:center; margin-top:6px;">${t('halftime.autoinicio')} <b id="halftime-countdown">${state.timer}s</b></div>`
         : `<button class="btn" id="start-2nd-half-btn" style="width:100%; margin-top:6px;">${t('halftime.start2nd')}</button>`
     }</div>`;
   }
@@ -10896,21 +10982,21 @@ function renderDicePanel(s) {
       const myTeamName = getTeamName(s, onlineMyTeam || 'home');
       const theirTeamName = getTeamName(s, theirTeam);
       const resultText = myScore > theirScore ? t('gameover.win') : myScore < theirScore ? t('gameover.loss') : t('gameover.draw');
-      const resultColor = myScore > theirScore ? '#1d6b2b' : myScore < theirScore ? '#dc2626' : '#6b7a64';
+      const resultColor = myScore > theirScore ? '#1d6b2b' : myScore < theirScore ? '#dc2626' : 'var(--text-3)';
       const wLabel = lang === 'en' ? 'W' : lang === 'pt' ? 'V' : 'V';
       const lLabel = lang === 'en' ? 'L' : lang === 'pt' ? 'D' : 'D';
       const eLabel = lang === 'en' ? 'D' : lang === 'pt' ? 'E' : 'E';
       const eloInfo = userProfile && onlineOpponentUid
-        ? `<div style="font-size:0.75rem; color:#6b7a64; text-align:center; margin: 4px 0 6px;">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${wLabel} ${userProfile.losses}${lLabel} ${userProfile.draws}${eLabel}</div>`
+        ? `<div style="font-size:0.75rem; color:var(--text-3); text-align:center; margin: 4px 0 6px;">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${wLabel} ${userProfile.losses}${lLabel} ${userProfile.draws}${eLabel}</div>`
         : '';
       return `<div class="dice-panel">
         <div style="font-size:1.1rem; font-weight:800; color:${resultColor}; text-align:center; margin-bottom:4px;">${resultText}</div>
-        <div style="font-size:0.85rem; text-align:center; color:#384032; margin-bottom:6px;">${myTeamName} ${myScore} — ${theirScore} ${theirTeamName}</div>
+        <div style="font-size:0.85rem; text-align:center; color:var(--text-2); margin-bottom:6px;">${myTeamName} ${myScore} — ${theirScore} ${theirTeamName}</div>
         ${eloInfo}
         <button class="btn ghost" id="share-result-btn" style="width:100%; margin-bottom:6px;">${t('gameover.share')}</button>
         <a href="javascript:void(0)"
            onclick="trackEvent('cafecito_click',{source:'game_over'});showDonateModal()"
-           style="display:block;text-align:center;font-size:0.75rem;color:#6b7a64;margin-bottom:8px;text-decoration:none;cursor:pointer;">
+           style="display:block;text-align:center;font-size:0.75rem;color:var(--text-3);margin-bottom:8px;text-decoration:none;cursor:pointer;">
           ❤️ ${t('menu.donate')}
         </a>
         ${onlineIncomingRematchFrom ? `
@@ -10998,7 +11084,7 @@ function renderDicePanel(s) {
     ${isZero ? `<div class="zero-note">${zeroNote}</div>` : ''}
     ${s.gameVariant === 'quick' && s.gamePhase === 'selecting-piece' && !blockControls ? `
     <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-      <span style="font-size:0.78rem;color:#6b7a64;">
+      <span style="font-size:0.78rem;color:var(--text-3);">
         ${lang === 'en' ? `Budget: <b>${s.remainingBudget}</b>` : lang === 'pt' ? `Movimentos: <b>${s.remainingBudget}</b>` : `Movimientos: <b>${s.remainingBudget}</b>`}
       </span>
       <button class="btn ghost" id="pass-budget-btn" style="padding:3px 10px;font-size:0.75rem;">
@@ -12893,6 +12979,12 @@ document.addEventListener('click', e => {
   if (btn) setLang(lang === 'es' ? 'en' : lang === 'en' ? 'pt' : lang === 'pt' ? 'es' : 'es');
 });
 
+// Global theme toggle — light/dark
+document.addEventListener('click', e => {
+  const btn = e.target.closest('#menu-theme-btn, #theme-toggle-btn');
+  if (btn) toggleTheme();
+});
+
 function showCommunityModal() {
   const existing = document.getElementById('community-modal');
   if (existing) existing.remove();
@@ -12900,25 +12992,25 @@ function showCommunityModal() {
   modal.id = 'community-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">${lang === 'en' ? 'Community' : lang === 'pt' ? 'Comunidade' : 'Comunidad'}</div>
-      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose where to connect' : lang === 'pt' ? 'Escolha onde se conectar' : 'Elegí dónde conectarte'}</div>
+    <div style="background:var(--surface-1);border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text-1);margin-bottom:6px;">${lang === 'en' ? 'Community' : lang === 'pt' ? 'Comunidade' : 'Comunidad'}</div>
+      <div style="font-size:0.8rem;color:var(--text-3);margin-bottom:16px;">${lang === 'en' ? 'Choose where to connect' : lang === 'pt' ? 'Escolha onde se conectar' : 'Elegí dónde conectarte'}</div>
       <a href="https://discord.gg/ndFWh5QVU8" target="_blank" rel="noopener"
          onclick="trackEvent('discord_community_click');document.getElementById('community-modal').remove()"
-         style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
+         style="display:block;background:var(--surface-3);border:1px solid var(--border-1);border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:var(--text-2);font-weight:600;font-size:0.85rem;">
         Discord
       </a>
       <a href="https://chat.whatsapp.com/DSUWimZMKPR01m09Gop2nA" target="_blank" rel="noopener"
          onclick="trackEvent('whatsapp_community_click');document.getElementById('community-modal').remove()"
-         style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
+         style="display:block;background:var(--surface-3);border:1px solid var(--border-1);border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:var(--text-2);font-weight:600;font-size:0.85rem;">
         WhatsApp
       </a>
       <a href="https://www.reddit.com/r/Hexagol/" target="_blank" rel="noopener"
          onclick="trackEvent('reddit_community_click');document.getElementById('community-modal').remove()"
-         style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
+         style="display:block;background:var(--surface-3);border:1px solid var(--border-1);border-radius:10px;padding:12px;text-decoration:none;color:var(--text-2);font-weight:600;font-size:0.85rem;">
         Reddit — r/Hexagol
       </a>
-      <button onclick="document.getElementById('community-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
+      <button onclick="document.getElementById('community-modal').remove()" style="margin-top:12px;background:none;border:none;color:var(--text-4);font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
@@ -12931,20 +13023,20 @@ function showDonateModal() {
   modal.id = 'donate-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
-      <div style="font-size:1.1rem;font-weight:700;color:#1c2b22;margin-bottom:6px;">${lang === 'en' ? 'Support Hexagol' : lang === 'pt' ? 'Apoie o Hexagol' : 'Apoyá Hexagol'}</div>
-      <div style="font-size:0.8rem;color:#6b7a64;margin-bottom:16px;">${lang === 'en' ? 'Choose your currency' : lang === 'pt' ? 'Escolha sua moeda' : 'Elegí tu moneda'}</div>
+    <div style="background:var(--surface-1);border-radius:16px;padding:24px;max-width:300px;width:100%;text-align:center;">
+      <div style="font-size:1.1rem;font-weight:700;color:var(--text-1);margin-bottom:6px;">${lang === 'en' ? 'Support Hexagol' : lang === 'pt' ? 'Apoie o Hexagol' : 'Apoyá Hexagol'}</div>
+      <div style="font-size:0.8rem;color:var(--text-3);margin-bottom:16px;">${lang === 'en' ? 'Choose your currency' : lang === 'pt' ? 'Escolha sua moeda' : 'Elegí tu moneda'}</div>
       <a href="https://cafecito.app/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('cafecito_click',{source:'donate_modal'});document.getElementById('donate-modal').remove()"
-         style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
+         style="display:block;background:var(--surface-3);border:1px solid var(--border-1);border-radius:10px;padding:12px;margin-bottom:8px;text-decoration:none;color:var(--text-2);font-weight:600;font-size:0.85rem;">
         🇦🇷 Pesos argentinos
       </a>
       <a href="https://ko-fi.com/hexagol" target="_blank" rel="noopener"
          onclick="trackEvent('kofi_click',{source:'donate_modal'});document.getElementById('donate-modal').remove()"
-         style="display:block;background:#f0f4ee;border:1px solid #e1e8db;border-radius:10px;padding:12px;text-decoration:none;color:#384032;font-weight:600;font-size:0.85rem;">
+         style="display:block;background:var(--surface-3);border:1px solid var(--border-1);border-radius:10px;padding:12px;text-decoration:none;color:var(--text-2);font-weight:600;font-size:0.85rem;">
         🌍 USD / ${lang === 'en' ? 'Other currency' : lang === 'pt' ? 'Outra moeda' : 'Otra moneda'}
       </a>
-      <button onclick="document.getElementById('donate-modal').remove()" style="margin-top:12px;background:none;border:none;color:#9aa593;font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
+      <button onclick="document.getElementById('donate-modal').remove()" style="margin-top:12px;background:none;border:none;color:var(--text-4);font-size:0.78rem;cursor:pointer;">${lang === 'en' ? 'Close' : lang === 'pt' ? 'Fechar' : 'Cerrar'}</button>
     </div>`;
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
@@ -12997,8 +13089,8 @@ function showLegalModal(type) {
   modal.id = 'legal-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
   modal.innerHTML = `
-    <div style="background:#fff;border-radius:12px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;position:relative;font-size:0.85rem;line-height:1.6;color:#1c2b22;">
-      <button onclick="document.getElementById('legal-modal').remove()" style="position:sticky;top:0;float:right;background:#f0f4ee;border:none;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:0.8rem;">✕</button>
+    <div style="background:var(--surface-1);border-radius:12px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;position:relative;font-size:0.85rem;line-height:1.6;color:var(--text-1);">
+      <button onclick="document.getElementById('legal-modal').remove()" style="position:sticky;top:0;float:right;background:var(--surface-3);border:none;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:0.8rem;">✕</button>
       ${content}
     </div>`;
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
