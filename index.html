@@ -465,7 +465,14 @@
     animation: zero-pulse 0.9s ease-in-out infinite;
   }
   .dice-face.empty { opacity: 0.45; font-size: 1.3rem; }
+  .dice-face.rolling { animation: dice-spin 0.42s ease-in-out; font-size: 1.3rem; }
   @keyframes zero-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+  @keyframes dice-spin {
+    0%   { transform: rotate(0deg) scale(1); }
+    30%  { transform: rotate(120deg) scale(1.15); }
+    60%  { transform: rotate(250deg) scale(0.9); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
   .dice-panel {
     border: 1.5px solid var(--border-1); border-radius: 12px; padding: 10px 12px;
     background: var(--surface-3); flex-shrink: 0;
@@ -1124,6 +1131,18 @@ function setLang(l) {
   lang = l;
   localStorage.setItem('hexagol_lang', l);
   render();
+}
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO: Auto-roll — per-device preference, independent of match/account.
+// Each player decides on their own device whether their own turns roll the
+// dice automatically; doesn't affect or require anything from the opponent.
+// ═══════════════════════════════════════════════════════════
+function getAutoRollPref() {
+  return localStorage.getItem('hexagol_auto_roll') === '1';
+}
+function setAutoRollPref(v) {
+  localStorage.setItem('hexagol_auto_roll', v ? '1' : '0');
 }
 
 // Display names for the language-picker button/modal — each language names
@@ -1856,7 +1875,7 @@ function generateRoomCode() {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
 }
 
-function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGoals = null, gameVariant = 'classic', boardSize = 'classic') {
+function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGoals = null, gameVariant = 'classic', boardSize = 'classic', diceMode = 'default') {
   const fresh = getInitialState(boardSize);
   const useGoals = targetGoals !== null;
   return {
@@ -1871,6 +1890,7 @@ function buildInitialOnlineState(homeTeam, awayTeam, turnDur, duration, targetGo
     timer: turnDur,
     gameVariant,
     boardSize,
+    diceMode,
     message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : lang === 'fr' ? 'Lancez le dé pour décider qui commence.' : 'Tiren los dados para decidir quién empieza.',
   };
 }
@@ -2028,6 +2048,7 @@ function applyRemoteState(remote) {
       if (chatHadFocus) newChatInput.focus();
     }
   }
+  maybeTriggerAutoRoll();
 }
 
 // ── Checksum ─────────────────────────────────────────────────────────────────
@@ -2499,6 +2520,7 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
     targetGoals: targetGoals || null,
     gameVariant: setupGameVariant || 'classic',
     boardSize: setupBoardSize || 'classic',
+    diceMode: setupDiceMode || 'default',
     gameState: null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   }).catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
@@ -2528,7 +2550,7 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
       ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
       : guestTeam;
 
-    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals, data.gameVariant || 'classic', data.boardSize || 'classic');
+    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals, data.gameVariant || 'classic', data.boardSize || 'classic', data.diceMode || 'default');
     // Fix 1: start with 30s timer for the pre-game roll phase, using wall-clock reference
     preGameRollStartedAt = Date.now();
     state = { ...initialState, timer: 30 };
@@ -2838,6 +2860,7 @@ function onUndoAccepted() {
       turnCount: snap.turnCount,
       gamePhase: 'selecting-piece',
       diceValue: snap.diceValue,
+      diceRolling: false, // cancel any in-flight roll animation from this undone turn
       remainingBudget: snap.remainingBudget ?? 0,
       usedPlayerIds: snap.usedPlayerIds ?? [],
       timer: s.turnDuration,
@@ -2846,6 +2869,8 @@ function onUndoAccepted() {
       validLoftedPassTargets: [], validLoftedDragTargets: [],
       validChainPassTargets: [], chainPassReceivers: [],
       lastAction: null,
+      turnStartState: { players: snap.players, ballPosition: snap.ballPosition, lastPlayerToTouchBallId: snap.lastPlayerToTouchBallId },
+      undoUsedThisTurn: true,
       prevTurnSnapshot: null,
     };
     return logAction(reverted, logMsg, 'game-event');
@@ -3009,6 +3034,12 @@ const GOALKEEPER_SWAP_DURATION = 15; // seconds
 const PRE_GAME_ROLL_DURATION = 30; // seconds
 const HALF_TIME_DURATION = 10; // seconds
 const DICE_VALUES = [0, 1, 2, 3, 4, 6];
+// Alternate dice for the "traditional" modifier: a standard 1-6 die, no 0 (no automatic
+// turn loss) and no gap at 5. Selected per-match via setupDiceMode / state.diceMode.
+const DICE_VALUES_TRADITIONAL = [1, 2, 3, 4, 5, 6];
+function getActiveDiceValues(s) {
+  return (s && s.diceMode === 'traditional') ? DICE_VALUES_TRADITIONAL : DICE_VALUES;
+}
 const MATCH_DURATION_MINUTES = 90;
 const HALF_TIME_MINUTES = 45;
 const LEAGUE_STORAGE_KEY = 'hexagol_league_save';
@@ -5012,6 +5043,7 @@ function getInitialState(boardSize) {
     ballPosition: initBall,
     boardSize: bs,
     gameVariant: 'classic',
+    diceMode: 'default', // 'default' (0,1,2,3,4,6) | 'traditional' (1-6, no 0)
     remainingBudget: 0,
     usedPlayerIds: [],
     lastActions: [], // array of {from, to} for quick mode multi-action turns
@@ -5049,6 +5081,7 @@ function getInitialState(boardSize) {
     assistProviderId: null,
     turnStartState: null,
     prevTurnSnapshot: null,
+    undoUsedThisTurn: false,
     lastAction: null,
     actionChoice: null,
     isKickoffTurn: false,
@@ -5164,6 +5197,7 @@ function setState(patch) {
   }
   render();
   maybeTriggerBot();
+  maybeTriggerAutoRoll();
 }
 window.state = state;
 
@@ -5332,6 +5366,29 @@ function maybeTriggerBot() {
   setTimeout(() => runBotTurn(), 450);
 }
 
+// Auto-rolls the dice at the start of a human turn when the device's own
+// preference has it enabled. Only ever acts on the local player's own turn:
+// the bot handles its own rolls in maybeTriggerBot, and in online play a
+// client only ever auto-rolls for the team it actually controls.
+let autoRollScheduled = false;
+function maybeTriggerAutoRoll() {
+  const s = state;
+  if (s.gamePhase !== 'rolling' || s.diceRolling) return;
+  if (!getAutoRollPref()) return;
+  if (s.gameMode === 'tutorial' || s.gameMode === 'training') return; // scripted / manual-dice modes
+  if (s.gameMode === 'vs-ai' && s.currentPlayer === s.aiTeam) return; // bot's own turn
+  if (s.gameMode === 'online' && s.currentPlayer !== onlineMyTeam) return; // not my turn
+  if (autoRollScheduled) return;
+  autoRollScheduled = true;
+  setTimeout(() => {
+    autoRollScheduled = false;
+    const cur = state;
+    if (cur.gamePhase !== 'rolling' || cur.diceRolling) return; // already moved on
+    if (cur.gameMode === 'online' && cur.currentPlayer !== onlineMyTeam) return;
+    doDiceRoll();
+  }, 550);
+}
+
 /* ---------------- Core turn-advance logic (ported from phase-reducers.ts) ---------------- */
 
 // Deduct movement cost from budget in quick mode and mark player as used
@@ -5437,12 +5494,29 @@ function advanceToNextTurn(s, opts) {
     }
   }
   const baseMsg = lang === 'en' ? `${teamToKickOffName}'s turn. Roll the dice.` : lang === 'pt' ? `Turno de ${teamToKickOffName}. Lance o dado.` : lang === 'fr' ? `Tour de ${teamToKickOffName}. Lancez le dé.` : `Turno de ${teamToKickOffName}. Lanza el dado.`;
+  // Undo point for the turn that's ending right now, built from turnStartState (the
+  // board as it was when THIS turn's dice was rolled) + the dice value actually used.
+  // If this turn never really happened (e.g. it was skipped by a 0-roll, so there's no
+  // turnStartState/diceValue to undo into) just keep whatever undo point already existed.
+  // If this turn already spent its one undo (undoUsedThisTurn), don't offer another —
+  // otherwise a second undo would hand back a board that already has the redone move on it.
+  const endedTurnSnapshot = s.undoUsedThisTurn ? null : (s.turnStartState && s.diceValue) ? {
+    players: s.turnStartState.players.map(p => ({ ...p, position: { ...p.position } })),
+    ballPosition: s.turnStartState.ballPosition ? { ...s.turnStartState.ballPosition } : null,
+    lastPlayerToTouchBallId: s.turnStartState.lastPlayerToTouchBallId,
+    currentPlayer: s.currentPlayer,
+    turnCount: s.turnCount,
+    diceValue: s.diceValue,
+    remainingBudget: s.gameVariant === 'quick' ? s.diceValue : 0,
+    usedPlayerIds: [],
+  } : s.prevTurnSnapshot;
   const news = {
     ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
     swapCandidates: [], swapTimer: GOALKEEPER_SWAP_DURATION, timer: s.turnDuration,
     turnCount: s.turnCount + 1, toastToShow: null, turnStartState: null, isKickoffTurn: false, assistProviderId: null,
-    prevTurnSnapshot: s.prevTurnSnapshot, // preserved until next dice roll
+    undoUsedThisTurn: false, // fresh incoming turn hasn't used its undo yet
+    prevTurnSnapshot: endedTurnSnapshot,
   };
   return logAction(news, baseMsg, 'turn-start', nextPlayer);
 }
@@ -5587,7 +5661,7 @@ function handleEndHalfOrMatch(s) {
   }
 
   if (s.half === 1) {
-    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false, prevTurnSnapshot: null };
+    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false, prevTurnSnapshot: null, undoUsedThisTurn: false };
     if (s.gameMode === 'online') halfTimeStartedAt = Date.now();
     return s.gameMode === 'online' ? { ...halfTimeState, timer: 30 } : halfTimeState;
   }
@@ -6843,6 +6917,7 @@ function startSandbox() {
     isClockRunning: false,
     isKickoffTurn: true,
     gameVariant: setupGameVariant,
+    diceMode: setupDiceMode,
     boardSize: setupBoardSize,
     message: lang === 'en' ? 'Training — choose the dice value to start.' : lang === 'pt' ? 'Treino — escolha o valor do dado para começar.' : lang === 'fr' ? 'Entraînement — choisissez la valeur du dé pour commencer.' : 'Entrenamiento — elegí el valor del dado para empezar.',
   };
@@ -7082,6 +7157,7 @@ function handleLocalUndo() {
       turnCount: snap.turnCount,
       gamePhase: 'selecting-piece',
       diceValue: snap.diceValue,
+      diceRolling: false, // cancel any in-flight roll animation from this undone turn
       remainingBudget: snap.remainingBudget ?? 0,
       usedPlayerIds: snap.usedPlayerIds ?? [],
       selectedPlayerId: null,
@@ -7089,6 +7165,13 @@ function handleLocalUndo() {
       validLoftedPassTargets: [], validLoftedDragTargets: [],
       validChainPassTargets: [], chainPassReceivers: [],
       lastAction: null,
+      // Re-entering the undone turn: its "start of turn" board is exactly what we just
+      // restored, not whatever turnStartState was left over from the turn we undid out of
+      // (which could otherwise get mistaken for this turn's data once it's replayed).
+      turnStartState: { players: snap.players, ballPosition: snap.ballPosition, lastPlayerToTouchBallId: snap.lastPlayerToTouchBallId },
+      // This turn already spent its one undo — once the player resolves it (moves again),
+      // don't let a second undo hand them back a board that already has that move applied.
+      undoUsedThisTurn: true,
       prevTurnSnapshot: null,
     };
     return logAction(reverted, logMsg, 'game-event');
@@ -8486,6 +8569,7 @@ function renderOnlineSetup() {
           ${[1, 3, 5].map(g => `<button data-online-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : lang === 'pt' ? (g === 1 ? 'gol' : 'gols') : lang === 'fr' ? (g === 1 ? 'but' : 'buts') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
       </div>
+${renderDiceModeToggle(setupDiceMode, 'dice-mode')}
     </div>
     <div class="menu-grid">
       <button class="menu-btn" id="online-create-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
@@ -9310,6 +9394,7 @@ let challengeSetupDuration = 5;
 let challengeSetupTargetGoals = null;
 let challengeSetupVariant = 'classic';
 let challengeSetupBoardSize = 'classic';
+let challengeSetupDiceMode = 'default';
 let challengeSetupHomeTeamIdx = 0;
 
 function challengeFriend(friendUid) {
@@ -9318,6 +9403,7 @@ function challengeFriend(friendUid) {
   challengeSetupTargetGoals = null;
   challengeSetupVariant = 'classic';
   challengeSetupBoardSize = 'classic';
+  challengeSetupDiceMode = 'default';
   challengeSetupHomeTeamIdx = 0;
   onlineKitEditorReturnView = 'challenge-setup';
   const modal = document.getElementById('friends-modal');
@@ -9345,6 +9431,7 @@ async function sendChallenge() {
     targetGoals: challengeSetupTargetGoals || null,
     gameVariant: challengeSetupVariant,
     boardSize: challengeSetupBoardSize,
+    diceMode: challengeSetupDiceMode || 'default',
     gameState: null,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
@@ -9394,7 +9481,7 @@ async function sendChallenge() {
       ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
       : guestTeam;
 
-    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals, challengeSetupVariant, challengeSetupBoardSize);
+    const initialState = buildInitialOnlineState(homeTeam, finalAwayTeam, turnDur, duration, targetGoals, challengeSetupVariant, challengeSetupBoardSize, challengeSetupDiceMode || 'default');
     preGameRollStartedAt = Date.now();
     state = { ...initialState, timer: 30 };
     window.state = state;
@@ -9438,6 +9525,7 @@ function renderChallengeSetup() {
           ${variants.map(v => `<button data-ch-variant="${v.id}" class="${v.id === challengeSetupVariant ? 'active' : ''}">${v.label}</button>`).join('')}
         </div>
       </div>
+${renderDiceModeToggle(challengeSetupDiceMode, 'ch-dice-mode')}
       ${renderTeamPickerCard('home')}
       <div>
         <span class="field-label">${t('setup.duration')}</span>
@@ -9675,6 +9763,7 @@ let tournamentSetupName = '';
 let tournamentSetupFormat = 'league'; // 'league' | 'cup'
 let tournamentSetupVariant = 'classic';
 let tournamentSetupBoardSize = 'classic';
+let tournamentSetupDiceMode = 'default';
 let tournamentSetupDuration = 5;
 let tournamentSetupTargetGoals = null;
 let tournamentSetupInvited = []; // [{ uid, username }]
@@ -9707,6 +9796,7 @@ function openTournamentCreation() {
   tournamentSetupFormat = 'league';
   tournamentSetupVariant = 'classic';
   tournamentSetupBoardSize = 'classic';
+  tournamentSetupDiceMode = 'default';
   tournamentSetupInvited = [];
   tournamentSetupDuration = 5;
   tournamentSetupTargetGoals = null;
@@ -9730,6 +9820,7 @@ async function createTournament() {
     format: tournamentSetupFormat,
     gameVariant: tournamentSetupVariant,
     boardSize: tournamentSetupBoardSize,
+    diceMode: tournamentSetupDiceMode || 'default',
     duration: tournamentSetupDuration,
     targetGoals: tournamentSetupTargetGoals,
     createdBy: currentUser.uid,
@@ -9859,6 +9950,7 @@ function renderTournamentCreate() {
           ${variants.map(v => `<button data-tournament-variant="${v.id}" class="${v.id === tournamentSetupVariant ? 'active' : ''}">${v.label}</button>`).join('')}
         </div>
       </div>
+${renderDiceModeToggle(tournamentSetupDiceMode, 'tournament-dice-mode')}
       <div>
         <span class="field-label">${t('setup.duration')}</span>
         <div class="duration-row" id="tournament-duration-row">
@@ -10120,6 +10212,7 @@ async function playTournamentMatch(tournamentId, matchId, isLeague) {
     targetGoals: tTargetGoals,
     gameVariant: t.gameVariant || 'classic',
     boardSize: t.boardSize || 'classic',
+    diceMode: t.diceMode || 'default',
     gameState: null,
     tournamentId, tournamentMatchId: matchId, tournamentIsLeague: isLeague,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -10155,7 +10248,7 @@ async function playTournamentMatch(tournamentId, matchId, isLeague) {
     const finalAwayTeam = conflict
       ? { ...guestTeam, design: 'solid', primaryColor: '0 0% 100%', secondaryColor: undefined, textColor: '215 28% 17%' }
       : guestTeam;
-    const initialState = buildInitialOnlineState(myTeam, finalAwayTeam, TURN_DURATION, tDuration, tTargetGoals, t.gameVariant || 'classic', t.boardSize || 'classic');
+    const initialState = buildInitialOnlineState(myTeam, finalAwayTeam, TURN_DURATION, tDuration, tTargetGoals, t.gameVariant || 'classic', t.boardSize || 'classic', t.diceMode || 'default');
     preGameRollStartedAt = Date.now();
     state = { ...initialState, timer: 30, tournamentId, tournamentMatchId: matchId, tournamentIsLeague: isLeague };
     window.state = state;
@@ -10767,6 +10860,20 @@ function renderRules() {
   </div>`;
 }
 
+function renderDiceModeToggle(currentValue, dataAttr) {
+  const diceModeLabel = lang === 'en' ? 'Dice' : lang === 'pt' ? 'Dado' : lang === 'fr' ? 'Dé' : 'Dado';
+  const diceModeDefaultLabel = 'Hexagol (0-4, 6)';
+  const diceModeTraditionalLabel = lang === 'en' ? 'Traditional (1-6)' : lang === 'pt' ? 'Tradicional (1-6)' : lang === 'fr' ? 'Traditionnel (1-6)' : 'Tradicional (1-6)';
+  return `
+      <div>
+        <span class="field-label">${diceModeLabel}</span>
+        <div class="duration-row">
+          <button data-${dataAttr}="default" class="${currentValue !== 'traditional' ? 'active' : ''}">${diceModeDefaultLabel}</button>
+          <button data-${dataAttr}="traditional" class="${currentValue === 'traditional' ? 'active' : ''}">${diceModeTraditionalLabel}</button>
+        </div>
+      </div>`;
+}
+
 function renderSetup() {
   const homeOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===0?'selected':''}>${t.name}</option>`).join('');
   const awayOptions = TEAMS.map((t, i) => `<option value="${i}" ${i===1?'selected':''}>${t.name}</option>`).join('');
@@ -10794,7 +10901,7 @@ function renderSetup() {
           ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : lang === 'pt' ? (g === 1 ? 'gol' : 'gols') : lang === 'fr' ? (g === 1 ? 'but' : 'buts') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
       </div>
-
+${renderDiceModeToggle(setupDiceMode, 'dice-mode')}
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:var(--text-2);">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
@@ -10857,6 +10964,7 @@ function renderAiSetup() {
           ${[1, 3, 5].map(g => `<button data-goals="${g}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : lang === 'pt' ? (g === 1 ? 'gol' : 'gols') : lang === 'fr' ? (g === 1 ? 'but' : 'buts') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
       </div>
+${renderDiceModeToggle(setupDiceMode, 'dice-mode')}
       <div style="margin-top:10px;">
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:var(--text-2);">
           <input type="checkbox" id="no-turn-timer-check" style="width:16px;height:16px;cursor:pointer;">
@@ -10877,6 +10985,7 @@ let setupDuration = 5;
 let setupTargetGoals = null;
 let setupBoardSize = 'classic';
 let setupGameVariant = 'classic';
+let setupDiceMode = 'default'; // 'default' (0,1,2,3,4,6) | 'traditional' (1-6, no 0)
 let leagueNumTeams = 4;
 let leagueSelectedTeams = Array(4).fill(null);
 let leagueDuration = 20;
@@ -11261,7 +11370,7 @@ function renderSandboxPanel(s) {
     <div style="margin-bottom:10px;">
       <span class="field-label">${diceLabelSandbox}</span>
       <div class="training-dice-grid">
-        ${DICE_VALUES.map(v => `<button class="training-dice-btn" data-training-dice="${v}">${v}</button>`).join('')}
+        ${getActiveDiceValues(s).map(v => `<button class="training-dice-btn" data-training-dice="${v}">${v}</button>`).join('')}
       </div>
     </div>
     ` : `<p style="font-size:0.76rem; color:var(--text-3); text-align:center; margin:8px 0;">${moveHint}</p>`}
@@ -11422,7 +11531,7 @@ function renderDicePanel(s) {
       } else if (onlineUndoRequestedByMe) {
         undoBtnDesktop = lang === 'en' ? '⏳ Waiting...' : lang === 'pt' ? '⏳ Aguardando...' : lang === 'fr' ? '⏳ En attente...' : '⏳ Esperando...';
         undoBtnMobile = '⏳';
-      } else if (onlineMyTeam !== s.currentPlayer && s.diceValue === null) {
+      } else if (onlineMyTeam !== s.currentPlayer) {
         const undoLabel = lang === 'en' ? '↩ Propose undo' : lang === 'pt' ? '↩ Propor desfazer' : lang === 'fr' ? '↩ Proposer une annulation' : '↩ Proponer deshacer';
         undoBtnDesktop = '<button class="btn ghost" id="request-undo-btn-d" style="width:100%;font-size:0.76rem;">' + undoLabel + '</button>';
         undoBtnMobile = '<button class="btn ghost" id="request-undo-btn-m" style="padding:1px 6px;font-size:0.7rem;">↩</button>';
@@ -11441,6 +11550,10 @@ function renderDicePanel(s) {
   return `
   <div class="dice-panel">
     <h3>${turnLabel}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
+    <label class="auto-roll-toggle" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--text-4);margin:2px 0 4px;cursor:pointer;user-select:none;">
+      <input type="checkbox" id="auto-roll-checkbox" ${getAutoRollPref() ? 'checked' : ''} style="cursor:pointer;margin:0;">
+      ${lang === 'en' ? 'Auto-roll dice' : lang === 'pt' ? 'Lançar dado automaticamente' : lang === 'fr' ? 'Lancer le dé automatiquement' : 'Tirar el dado automáticamente'}
+    </label>
     ${isTimerActive ? `
     <div class="turn-timer-row">
       <div class="turn-timer-bar"><div class="turn-timer-fill ${timerLow ? 'low' : ''}" id="turn-timer-fill" style="width:${timerPct}%;"></div></div>
@@ -11452,8 +11565,8 @@ function renderDicePanel(s) {
       ${mobilMenuBtns}
     </div>`}
     <div class="dice-row" style="margin:6px 0;">
-      <div class="dice-face ${isZero ? 'zero' : ''} ${s.diceValue === null ? 'empty' : ''}">${diceDisplay}</div>
-      ${s.gamePhase === 'rolling' && !blockControls ? `<button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(currentTeam)}">🎲 ${t('game.roll')}</button>` : ''}
+      <div class="dice-face ${isZero ? 'zero' : ''} ${s.diceValue === null ? 'empty' : ''} ${s.diceRolling ? 'rolling' : ''}">${s.diceRolling ? '🎲' : diceDisplay}</div>
+      ${s.gamePhase === 'rolling' && !blockControls ? `<button class="btn team-btn" id="roll-dice-btn" style="flex:1; ${teamButtonStyle(currentTeam)}" ${s.diceRolling ? 'disabled' : ''}>🎲 ${t('game.roll')}</button>` : ''}
       ${isBotTurn ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> ${thinkingLabel}</div>` : ''}
       ${isOpponentOnlineTurn && s.gamePhase === 'rolling' ? `<div class="bot-thinking"><span class="bot-dot"></span><span class="bot-dot"></span><span class="bot-dot"></span> ${opponentLabel}</div>` : ''}
     </div>
@@ -11735,6 +11848,15 @@ function wireEvents() {
     };
   });
 
+  // Dice mode selector (variant menu — applies to whichever sub-mode is chosen next)
+  document.querySelectorAll('[data-dice-mode]').forEach(btn => {
+    btn.onclick = () => {
+      setupDiceMode = btn.getAttribute('data-dice-mode');
+      document.querySelectorAll('[data-dice-mode]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
   // Online duration selector
   document.querySelectorAll('[data-online-goals]').forEach(btn => {
     btn.onclick = () => {
@@ -12005,6 +12127,7 @@ function wireEvents() {
         targetGoals: setupTargetGoals,
         boardSize: setupBoardSize,
         gameVariant: setupGameVariant,
+        diceMode: setupDiceMode,
         turnDuration: finalTurnDur, timer: finalTurnDur,
         message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : lang === 'fr' ? 'Lancez le dé pour décider qui commence.' : 'Tiren los dados para decidir quién empieza.',
         toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : lang === 'fr' ? 'Conflit de maillots' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : lang === 'pt' ? `${awayTeam.name} usará uma cor alternativa.` : lang === 'fr' ? `${awayTeam.name} utilisera une couleur alternative.` : `${awayTeam.name} usará un color alternativo.` } : null,
@@ -12038,6 +12161,7 @@ function wireEvents() {
         targetGoals: setupTargetGoals, turnDuration: finalTurnDurAi, timer: finalTurnDurAi,
         boardSize: setupBoardSize,
         gameVariant: setupGameVariant,
+        diceMode: setupDiceMode,
         message: lang === 'en' ? 'Roll the dice to decide who starts.' : lang === 'pt' ? 'Lance o dado para decidir quem começa.' : lang === 'fr' ? 'Lancez le dé pour décider qui commence.' : 'Tiren los dados para decidir quién empieza.',
         toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : lang === 'fr' ? 'Conflit de maillots' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeam.name} will use an alternate color.` : lang === 'pt' ? `${awayTeam.name} usará uma cor alternativa.` : lang === 'fr' ? `${awayTeam.name} utilisera une couleur alternative.` : `${awayTeam.name} usará un color alternativo.` } : null,
       });
@@ -12185,7 +12309,7 @@ function wireEvents() {
         return logAction({ ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', half: 2, gameClock: s.halfDurationMinutes * 60,
           overtimeMode: 'extra-time', isClockRunning: false, diceValue: null, homeRoll: null, awayRoll: null,
-          prevTurnSnapshot: null,
+          prevTurnSnapshot: null, undoUsedThisTurn: false,
         }, msg, 'game-event');
       });
     };
@@ -12199,7 +12323,7 @@ function wireEvents() {
         const msg = lang === 'en' ? 'Golden goal! First to score wins.' : lang === 'pt' ? 'Gol de ouro! O primeiro a marcar vence.' : lang === 'fr' ? 'But en or ! Le premier à marquer gagne.' : '¡Gol de oro! El primero en marcar gana.';
         return logAction({ ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
-          diceValue: null, homeRoll: null, awayRoll: null, prevTurnSnapshot: null,
+          diceValue: null, homeRoll: null, awayRoll: null, prevTurnSnapshot: null, undoUsedThisTurn: false,
         }, msg, 'game-event');
       });
     };
@@ -12265,6 +12389,14 @@ function wireEvents() {
       tournamentSetupVariant = btn.getAttribute('data-tournament-variant');
       tournamentSetupBoardSize = tournamentSetupVariant === 'compact' ? 'compact' : 'classic';
       document.querySelectorAll('[data-tournament-variant]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+
+  document.querySelectorAll('[data-tournament-dice-mode]').forEach(btn => {
+    btn.onclick = () => {
+      tournamentSetupDiceMode = btn.getAttribute('data-tournament-dice-mode');
+      document.querySelectorAll('[data-tournament-dice-mode]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
   });
@@ -12335,6 +12467,13 @@ function wireEvents() {
       challengeSetupVariant = btn.getAttribute('data-ch-variant');
       challengeSetupBoardSize = challengeSetupVariant === 'compact' ? 'compact' : 'classic';
       document.querySelectorAll('[data-ch-variant]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+  document.querySelectorAll('[data-ch-dice-mode]').forEach(btn => {
+    btn.onclick = () => {
+      challengeSetupDiceMode = btn.getAttribute('data-ch-dice-mode');
+      document.querySelectorAll('[data-ch-dice-mode]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
   });
@@ -12475,6 +12614,12 @@ function wireEvents() {
   if (rollBtn) rollBtn.onclick = () => {
     if (state.gameMode === 'tutorial') { handleTutorialAction({ type: 'click_element', payload: { elementId: 'dice-roll-button' } }); return; }
     doDiceRoll();
+  };
+
+  const autoRollCheckbox = document.getElementById('auto-roll-checkbox');
+  if (autoRollCheckbox) autoRollCheckbox.onchange = () => {
+    setAutoRollPref(autoRollCheckbox.checked);
+    if (autoRollCheckbox.checked) maybeTriggerAutoRoll();
   };
 
   const skipSwap = document.getElementById('skip-swap-btn');
@@ -12841,15 +12986,35 @@ function resolveKickoffWinner(s) {
   return logAction({ ...s, homeRoll: null, awayRoll: null }, tieMsg, 'roll');
 }
 
+const DICE_ROLL_ANIM_MS = 420;
 function doDiceRoll() {
+  // Guard against double-fire: a second click, the auto-roll timer, or the bot's
+  // step loop landing while the spin animation from a first call is still playing.
+  if (state.diceRolling) return;
   // If there's a pending undo request from the opponent, rolling the dice cancels it
   if (onlineIncomingUndoFrom) declineOnlineUndo();
   sounds.diceRoll();
-  const roll = DICE_VALUES[Math.floor(Math.random() * DICE_VALUES.length)];
-  setState(s => {
-    const updated = { ...s, diceValue: roll };
+  // Short spin animation before the value is revealed — diceRolling is a purely
+  // visual/transient flag, resolved by the second setState below.
+  setState(s => ({ ...s, diceRolling: true }));
+  setTimeout(() => {
+    setState(s0 => {
+      // If an undo (or anything else) moved the game out of 'rolling' while the
+      // spin animation was playing, abandon this roll entirely — resolving it
+      // anyway would stomp the undo's restored dice value with a brand new one,
+      // or force a phase change the player didn't ask for.
+      if (!s0.diceRolling || s0.gamePhase !== 'rolling') return s0;
+      const activeDice = getActiveDiceValues(s0);
+      const roll = activeDice[Math.floor(Math.random() * activeDice.length)];
+      return doDiceRollResolve(s0, roll);
+    });
+  }, DICE_ROLL_ANIM_MS);
+}
+function doDiceRollResolve(s, roll) {
+  {
+    const updated = { ...s, diceValue: roll, diceRolling: false };
     if (roll === 0) {
-      const zeroState = { ...logAction(updated, t('msg.zero'), 'roll'), gamePhase: 'turn-over' };
+      const zeroState = { ...logAction(updated, t('msg.zero'), 'roll'), gamePhase: 'turn-over', prevTurnSnapshot: null, undoUsedThisTurn: false };
       // In online mode, only the player who actually rolled drives this timeout.
       // The other client just receives 'turn-over' via Firebase and stays passive —
       // it must NOT also schedule its own advance, or both clients race to call
@@ -12882,18 +13047,10 @@ function doDiceRoll() {
       usedPlayerIds: [],
       lastActions: [],
       turnStartState: { players: s.players, ballPosition: s.ballPosition, lastPlayerToTouchBallId: s.lastPlayerToTouchBallId },
-      prevTurnSnapshot: {
-        players: s.players.map(p => ({ ...p, position: { ...p.position } })),
-        ballPosition: s.ballPosition ? { ...s.ballPosition } : null,
-        lastPlayerToTouchBallId: s.lastPlayerToTouchBallId,
-        currentPlayer: s.currentPlayer,
-        turnCount: s.turnCount,
-        diceValue: roll,
-        remainingBudget: s.gameVariant === 'quick' ? roll : 0,
-        usedPlayerIds: [],
-      },
+      // prevTurnSnapshot is intentionally NOT touched here — it still holds whatever the
+      // previous turn left behind (see advanceToNextTurn), so it survives this roll intact.
     };
-  });
+  }
 }
 
 /* ---------------- Clock ---------------- */
@@ -13167,7 +13324,7 @@ function startSecondHalfOnlineAuto() {
       ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
       currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-      isClockRunning: true, isKickoffTurn: true, assistProviderId: null, prevTurnSnapshot: null,
+      isClockRunning: true, isKickoffTurn: true, assistProviderId: null, prevTurnSnapshot: null, undoUsedThisTurn: false,
     };
     return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
   });
