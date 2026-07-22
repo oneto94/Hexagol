@@ -5760,7 +5760,7 @@ function handleEndHalfOrMatch(s) {
   }
 
   if (s.half === 1) {
-    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false, prevTurnSnapshot: null, undoUsedThisTurn: false };
+    const halfTimeState = { ...logAction(s, t('msg.halftime'), 'game-event'), gamePhase: 'half-time', isClockRunning: false, prevTurnSnapshot: null, undoUsedThisTurn: false, isAiThinking: false };
     if (s.gameMode === 'online') halfTimeStartedAt = Date.now();
     return s.gameMode === 'online' ? { ...halfTimeState, timer: 30 } : halfTimeState;
   }
@@ -5773,7 +5773,7 @@ function handleEndHalfOrMatch(s) {
   if (isDraw && !isExtraTime && !s.targetGoals) {
     const msg = lang === 'en' ? "It's a draw! Choose how to continue." : '¡Empate! Elegí cómo continuar.';
     if (s.gameMode === 'online') overtimeChoiceStartedAt = Date.now();
-    return { ...logAction(s, msg, 'game-event'), gamePhase: 'overtime-choice', isClockRunning: false };
+    return { ...logAction(s, msg, 'game-event'), gamePhase: 'overtime-choice', isClockRunning: false, isAiThinking: false };
   }
 
   // Regular end
@@ -5782,7 +5782,7 @@ function handleEndHalfOrMatch(s) {
   if (s.score.home > s.score.away) msg += lang === 'en' ? `${homeName} wins.` : lang === 'pt' ? `${homeName} venceu.` : lang === 'fr' ? `${homeName} gagne.` : `${homeName} ha ganado.`;
   else if (s.score.away > s.score.home) msg += lang === 'en' ? `${awayName} wins.` : lang === 'pt' ? `${awayName} venceu.` : lang === 'fr' ? `${awayName} gagne.` : `${awayName} ha ganado.`;
   else msg += lang === 'en' ? 'The result is a draw.' : lang === 'pt' ? 'O resultado é empate.' : lang === 'fr' ? 'Le résultat est un match nul.' : 'El resultado es un empate.';
-  return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false };
+  return { ...logAction(s, msg, 'game-event'), gamePhase: 'game-over', isClockRunning: false, isAiThinking: false };
 }
 
 /* ---------------- AI bot (uses the real rules engine — same validators a human sees) ---------------- */
@@ -12829,7 +12829,7 @@ function wireEvents() {
         ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
         currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
         lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-        isClockRunning: true, isKickoffTurn: true, assistProviderId: null,
+        isClockRunning: true, isKickoffTurn: true, assistProviderId: null, isAiThinking: false,
       };
       return logAction(news, t('msg.kickoff', { half: t('msg.second'), team: kickoffTeamName }), 'game-event');
     });
