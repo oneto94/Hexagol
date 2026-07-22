@@ -1147,6 +1147,50 @@ function setAutoRollPref(v) {
   localStorage.setItem('hexagol_auto_roll', v ? '1' : '0');
 }
 
+// ═══════════════════════════════════════════════════════════
+// MÓDULO: "Plan Entrada" — invite-a-friend CTA at the tutorial-complete and
+// vs-IA game-over moments. Goal: nudge someone who only knows the AI (weak
+// opponent, dead end) toward playing a real person, via the existing
+// WhatsApp/copy-link room invite — without becoming permanent nagging.
+// Shown only if: never played online AND not explicitly dismissed AND seen
+// fewer than 3 times. Any one of those three turns it off for good.
+// ═══════════════════════════════════════════════════════════
+function hasPlayedOnline() {
+  return localStorage.getItem('hx_played_online') === '1';
+}
+function markPlayedOnline() {
+  localStorage.setItem('hx_played_online', '1');
+}
+function getInviteCtaViews() {
+  return parseInt(localStorage.getItem('hx_invite_cta_views') || '0', 10);
+}
+function bumpInviteCtaViews() {
+  localStorage.setItem('hx_invite_cta_views', String(getInviteCtaViews() + 1));
+}
+function isInviteCtaDismissed() {
+  return localStorage.getItem('hx_invite_cta_dismissed') === '1';
+}
+function dismissInviteCta() {
+  localStorage.setItem('hx_invite_cta_dismissed', '1');
+}
+function shouldShowInviteCta() {
+  return !hasPlayedOnline() && !isInviteCtaDismissed() && getInviteCtaViews() < 3;
+}
+let inviteCtaTeam = null; // which team to use if the person taps "invite a friend" from the CTA
+// One-tap room creation for the CTA: reuses the normal online-room flow with
+// sensible defaults (current variant/dice-mode globals, 5 min, no target
+// goals) so the person lands straight on the existing share/WhatsApp screen
+// instead of the full online setup form.
+function startInviteCtaRoom(team, source) {
+  trackEvent('invite_cta_clicked', { source });
+  trackEvent('online_room_created', { duration: setupDuration, target_goals: setupTargetGoals, source: 'invite_cta_' + source });
+  onlineCreateRoom(team, setupDuration, setupTargetGoals).catch(err => {
+    console.error('[Hexagol] Plan Entrada — error creando sala desde CTA:', err);
+    alert('No se pudo crear la sala: ' + (err?.message || err));
+  });
+}
+
+
 // Display names for the language-picker button/modal — each language names
 // itself (native autonym), so the button always reads correctly regardless
 // of which language is currently active.
@@ -2098,6 +2142,7 @@ function pushOnlineState(s) {
 }
 
 function attachOnlineStateListener() {
+  if (!hasPlayedOnline()) markPlayedOnline();
   if (onlineStateUnsub) { onlineStateUnsub(); onlineStateUnsub = null; }
   let lastSeenStateKey = '';
   onlineStateUnsub = onlineRoomRef.onSnapshot({ includeMetadataChanges: true }, snap => {
@@ -4246,6 +4291,7 @@ const tutorialScript = [
     // 1. Welcome
     {
         id: 'welcome',
+        lesson: 1,
         message: '¡Bienvenido a Hexagol! Este tutorial te guiará por las reglas. Para empezar, lanza el dado.',
         messageEn: 'Welcome to Hexagol! This tutorial will guide you through the rules. To start, roll the dice.',
         messageFr: 'Bienvenue sur Hexagol ! Ce tutoriel va vous guider à travers les règles. Pour commencer, lancez le dé.',
@@ -4262,6 +4308,7 @@ const tutorialScript = [
     // 2. Move Player
     {
         id: 'move-intro',
+        lesson: 2,
         message: '¡Sacaste un 4! El número del dado indica cuántas casillas puedes moverte. Selecciona al jugador #8.',
         messageEn: 'You rolled 4! The dice number shows how many squares you can move. Select player #8.',
         messageFr: 'Vous avez fait 4 ! Le nombre du dé indique combien de cases vous pouvez déplacer. Sélectionnez le joueur #8.',
@@ -4277,6 +4324,7 @@ const tutorialScript = [
     },
     {
         id: 'move-execute',
+        lesson: 2,
         message: 'Excelente. Muévelo 4 casillas en diagonal a la casilla N10.',
         messageEn: 'Great. Move them 4 squares diagonally to square N10.',
         messageFr: 'Parfait. Déplacez-le de 4 cases en diagonale jusqu\'à la case N10.',
@@ -4293,6 +4341,7 @@ const tutorialScript = [
     // 3. Kick Ball
     {
         id: 'kick-intro',
+        lesson: 3,
         message: '¡Vamos a chutar! Un jugador adyacente al balón puede chutarlo. Selecciona al jugador #9.',
         messageEn: "Let's kick! A player next to the ball can kick it. Select player #9.",
         messageFr: 'Frappons ! Un joueur à côté du ballon peut le frapper. Sélectionnez le joueur #9.',
@@ -4308,6 +4357,7 @@ const tutorialScript = [
     },
     {
         id: 'kick-execute',
+        lesson: 3,
         message: '¡Perfecto! Al chutar, el jugador ocupa la casilla del balón. Chuta el balón 4 casillas hacia adelante a J6.',
         messageEn: 'Perfect! When kicking, the player moves to the ball square. Kick the ball 4 squares forward to J6.',
         messageFr: 'Parfait ! En frappant, le joueur se déplace vers la case du ballon. Frappez le ballon de 4 cases vers l\'avant jusqu\'à J6.',
@@ -4324,6 +4374,7 @@ const tutorialScript = [
     // 4. Drag Ball
     {
         id: 'drag-intro',
+        lesson: 4,
         message: 'Ahora, "arrastrar". Cuesta moverte HASTA el balón, y el resto para arrastrarlo. Selecciona al jugador #7.',
         messageEn: 'Now, "drag". It costs moves to reach the ball, and the rest to drag it. Select player #7.',
         messageFr: 'Maintenant, l\'« entraînement ». Il coûte des déplacements pour atteindre le ballon, et le reste pour l\'entraîner. Sélectionnez le joueur #7.',
@@ -4339,6 +4390,7 @@ const tutorialScript = [
     },
     {
         id: 'drag-execute',
+        lesson: 4,
         message: 'Moverse 2 casillas a la bola cuesta 2. Te quedan 2 para arrastrar. Arrástralo a L14.',
         messageEn: 'Moving 2 squares to the ball costs 2. You have 2 left to drag. Drag it to L14.',
         messageFr: 'Se déplacer de 2 cases jusqu\'au ballon coûte 2. Il vous reste 2 pour entraîner. Entraînez-le jusqu\'à L14.',
@@ -4355,6 +4407,7 @@ const tutorialScript = [
     // Lofted Pass
     {
         id: 'lofted-pass-intro',
+        lesson: 4,
         message: 'El "Pase Elevado" te permite pasar por encima de tus compañeros. Selecciona al jugador #9.',
         messageEn: 'The "Lofted Pass" lets you pass over your teammates. Select player #9.',
         messageFr: 'La « passe lobée » vous permet de passer par-dessus vos coéquipiers. Sélectionnez le joueur #9.',
@@ -4373,6 +4426,7 @@ const tutorialScript = [
     },
     {
         id: 'lofted-pass-execute',
+        lesson: 4,
         message: 'Ahora, realiza un pase elevado por encima de tu compañero (#8) hacia la casilla vacía N14.',
         messageEn: 'Now, make a lofted pass over your teammate (#8) to the empty square N14.',
         messageFr: 'Maintenant, faites une passe lobée par-dessus votre coéquipier (#8) vers la case vide N14.',
@@ -4392,6 +4446,7 @@ const tutorialScript = [
     // Drag Elevado
     {
         id: 'lofted-drag-intro',
+        lesson: 4,
         message: 'El "Arrastre Elevado" combina arrastre y pase elevado. Si arrastras sobre un compañero, el balón lo ignora. Selecciona al jugador #7.',
         messageEn: 'The "Lofted Drag" combines drag and lofted pass. If you drag over a teammate, the ball ignores them. Select player #7.',
         messageFr: 'L\'« entraînement lobé » combine entraînement et passe lobée. Si vous entraînez par-dessus un coéquipier, le ballon l\'ignore. Sélectionnez le joueur #7.',
@@ -4410,6 +4465,7 @@ const tutorialScript = [
     },
     {
         id: 'lofted-drag-execute',
+        lesson: 4,
         message: 'Cuesta 2 llegar. Te quedan 4. Arrastra el balón 4 casillas a J8, pasando por encima de tu compañero.',
         messageEn: 'It costs 2 to reach the ball. You have 4 left. Drag the ball 4 squares to J8, over your teammate.',
         messageFr: 'Cela coûte 2 pour atteindre le ballon. Il vous en reste 4. Entraînez le ballon de 4 cases jusqu\'à J8, par-dessus votre coéquipier.',
@@ -4429,6 +4485,7 @@ const tutorialScript = [
     // 5. Stacking and Moving Over
     {
         id: 'stacking-move-over-opponent-intro',
+        lesson: 5,
         message: 'Puedes moverte por encima de otros jugadores. Selecciona al jugador #8 para saltar por encima del rival.',
         messageEn: 'You can move over other players. Select player #8 to jump over the opponent.',
         messageFr: 'Vous pouvez vous déplacer par-dessus d\'autres joueurs. Sélectionnez le joueur #8 pour sauter par-dessus l\'adversaire.',
@@ -4447,6 +4504,7 @@ const tutorialScript = [
     },
     {
         id: 'stacking-move-over-opponent-execute',
+        lesson: 5,
         message: 'Ahora muévelo 4 casillas en línea recta hasta J10, pasando por encima del jugador rival.',
         messageEn: 'Now move them 4 squares in a straight line to J10, over the opponent.',
         messageFr: 'Maintenant déplacez-le de 4 cases en ligne droite jusqu\'à J10, par-dessus l\'adversaire.',
@@ -4465,6 +4523,7 @@ const tutorialScript = [
     },
     {
         id: 'stacking-on-teammate-intro',
+        lesson: 5,
         message: 'También puedes apilar hasta 2 jugadores de tu equipo en una misma casilla. Selecciona al jugador #7.',
         messageEn: 'You can also stack up to 2 of your players on the same square. Select player #7.',
         messageFr: 'Vous pouvez aussi empiler jusqu\'à 2 de vos joueurs sur la même case. Sélectionnez le joueur #7.',
@@ -4483,6 +4542,7 @@ const tutorialScript = [
     },
     {
         id: 'stacking-on-teammate-execute',
+        lesson: 5,
         message: 'Mueve al jugador #7 dos casillas para apilarlo con el jugador #8 en la casilla M12.',
         messageEn: 'Move player #7 two squares to stack with player #8 at square M12.',
         messageFr: 'Déplacez le joueur #7 de deux cases pour l\'empiler avec le joueur #8 à la case M12.',
@@ -4502,6 +4562,7 @@ const tutorialScript = [
     // 6. Defensive Tactics
     {
         id: 'defensive-stacking-intro',
+        lesson: 6,
         message: 'Ahora, tácticas defensivas. El rival está listo para un pase. ¡Evítalo seleccionando a tu jugador #7!',
         messageEn: 'Now, defensive tactics. The opponent is ready to pass. Stop it by selecting your player #7!',
         messageFr: 'Maintenant, la tactique défensive. L\'adversaire est prêt à passer. Empêchez-le en sélectionnant votre joueur #7 !',
@@ -4521,6 +4582,7 @@ const tutorialScript = [
     },
     {
         id: 'defensive-stacking-execute',
+        lesson: 6,
         message: '¡Exacto! Ahora muévelo para apilarlo sobre el receptor rival (#8). Esto bloquea un posible pase en cadena.',
         messageEn: 'Exactly! Now move them to stack on the opponent receiver (#8). This blocks a possible chain pass.',
         messageFr: 'Exactement ! Maintenant déplacez-le pour l\'empiler sur le receveur adverse (#8). Cela bloque une passe en chaîne possible.',
@@ -4540,6 +4602,7 @@ const tutorialScript = [
     },
     {
         id: 'pass-blocking-intro',
+        lesson: 6,
         message: 'También puedes bloquear un pase interceptando la línea de visión. Selecciona a tu jugador #4 para cortar la jugada.',
         messageEn: 'You can also block a pass by intercepting the line of sight. Select your player #4 to cut the play.',
         messageFr: 'Vous pouvez aussi bloquer une passe en interceptant la ligne de vue. Sélectionnez votre joueur #4 pour couper l\'action.',
@@ -4559,6 +4622,7 @@ const tutorialScript = [
     },
     {
         id: 'pass-blocking-execute',
+        lesson: 6,
         message: '¡Bien! Ahora muévelo 2 casillas a la posición L10, bloqueando el camino entre el balón y el receptor.',
         messageEn: 'Good! Now move them 2 squares to position L10, blocking the path between the ball and the receiver.',
         messageFr: 'Bien ! Maintenant déplacez-le de 2 cases vers la position L10, bloquant le chemin entre le ballon et le receveur.',
@@ -4579,6 +4643,7 @@ const tutorialScript = [
     // 7. Chain Pass
     {
         id: 'chain-pass-intro',
+        lesson: 7,
         message: 'Pase en Cadena: Un pase a un compañero permite otro pase inmediato. Selecciona al jugador #9 para empezar.',
         messageEn: 'Chain Pass: A pass to a teammate allows another immediate pass. Select player #9 to start.',
         messageFr: 'Passe en chaîne : une passe à un coéquipier permet une autre passe immédiate. Sélectionnez le joueur #9 pour commencer.',
@@ -4598,6 +4663,7 @@ const tutorialScript = [
     },
     {
         id: 'chain-pass-select-target',
+        lesson: 7,
         message: '¡Bien! Ahora pásale el balón a tu compañero #10, que está en la casilla K10.',
         messageEn: 'Good! Now pass the ball to your teammate #10, who is at square K10.',
         messageFr: 'Bien ! Maintenant passez le ballon à votre coéquipier #10, qui est à la case K10.',
@@ -4617,6 +4683,7 @@ const tutorialScript = [
     },
     {
         id: 'chain-pass-execute',
+        lesson: 7,
         message: '¡Pase conectado! Ahora el #10 puede pasar 4 casillas. Pásasela a tu compañero #11 en O10.',
         messageEn: 'Pass connected! Now #10 can pass 4 squares. Pass it to your teammate #11 at O10.',
         messageFr: 'Passe réussie ! Maintenant #10 peut passer sur 4 cases. Passez-le à votre coéquipier #11 à O10.',
@@ -4636,6 +4703,7 @@ const tutorialScript = [
     },
     {
         id: 'chain-pass-final-kick',
+        lesson: 7,
         message: '¡Excelente! El jugador #11 ahora puede realizar el pase final de 4 casillas. ¡Patea el balón a S10!',
         messageEn: 'Excellent! Player #11 can now make the final 4-square pass. Kick the ball to S10!',
         messageFr: 'Excellent ! Le joueur #11 peut maintenant faire la dernière passe de 4 cases. Frappez le ballon vers S10 !',
@@ -4656,6 +4724,7 @@ const tutorialScript = [
     // 8. Goal Block
     {
         id: 'goal-block-gk-intro',
+        lesson: 8,
         message: '¡Peligro! El rival solo tiene un camino para marcar. Mueve a tu arquero para bloquear el tiro. Selecciónalo.',
         messageEn: 'Danger! The opponent only has one path to score. Move your goalkeeper to block the shot. Select them.',
         messageFr: 'Danger ! L\'adversaire n\'a qu\'un seul chemin pour marquer. Déplacez votre gardien pour bloquer le tir. Sélectionnez-le.',
@@ -4675,6 +4744,7 @@ const tutorialScript = [
     },
     {
         id: 'goal-block-gk-execute',
+        lesson: 8,
         message: '¡Rápido! El único tiro posible es a J24. ¡Muévelo a la línea de tiro en J22 para interceptar!',
         messageEn: 'Quick! The only possible shot is to J24. Move them to the shot line at J22 to intercept!',
         messageFr: 'Vite ! Le seul tir possible est vers J24. Déplacez-le sur la ligne de tir à J22 pour intercepter !',
@@ -4694,6 +4764,7 @@ const tutorialScript = [
     },
     {
         id: 'goal-block-defender-intro',
+        lesson: 8,
         message: 'También puedes usar un defensor. El rival tiene tiro libre. Selecciona a tu defensor #4.',
         messageEn: 'You can also use a defender. The opponent has a clear shot. Select your defender #4.',
         messageFr: 'Vous pouvez aussi utiliser un défenseur. L\'adversaire a un tir dégagé. Sélectionnez votre défenseur #4.',
@@ -4712,6 +4783,7 @@ const tutorialScript = [
     },
     {
         id: 'goal-block-defender-execute',
+        lesson: 8,
         message: '¡Bien! Ahora muévelo 2 casillas a la línea de tiro en J21 para bloquear el gol.',
         messageEn: 'Good! Now move them 2 squares to the shot line at J21 to block the goal.',
         messageFr: 'Bien ! Maintenant déplacez-le de 2 cases vers la ligne de tir à J21 pour bloquer le but.',
@@ -4731,6 +4803,7 @@ const tutorialScript = [
     // 9. Goalkeeper
     {
         id: 'gk-move-intro',
+        lesson: 9,
         message: 'El arquero se mueve al 50% de coste en su área. Con un dado de 3 puede moverse hasta 6 casillas. ¡Selecciónalo!',
         messageEn: 'The goalkeeper moves at 50% cost in their area. With a dice of 3 they can move up to 6 squares. Select them!',
         messageFr: 'Le gardien se déplace à 50% du coût dans sa surface. Avec un dé de 3, il peut se déplacer jusqu\'à 6 cases. Sélectionnez-le !',
@@ -4746,6 +4819,7 @@ const tutorialScript = [
     },
     {
         id: 'gk-move-execute',
+        lesson: 9,
         message: 'Observa su gran alcance. Muévelo 5 casillas a E19 en línea recta.',
         messageEn: 'See their great range. Move them 5 squares to E19 in a straight line.',
         messageFr: 'Voyez sa grande portée. Déplacez-le de 5 cases jusqu\'à E19 en ligne droite.',
@@ -4761,6 +4835,7 @@ const tutorialScript = [
     },
     {
         id: 'gk-kick-intro',
+        lesson: 9,
         message: 'El chute del arquero se duplica si él y el balón están en el área. Sacaste 3 (chute de 6). Selecciónalo.',
         messageEn: "The goalkeeper's kick doubles if both they and the ball are in the area. You rolled 3 (kick of 6). Select them.",
         messageFr: 'Le tir du gardien double si lui et le ballon sont dans la surface. Vous avez fait 3 (tir de 6). Sélectionnez-le.',
@@ -4776,6 +4851,7 @@ const tutorialScript = [
     },
     {
         id: 'gk-kick-execute',
+        lesson: 9,
         message: '¡Un despeje potente! Chuta el balón 6 casillas hasta J15.',
         messageEn: 'A powerful clearance! Kick the ball 6 squares to J15.',
         messageFr: 'Un dégagement puissant ! Frappez le ballon de 6 cases jusqu\'à J15.',
@@ -4791,6 +4867,7 @@ const tutorialScript = [
     },
     {
         id: 'gk-swap-intro',
+        lesson: 9,
         message: 'Si el GK termina fuera de su área, puedes cambiarlo por un compañero que esté dentro. Intercambia con el jugador #5.',
         messageEn: 'If the GK ends up outside their area, you can swap them with a teammate inside. Swap with player #5.',
         messageFr: 'Si le gardien se retrouve hors de sa surface, vous pouvez l\'échanger avec un coéquipier à l\'intérieur. Échangez avec le joueur #5.',
@@ -4810,6 +4887,7 @@ const tutorialScript = [
     },
     {
         id: 'gk-swap-skip-intro',
+        lesson: 9,
         message: 'También puedes omitir el cambio y finalizar tu turno. Haz clic en el botón para continuar.',
         messageEn: 'You can also skip the swap and end your turn. Click the button to continue.',
         messageFr: 'Vous pouvez aussi passer l\'échange et terminer votre tour. Cliquez sur le bouton pour continuer.',
@@ -4830,6 +4908,7 @@ const tutorialScript = [
     // 10. Offside
     {
         id: 'offside-explain-position',
+        lesson: 10,
         message: 'FUERA DE JUEGO: El jugador #11 está adelantado. La infracción ocurre si se le pasa el balón. Selecciona al pasador, #10.',
         messageEn: 'OFFSIDE: Player #11 is ahead. The infraction occurs if the ball is passed to them. Select the passer, #10.',
         messageFr: 'HORS-JEU : Le joueur #11 est avancé. L\'infraction se produit si le ballon lui est passé. Sélectionnez le passeur, #10.',
@@ -4850,6 +4929,7 @@ const tutorialScript = [
     },
     {
         id: 'offside-cause-infraction',
+        lesson: 10,
         message: 'Ahora, demuestra la infracción. Pasa el balón a la casilla K5, adyacente a tu compañero adelantado.',
         messageEn: 'Now, demonstrate the infraction. Pass the ball to square K5, next to your advanced teammate.',
         messageFr: 'Maintenant, montrez l\'infraction. Passez le ballon vers la case K5, à côté de votre coéquipier avancé.',
@@ -4870,6 +4950,7 @@ const tutorialScript = [
     },
     {
         id: 'offside-resolve-intro',
+        lesson: 10,
         message: '¡INFRACCIÓN! El rival debe mover al jugador adelantado. Selecciona al jugador #11 para reposicionarlo.',
         messageEn: 'INFRACTION! The opponent must move the advanced player. Select player #11 to reposition them.',
         messageFr: 'INFRACTION ! L\'adversaire doit déplacer le joueur avancé. Sélectionnez le joueur #11 pour le repositionner.',
@@ -4891,6 +4972,7 @@ const tutorialScript = [
     },
     {
         id: 'offside-resolve-execute',
+        lesson: 10,
         message: 'La línea de fuera de juego está en y=8. Mueve al jugador a la casilla J8 para corregir su posición.',
         messageEn: 'The offside line is at y=8. Move the player to square J8 to correct their position.',
         messageFr: 'La ligne de hors-jeu est à y=8. Déplacez le joueur vers la case J8 pour corriger sa position.',
@@ -4913,6 +4995,7 @@ const tutorialScript = [
     // 11. Goal
     {
         id: 'goal-intro',
+        lesson: 11,
         message: 'El objetivo final: ¡marcar un GOL! Selecciona a tu jugador #9.',
         messageEn: 'The final objective: score a GOAL! Select your player #9.',
         messageFr: 'L\'objectif final : marquer un BUT ! Sélectionnez votre joueur #9.',
@@ -4930,6 +5013,7 @@ const tutorialScript = [
     },
     {
         id: 'goal-execute',
+        lesson: 11,
         message: 'Ahora, ¡chuta a la portería rival en J24 para marcar!',
         messageEn: 'Now, shoot at the opponent goal at J24 to score!',
         messageFr: 'Maintenant, tirez vers le but adverse à J24 pour marquer !',
@@ -4948,6 +5032,7 @@ const tutorialScript = [
     // 12. Blocked Ball
     {
         id: 'blocked-ball-intro',
+        lesson: 12,
         message: 'Si el balón está rodeado por rivales, se considera "bloqueado" y el juego se reinicia. Lanza el dado para ver qué pasa.',
         messageEn: 'If the ball is surrounded by opponents, it is "blocked" and the game resets. Roll the dice to see what happens.',
         messageFr: 'Si le ballon est encerclé par des adversaires, il est « bloqué » et le jeu se réinitialise. Lancez le dé pour voir ce qui se passe.',
@@ -4973,6 +5058,7 @@ const tutorialScript = [
     },
     {
         id: 'end',
+        lesson: 12,
         message: '¡Felicidades! Has completado el tutorial y ya sabes todo lo necesario para dominar Hexagol. ¡Mucha suerte!',
         messageEn: 'Congratulations! You have completed the tutorial and know everything you need to master Hexagol. Good luck!',
         messageFr: 'Félicitations ! Vous avez terminé le tutoriel et connaissez tout ce qu\'il faut pour maîtriser Hexagol. Bonne chance !',
@@ -4986,6 +5072,11 @@ const tutorialScript = [
         animation: { type: 'none' }
     }
 ];
+// Total number of distinct lessons (not raw steps) — several steps can belong to the
+// same lesson (e.g. "select player" + "move to square" are both the "Move" lesson).
+// Used to show tutorial progress as "Lección X de N" instead of "Paso X de 41",
+// since that's what actually reads as "how much is left to learn".
+const TUTORIAL_LESSON_COUNT = Math.max(...tutorialScript.map(step => step.lesson));
 
 
 /* =========================================================================
@@ -5330,6 +5421,12 @@ function playSoundsForTransition(prev, next) {
       score_away: next.score.away,
       half_duration: next.halfDurationMinutes,
     });
+    // "Plan Entrada" — invite-a-friend CTA impression, vs-IA game-over entry point.
+    if (next.gameMode === 'vs-ai' && shouldShowInviteCta()) {
+      inviteCtaTeam = next.aiTeam === 'home' ? next.awayTeam : next.homeTeam;
+      bumpInviteCtaViews();
+      trackEvent('invite_cta_shown', { source: 'vs_ai_gameover' });
+    }
     if (next.gameMode === 'online' && onlineMyTeam && onlineOpponentUid && !onlineMatchResultSaved) {
       onlineMatchResultSaved = true;
       const myScore = next.score[onlineMyTeam];
@@ -6896,6 +6993,30 @@ function startTutorial() {
   };
 }
 
+function renderTutorialInviteCta() {
+  const title = lang === 'en' ? 'Tutorial complete!' : lang === 'pt' ? 'Tutorial concluído!' : lang === 'fr' ? 'Tutoriel terminé !' : '¡Tutorial completado!';
+  const subtitle = lang === 'en' ? 'Now play with someone for real' : lang === 'pt' ? 'Agora jogue com alguém de verdade' : lang === 'fr' ? 'Maintenant, jouez avec une vraie personne' : 'Ahora jugá con alguien de verdad';
+  const inviteLabel = lang === 'en' ? 'Invite a friend now' : lang === 'pt' ? 'Convidar um amigo agora' : lang === 'fr' ? 'Inviter un ami maintenant' : 'Invitar a un amigo ahora';
+  const configLabel = lang === 'en' ? 'Change settings before inviting' : lang === 'pt' ? 'Mudar configurações antes de convidar' : lang === 'fr' ? 'Modifier les paramètres avant de convier un ami' : 'Cambiar configuración antes de invitar';
+  const skipLabel = lang === 'en' ? 'Go to menu' : lang === 'pt' ? 'Ir ao menu' : lang === 'fr' ? 'Aller au menu' : 'Ir al menú';
+  const dismissLabel = lang === 'en' ? "No thanks, don't show this again" : lang === 'pt' ? 'Não, obrigado — não mostrar de novo' : lang === 'fr' ? 'Non merci, ne plus afficher' : 'No, gracias — no mostrar de nuevo';
+  return `
+  <div class="menu-screen" style="text-align:center;">
+    <h1>${title}</h1>
+    <div class="subtitle">${subtitle}</div>
+    <div class="menu-grid" style="margin-top:20px;">
+      <button class="menu-btn" id="invite-cta-play-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
+        <div class="t" style="color:#fff;">${inviteLabel}</div>
+      </button>
+    </div>
+    <button id="invite-cta-config-btn" style="background:none;border:none;color:var(--text-3);font-size:0.8rem;margin-top:14px;cursor:pointer;font-family:inherit;text-decoration:underline;">${configLabel}</button>
+    <div class="menu-grid" style="margin-top:16px;">
+      <button class="menu-btn ghost" id="invite-cta-skip-btn"><div class="t">${skipLabel}</div></button>
+    </div>
+    <button id="invite-cta-dismiss-btn" style="background:none;border:none;color:var(--text-4);font-size:0.72rem;margin-top:10px;cursor:pointer;font-family:inherit;">${dismissLabel}</button>
+  </div>`;
+}
+
 // Training mode — same rules as a normal match, but:
 // 1. No game clock (isClockRunning: false always)
 // 2. No half-time (the match runs indefinitely)
@@ -7028,9 +7149,17 @@ function handleTutorialAction(userAction) {
   setTimeout(() => {
     const nextStepIndex = state.tutorialStep + 1;
     if (nextStepIndex >= tutorialScript.length) {
-      currentMenuView = 'main';
+      const tutorialTeam = state.homeTeam;
+      const showCta = shouldShowInviteCta();
+      currentMenuView = showCta ? 'tutorial-invite-cta' : 'main';
       setState(getInitialState());
-      setState({ toastToShow: { title: lang === 'en' ? 'Tutorial complete!' : lang === 'pt' ? 'Tutorial concluído!' : lang === 'fr' ? 'Tutoriel terminé !' : '¡Tutorial completado!', description: lang === 'en' ? 'You are ready to play. Choose a game mode.' : lang === 'pt' ? 'Você está pronto para jogar. Escolha um modo de jogo.' : lang === 'fr' ? 'Vous êtes prêt à jouer. Choisissez un mode de jeu.' : 'Ya estás listo para jugar. Elige un modo de juego.' } });
+      if (showCta) {
+        inviteCtaTeam = tutorialTeam;
+        bumpInviteCtaViews();
+        trackEvent('invite_cta_shown', { source: 'tutorial' });
+      } else {
+        setState({ toastToShow: { title: lang === 'en' ? 'Tutorial complete!' : lang === 'pt' ? 'Tutorial concluído!' : lang === 'fr' ? 'Tutoriel terminé !' : '¡Tutorial completado!', description: lang === 'en' ? 'You are ready to play. Choose a game mode.' : lang === 'pt' ? 'Você está pronto para jogar. Escolha um modo de jogo.' : lang === 'fr' ? 'Vous êtes prêt à jouer. Choisissez un mode de jeu.' : 'Ya estás listo para jugar. Elige un modo de juego.' } });
+      }
       // Notify via Discord webhook — only for registered users (guests can't be challenged)
       if (currentUser && !currentUser.isAnonymous) {
         const username = userProfile?.username || currentUser?.email || 'Desconocido';
@@ -11341,7 +11470,7 @@ function renderTutorialPanel(s) {
   const hintLabel = lang === 'en' ? 'Follow the highlighted hint on the board.' : lang === 'pt' ? 'Siga a dica destacada no tabuleiro.' : lang === 'fr' ? 'Suivez l\'indication en surbrillance sur le plateau.' : 'Seguí la indicación resaltada en el tablero.';
   const doneLabel = lang === 'en' ? 'Got it! →' : lang === 'pt' ? 'Entendido! →' : lang === 'fr' ? 'Compris ! →' : '¡Entendido! →';
   const exitLabel = lang === 'en' ? 'Exit tutorial' : lang === 'pt' ? 'Sair do tutorial' : lang === 'fr' ? 'Quitter le tutoriel' : 'Salir del tutorial';
-  const stepLabel = lang === 'en' ? `Step ${s.tutorialStep + 1}/${tutorialScript.length}` : lang === 'pt' ? `Passo ${s.tutorialStep + 1}/${tutorialScript.length}` : lang === 'fr' ? `Étape ${s.tutorialStep + 1}/${tutorialScript.length}` : `Paso ${s.tutorialStep + 1}/${tutorialScript.length}`;
+  const stepLabel = lang === 'en' ? `Lesson ${step.lesson}/${TUTORIAL_LESSON_COUNT}` : lang === 'pt' ? `Lição ${step.lesson}/${TUTORIAL_LESSON_COUNT}` : lang === 'fr' ? `Leçon ${step.lesson}/${TUTORIAL_LESSON_COUNT}` : `Lección ${step.lesson}/${TUTORIAL_LESSON_COUNT}`;
 
   let actionHtml = '';
   if (needsDiceButton) {
@@ -11515,7 +11644,15 @@ function renderDicePanel(s) {
         <button class="btn ghost" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${t('gameover.back')}</button>
       </div>`;
     }
-    return `<div class="dice-panel"><h3>${t('gameover.finished')}</h3><button class="btn" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${s.gameMode === 'league' ? t('gameover.league') : t('gameover.back')}</button></div>`;
+    const showGameOverInviteCta = s.gameMode === 'vs-ai' && shouldShowInviteCta();
+    const gameOverInviteCtaHtml = showGameOverInviteCta ? `
+      <button class="btn team-btn" id="gameover-invite-cta-btn" style="width:100%; margin-top:6px; background:var(--green-accent); border-color:var(--green-accent);">${lang === 'en' ? 'Beat the machine? Play a friend' : lang === 'pt' ? 'Venceu a máquina? Jogue com um amigo' : lang === 'fr' ? 'Battu la machine ? Jouez contre un ami' : '¿Le ganaste a la máquina? Jugá contra un amigo'}</button>
+      <div style="text-align:center;margin-top:6px;">
+        <button id="gameover-invite-cta-config-btn" style="background:none;border:none;color:var(--text-3);font-size:0.74rem;cursor:pointer;font-family:inherit;text-decoration:underline;">${lang === 'en' ? 'Change settings' : lang === 'pt' ? 'Mudar configurações' : lang === 'fr' ? 'Modifier les paramètres' : 'Cambiar configuración'}</button>
+        <span style="color:var(--text-4);"> · </span>
+        <button id="gameover-invite-cta-dismiss-btn" style="background:none;border:none;color:var(--text-4);font-size:0.7rem;cursor:pointer;font-family:inherit;">${lang === 'en' ? 'No thanks' : lang === 'pt' ? 'Não, obrigado' : lang === 'fr' ? 'Non merci' : 'No, gracias'}</button>
+      </div>` : '';
+    return `<div class="dice-panel"><h3>${t('gameover.finished')}</h3>${gameOverInviteCtaHtml}<button class="btn" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${s.gameMode === 'league' ? t('gameover.league') : t('gameover.back')}</button></div>`;
   }
 
   const isBotTurn = s.gameMode === 'vs-ai' && s.currentPlayer === s.aiTeam;
@@ -11719,6 +11856,7 @@ function render() {
       return;
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
+    else if (currentMenuView === 'tutorial-invite-cta') app.innerHTML = renderTutorialInviteCta();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
     else if (currentMenuView === 'tournaments') app.innerHTML = renderTournamentsScreen();
     else if (currentMenuView === 'tournament-create') app.innerHTML = renderTournamentCreate();
@@ -12069,6 +12207,30 @@ function wireEvents() {
       render();
     };
   }
+
+  // "Plan Entrada" — invite-a-friend CTA (post-tutorial screen)
+  const inviteCtaPlayBtn = document.getElementById('invite-cta-play-btn');
+  if (inviteCtaPlayBtn) inviteCtaPlayBtn.onclick = () => {
+    startInviteCtaRoom(inviteCtaTeam || TEAMS[0], 'tutorial');
+  };
+  const inviteCtaConfigBtn = document.getElementById('invite-cta-config-btn');
+  if (inviteCtaConfigBtn) inviteCtaConfigBtn.onclick = () => {
+    trackEvent('invite_cta_config_changed', { source: 'tutorial' });
+    currentMenuView = 'online-setup';
+    render();
+  };
+  const inviteCtaSkipBtn = document.getElementById('invite-cta-skip-btn');
+  if (inviteCtaSkipBtn) inviteCtaSkipBtn.onclick = () => {
+    currentMenuView = 'main';
+    render();
+  };
+  const inviteCtaDismissBtn = document.getElementById('invite-cta-dismiss-btn');
+  if (inviteCtaDismissBtn) inviteCtaDismissBtn.onclick = () => {
+    dismissInviteCta();
+    trackEvent('invite_cta_dismissed', { source: 'tutorial' });
+    currentMenuView = 'main';
+    render();
+  };
 
   const reconnectAcceptBtn = document.getElementById('reconnect-accept-btn');
   if (reconnectAcceptBtn) reconnectAcceptBtn.onclick = () => { reconnectToOnlineRoom(); };
@@ -12692,6 +12854,29 @@ function wireEvents() {
     } else {
       currentMenuView = 'main'; setState(getInitialState());
     }
+  };
+
+  // "Plan Entrada" — invite-a-friend CTA (vs-IA game-over screen)
+  const gameoverInviteCtaBtn = document.getElementById('gameover-invite-cta-btn');
+  if (gameoverInviteCtaBtn) gameoverInviteCtaBtn.onclick = () => {
+    const team = inviteCtaTeam || (state.aiTeam === 'home' ? state.awayTeam : state.homeTeam);
+    // Must leave gamePhase:'game-over' first — otherwise render() keeps routing to the
+    // game screen regardless of currentMenuView, and onlineCreateRoom's navigation to
+    // 'online-waiting' silently has no visible effect.
+    setState(getInitialState());
+    startInviteCtaRoom(team, 'vs_ai_gameover');
+  };
+  const gameoverInviteCtaConfigBtn = document.getElementById('gameover-invite-cta-config-btn');
+  if (gameoverInviteCtaConfigBtn) gameoverInviteCtaConfigBtn.onclick = () => {
+    trackEvent('invite_cta_config_changed', { source: 'vs_ai_gameover' });
+    currentMenuView = 'online-setup';
+    setState(getInitialState());
+  };
+  const gameoverInviteCtaDismissBtn = document.getElementById('gameover-invite-cta-dismiss-btn');
+  if (gameoverInviteCtaDismissBtn) gameoverInviteCtaDismissBtn.onclick = () => {
+    dismissInviteCta();
+    trackEvent('invite_cta_dismissed', { source: 'vs_ai_gameover' });
+    render();
   };
 
   const shareResultBtn = document.getElementById('share-result-btn');
