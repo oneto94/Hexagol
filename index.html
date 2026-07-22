@@ -260,7 +260,8 @@
     /* Dice panel: absolute minimum */
     .dice-panel { padding: 3px 6px; border-radius: 6px; }
     .dice-row { gap: 4px; }
-    .dice-face { width: 26px; height: 26px; font-size: 0.76rem; border-radius: 6px; }
+    .dice-face { width: 26px; height: 26px; font-size: 0.76rem; border-radius: 6px; box-shadow: 0 0 0 2px rgba(255,255,255,0.6), 0 1px 3px rgba(0,0,0,0.18); }
+    .dice-face.zero { box-shadow: 0 0 0 2px rgba(255,255,255,0.7), 0 1px 4px rgba(0,0,0,0.2); }
 
     /* Hide desktop-only elements on mobile */
     .hide-on-mobile { display: none !important; }
@@ -456,12 +457,13 @@
     border: 1px solid #d2d2d2;
     display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 1.1rem;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.6), 0 2px 4px rgba(0,0,0,0.18);
     flex-shrink: 0;
     color: #1c2b22; /* fixed dark text — the dice face itself is always white/physical-looking, independent of theme */
   }
   .dice-face.zero {
     background: linear-gradient(160deg,#fde2e1,#f8c9c7); color: #9a2f24;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.7), 0 2px 6px rgba(0,0,0,0.2);
     animation: zero-pulse 0.9s ease-in-out infinite;
   }
   .dice-face.empty { opacity: 0.45; font-size: 1.3rem; }
@@ -11310,6 +11312,21 @@ function teamButtonStyle(team) {
   const border = team.secondaryColor ? hsl(team.secondaryColor) : 'transparent';
   return `background:${bg}; color:${fg}; border:2px solid ${border};`;
 }
+// Subtle version for "whose turn is it" panels: a soft tint + a colored left edge,
+// NOT the team's solid color — that's reserved for actual buttons (roll dice, etc.)
+// so the two don't get visually confused with each other.
+function teamPanelTintStyle(team) {
+  // Near-white primary colors barely show up as a tint and are invisible as a border
+  // against a light page background — fall back to the kit's secondary color for the
+  // accent edge in that case (most white kits pair with a contrasting trim color).
+  const lightness = parseFloat((team.primaryColor || '').split(' ')[2]) || 50;
+  const isNearWhite = lightness >= 88;
+  const accentColor = (isNearWhite && team.secondaryColor) ? team.secondaryColor : team.primaryColor;
+  // Note: border-color is intentionally left untouched (keeps the panel's normal
+  // neutral border) — that way the panel always reads as "a panel" even when the
+  // team's own color would otherwise be too pale to see against the background.
+  return `background:hsl(${team.primaryColor} / 0.13); border-left:4px solid hsl(${accentColor});`;
+}
 
 function renderTutorialPanel(s) {
   const step = tutorialScript[s.tutorialStep];
@@ -11548,7 +11565,7 @@ function renderDicePanel(s) {
     </span>`;
 
   return `
-  <div class="dice-panel">
+  <div class="dice-panel" style="${teamPanelTintStyle(currentTeam)}">
     <h3>${turnLabel}${isBotTurn ? ' 🤖' : ''}${isOpponentOnlineTurn ? ' ⏳' : ''}</h3>
     <label class="auto-roll-toggle" style="display:flex;align-items:center;gap:5px;font-size:0.7rem;color:var(--text-4);margin:2px 0 4px;cursor:pointer;user-select:none;">
       <input type="checkbox" id="auto-roll-checkbox" ${getAutoRollPref() ? 'checked' : ''} style="cursor:pointer;margin:0;">
