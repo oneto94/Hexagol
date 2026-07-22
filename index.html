@@ -5288,7 +5288,22 @@ function setState(patch) {
       scheduleRoomDeletion();
     }
   }
+  // Preserve whatever the user is mid-typing in the chat input — render() replaces
+  // the whole DOM so the <input> gets destroyed and recreated, wiping any draft.
+  // Same fix already applied to applyRemoteState (opponent's actions) and to the
+  // clock tick (via surgical updates); this covers the remaining case: our own
+  // actions (rolling the dice, moving a piece, etc.), which go through setState.
+  const chatInput = document.getElementById('chat-input');
+  const chatDraft = chatInput ? chatInput.value : '';
+  const chatHadFocus = chatInput === document.activeElement;
   render();
+  if (chatDraft) {
+    const newChatInput = document.getElementById('chat-input');
+    if (newChatInput) {
+      newChatInput.value = chatDraft;
+      if (chatHadFocus) newChatInput.focus();
+    }
+  }
   maybeTriggerBot();
   maybeTriggerAutoRoll();
 }
@@ -13448,7 +13463,7 @@ function startTurnTimer() {
       if (state.timer !== remaining) {
         setLocalOnlyState(s => ({ ...s, timer: remaining }));
       }
-      if (remaining === 0) startSecondHalfOnlineAuto();
+      if (remaining === 0 && onlineIsHost) startSecondHalfOnlineAuto();
       return;
     }
 
@@ -13508,7 +13523,9 @@ function autoRollPreGame() {
   }
 }
 
-// Fix 2: auto-start second half after 30s (online only, each client drives it)
+// Fix 2: auto-start second half after 30s (online only — host-only, like every
+// other automatic shared-state transition; the guest just receives the result via
+// Firebase sync, same as the manual button which only the host ever sees).
 // Uses wall-clock time (halfTimeStartedAt) instead of a local countdown to avoid
 // desync between host and guest who receive the half-time state at different times.
 let halfTimeStartedAt = null;
@@ -13516,7 +13533,7 @@ let preGameRollStartedAt = null; // wall-clock reference for pre-game-roll timer
 let overtimeChoiceStartedAt = null; // wall-clock reference for overtime-choice timeout
 
 function startSecondHalfOnlineAuto() {
-  if (state.gamePhase !== 'half-time' || state.gameMode !== 'online') return;
+  if (state.gamePhase !== 'half-time' || state.gameMode !== 'online' || !onlineIsHost) return;
   setState(s => {
     if (s.gamePhase !== 'half-time') return s; // already started
     const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
