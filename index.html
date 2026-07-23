@@ -1111,7 +1111,22 @@ const googleProvider = new firebase.auth.GoogleAuthProvider();
 // ═══════════════════════════════════════════════════════════
 // MÓDULO: I18N — Sistema de traducciones ES/EN
 // ═══════════════════════════════════════════════════════════
-let lang = localStorage.getItem('hexagol_lang') || 'es';
+const SUPPORTED_LANGS = ['es', 'en', 'pt', 'fr', 'de', 'it'];
+function detectInitialLang() {
+  const saved = localStorage.getItem('hexagol_lang');
+  if (saved) return saved; // returning visitor — their own choice always wins
+  const prefs = (navigator.languages && navigator.languages.length) ? navigator.languages : [navigator.language || ''];
+  for (const pref of prefs) {
+    const base = (pref || '').slice(0, 2).toLowerCase();
+    if (SUPPORTED_LANGS.includes(base)) {
+      localStorage.setItem('hexagol_lang', base); // persist like a manual pick, same as setLang does
+      return base;
+    }
+  }
+  localStorage.setItem('hexagol_lang', 'en'); // none of the browser's preferred languages are supported — English is a safer universal default than Spanish
+  return 'en';
+}
+let lang = detectInitialLang();
 
 // ═══════════════════════════════════════════════════════════
 // MÓDULO: Theme — light/dark, mirrors the inline early-init script
@@ -2376,6 +2391,27 @@ function applyRemoteState(remote) {
       window.state = state;
       console.log('[Hexagol Sync] ✅ Re-synced from remote state.');
     }
+  }
+
+  // Recovery: both pre-game rolls can end up filled purely through sync (both
+  // players rolled within the same round-trip, so neither client's own
+  // doPreGameRoll call ever locally saw both values at once — each only saw
+  // its own). Nobody scheduled the kickoff resolution in that case, so the
+  // match would otherwise sit stuck in pre-game-roll forever. Host-only, like
+  // every other automatic shared-state transition, so the clients don't race.
+  if (onlineIsHost && state.gamePhase === 'pre-game-roll' && !state.isResolvingKickoff &&
+      state.homeRoll !== null && state.awayRoll !== null) {
+    console.warn('[Hexagol Sync] Pre-game-roll stuck with both rolls in — host recovering. homeRoll:', state.homeRoll, 'awayRoll:', state.awayRoll, 'overtimeMode:', state.overtimeMode, 'half:', state.half, 'turnCount:', state.turnCount);
+    setState(s => (s.gamePhase === 'pre-game-roll' && !s.isResolvingKickoff && s.homeRoll !== null && s.awayRoll !== null)
+      ? { ...s, isResolvingKickoff: true }
+      : s);
+    setTimeout(() => {
+      setState(s2 => {
+        if (!s2.isResolvingKickoff) return s2; // already resolved another way
+        console.log('[Hexagol Sync] Resolving recovered kickoff. homeRoll:', s2.homeRoll, 'awayRoll:', s2.awayRoll, 'resulting turnCount will be:', (s2.turnCount || 0) + 1);
+        return resolveKickoffWinner({ ...s2, isResolvingKickoff: false });
+      });
+    }, 1700);
   }
 
   if (prev.gamePhase !== 'game-over' && state.gamePhase === 'game-over' && state.gameMode === 'online') {
@@ -13684,9 +13720,12 @@ function resolveKickoffWinner(s) {
     startClock();
     startTurnTimer();
     preGameRollStartedAt = null;
+    if (s.gameMode === 'online') {
+      console.log('[Hexagol Sync] Kickoff resolved. startingTeam:', startingTeam, 'onlineIsHost:', onlineIsHost, 'onlineMyTeam:', onlineMyTeam, 'overtimeMode:', s.overtimeMode, 'newTurnCount:', (s.turnCount || 0) + 1);
+    }
     const finalState = {
       ...s, players: newPlayers, currentPlayer: startingTeam, gamePhase: 'rolling',
-      kickoffTeam: startingTeam, turnCount: 1, isClockRunning: true, homeRoll: null, awayRoll: null,
+      kickoffTeam: startingTeam, turnCount: (s.turnCount || 0) + 1, isClockRunning: true, homeRoll: null, awayRoll: null,
       isKickoffTurn: true, timer: s.turnDuration,
       stats: { ...s.stats, possession: { home: s.stats.possession.home + (startingTeam === 'home' ? 1 : 0), away: s.stats.possession.away + (startingTeam === 'away' ? 1 : 0) } },
     };
