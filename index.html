@@ -1199,7 +1199,7 @@ let inviteCtaTeam = null; // which team to use if the person taps "invite a frie
 function startInviteCtaRoom(team, source) {
   trackEvent('invite_cta_clicked', { source });
   trackEvent('online_room_created', { duration: setupDuration, target_goals: setupTargetGoals, source: 'invite_cta_' + source });
-  onlineCreateRoom(team, setupDuration, setupTargetGoals).catch(err => {
+  onlineCreateRoom(team, setupDuration, setupTargetGoals, 'invite_cta').catch(err => {
     console.error('[Hexagol] Plan Entrada — error creando sala desde CTA:', err);
     alert('No se pudo crear la sala: ' + (err?.message || err));
   });
@@ -1297,7 +1297,7 @@ const i18n = {
     'menu.training.desc': 'Mova jogadores e a bola livremente, sem turnos ou regras.',
     'menu.donate': '️ Doações',
     'menu.community': 'Comunidade',
-    'menu.bug': '🐛 Reportar bug',
+    'menu.bug': 'Reportar bug',
     // User chip
     'user.guest': 'Convidado',
     'user.guest.desc': 'Crie uma conta para salvar seu progresso',
@@ -1459,7 +1459,7 @@ const i18n = {
     'menu.training.desc': 'Mové jugadores y la pelota libremente, sin turnos ni reglas.',
     'menu.donate': '️ Donaciones',
     'menu.community': 'Comunidad',
-    'menu.bug': '🐛 Reportar bug',
+    'menu.bug': 'Reportar bug',
     // User chip
     'user.guest': 'Invitado',
     'user.guest.desc': 'Creá una cuenta para guardar tu progreso',
@@ -1619,7 +1619,7 @@ const i18n = {
     'menu.training.desc': 'Move players and the ball freely, no turns or rules.',
     'menu.donate': '️ Donate',
     'menu.community': 'Community',
-    'menu.bug': '🐛 Report bug',
+    'menu.bug': 'Report bug',
     // User chip
     'user.guest': 'Guest',
     'user.guest.desc': 'Create an account to save your progress',
@@ -1779,7 +1779,7 @@ const i18n = {
     'menu.training.desc': 'Déplacez librement joueurs et ballon, sans tours ni règles.',
     'menu.donate': '️ Faire un don',
     'menu.community': 'Communauté',
-    'menu.bug': '🐛 Signaler un bug',
+    'menu.bug': 'Signaler un bug',
     // User chip
     'user.guest': 'Invité',
     'user.guest.desc': 'Créez un compte pour sauvegarder votre progression',
@@ -1939,7 +1939,7 @@ const i18n = {
     'menu.training.desc': 'Bewege Spieler und Ball frei, ohne Runden oder Regeln.',
     'menu.donate': '️ Spenden',
     'menu.community': 'Community',
-    'menu.bug': '🐛 Fehler melden',
+    'menu.bug': 'Fehler melden',
     // User chip
     'user.guest': 'Gast',
     'user.guest.desc': 'Erstelle ein Konto, um deinen Fortschritt zu speichern',
@@ -2099,7 +2099,7 @@ const i18n = {
     'menu.training.desc': 'Muovi liberamente giocatori e palla, senza turni né regole.',
     'menu.donate': '️ Fai una donazione',
     'menu.community': 'Community',
-    'menu.bug': '🐛 Segnala un bug',
+    'menu.bug': 'Segnala un bug',
     // User chip
     'user.guest': 'Ospite',
     'user.guest.desc': 'Crea un account per salvare i tuoi progressi',
@@ -2907,7 +2907,7 @@ async function updateEloAfterMatch(myResult, opponentUid) {
   }).catch(() => {});
 }
 
-async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
+async function onlineCreateRoom(homeTeam, duration, targetGoals = null, source = 'manual_create') {
   const code = generateRoomCode();
   onlineRoomId = code;
   onlineMyTeam = 'home';
@@ -2930,6 +2930,19 @@ async function onlineCreateRoom(homeTeam, duration, targetGoals = null) {
   }).catch(err => { console.error('[Hexagol Online] Error creando sala:', err); alert('Error creando sala: ' + err.message); });
 
   console.log('[Hexagol Online] Sala creada:', code);
+
+  // Aviso a Discord — mientras el flujo de salas sea manejable, avisar de cada
+  // sala creada (mientras espera rival) para poder sumarse a jugar. Sacar esto
+  // en cuanto el volumen de salas creadas por minuto lo vuelva ruido constante.
+  const sourceLabel = source === 'quick_match' ? 'Partida rápida (sin rival esperando, creó sala nueva)' : source === 'invite_cta' ? 'Invitación post-tutorial/post-IA' : 'Crear sala (manual)';
+  const creatorLabel = (currentUser && !currentUser.isAnonymous) ? (userProfile?.username || currentUser.email || 'usuario') : 'invitado';
+  fetch('https://discord.com/api/webhooks/1527085809487057048/i87E-iXVuId4qGMCS_WNTSrwQMc1sMmvGw5gEUj3omG6O67myw49xoqx_nVBFGzsElQh', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      content: `🎮 **Sala nueva creada** — ${creatorLabel} (${sourceLabel}) — variante ${setupGameVariant || 'classic'}\nUnirte: https://hexagol.com.ar?sala=${code}`,
+    }),
+  }).catch(() => {});
 
   onlineStatus = 'waiting';
   currentMenuView = 'online-waiting';
@@ -3063,7 +3076,7 @@ async function onlineQuickMatch(homeTeam, duration, targetGoals = null) {
   if (found) {
     await onlineJoinRoom(found, homeTeam);
   } else {
-    await onlineCreateRoom(homeTeam, duration, targetGoals);
+    await onlineCreateRoom(homeTeam, duration, targetGoals, 'quick_match');
   }
 }
 
@@ -5614,6 +5627,7 @@ function getInitialState(boardSize) {
     turnStartState: null,
     prevTurnSnapshot: null,
     undoUsedThisTurn: false,
+    diceRolling: false,
     lastAction: null,
     actionChoice: null,
     isKickoffTurn: false,
@@ -7447,6 +7461,142 @@ function startTutorial() {
   };
 }
 
+// ═══════════════════════════════════════════════════════════
+// MÓDULO: Reporte de bugs — reemplaza el Google Forms externo por una
+// pantalla propia, traducida en los 6 idiomas, con auto-detección de
+// dispositivo. Guarda en Firestore (colección 'bug_reports') y avisa por
+// Discord, mismo patrón que el aviso de tutorial completado.
+// ═══════════════════════════════════════════════════════════
+let bugReportForm = { description: '', screenMode: '', screenModeOther: '', device: '', deviceOther: '', email: '' };
+let bugReportSubmitted = false;
+let bugReportError = '';
+
+async function submitBugReport() {
+  const errRequired = lang === 'en' ? 'Please describe what happened.' : lang === 'pt' ? 'Por favor, descreva o que aconteceu.' : lang === 'fr' ? "Merci de décrire ce qui s'est passé." : lang === 'de' ? 'Bitte beschreibe, was passiert ist.' : lang === 'it' ? 'Per favore descrivi cosa è successo.' : 'Por favor contanos qué pasó.';
+  const errGeneric = lang === 'en' ? 'Something went wrong sending your report. Try again.' : lang === 'pt' ? 'Algo deu errado ao enviar seu relatório. Tente novamente.' : lang === 'fr' ? "Une erreur s'est produite lors de l'envoi. Réessayez." : lang === 'de' ? 'Beim Senden ist ein Fehler aufgetreten. Versuche es erneut.' : lang === 'it' ? "Si è verificato un errore nell'invio. Riprova." : 'Algo salió mal al enviar tu reporte. Probá de nuevo.';
+
+  if (!bugReportForm.description.trim()) {
+    bugReportError = errRequired;
+    render();
+    return;
+  }
+  bugReportError = '';
+
+  const screenModeLabel = bugReportForm.screenMode === 'other' ? (bugReportForm.screenModeOther || 'other') : (bugReportForm.screenMode || null);
+  const deviceLabel = bugReportForm.device === 'other' ? (bugReportForm.deviceOther || 'other') : (bugReportForm.device || null);
+
+  const payload = {
+    description: bugReportForm.description.trim(),
+    screenMode: screenModeLabel,
+    device: deviceLabel,
+    email: bugReportForm.email.trim() || null,
+    lang,
+    userAgent: navigator.userAgent,
+    username: (currentUser && !currentUser.isAnonymous) ? (userProfile?.username || null) : null,
+    uid: (currentUser && !currentUser.isAnonymous) ? currentUser.uid : null,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+  };
+
+  try {
+    await db.collection('bug_reports').add(payload);
+    trackEvent('bug_report_submitted', { screen_mode: screenModeLabel, device: deviceLabel, lang });
+    fetch('https://discord.com/api/webhooks/1527085809487057048/i87E-iXVuId4qGMCS_WNTSrwQMc1sMmvGw5gEUj3omG6O67myw49xoqx_nVBFGzsElQh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content: `🐛 **Nuevo reporte de bug**\n**Qué pasó:** ${payload.description}\n**Pantalla/modo:** ${screenModeLabel || '—'}\n**Dispositivo:** ${deviceLabel || '—'}\n**Idioma:** ${lang}\n**Usuario:** ${payload.username || '(invitado/sin cuenta)'}\n**Email:** ${payload.email || '—'}`,
+      }),
+    }).catch(() => {});
+    bugReportSubmitted = true;
+    render();
+  } catch (err) {
+    console.error('[Hexagol] Error submitting bug report:', err);
+    bugReportError = errGeneric;
+    render();
+  }
+}
+
+function resetBugReportForm() {
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  bugReportForm = { description: '', screenMode: '', screenModeOther: '', device: isMobile ? 'mobile' : 'desktop', deviceOther: '', email: '' };
+  bugReportSubmitted = false;
+  bugReportError = '';
+}
+
+function renderBugReportScreen() {
+  const title = lang === 'en' ? 'Report a bug' : lang === 'pt' ? 'Reportar um bug' : lang === 'fr' ? 'Signaler un bug' : lang === 'de' ? 'Einen Fehler melden' : lang === 'it' ? 'Segnala un bug' : 'Reportar un bug';
+
+  if (bugReportSubmitted) {
+    const thanksTitle = lang === 'en' ? 'Thanks!' : lang === 'pt' ? 'Obrigado!' : lang === 'fr' ? 'Merci !' : lang === 'de' ? 'Danke!' : lang === 'it' ? 'Grazie!' : '¡Gracias!';
+    const thanksDesc = lang === 'en' ? 'We received your report.' : lang === 'pt' ? 'Recebemos seu relatório.' : lang === 'fr' ? 'Nous avons bien reçu votre signalement.' : lang === 'de' ? 'Wir haben deine Meldung erhalten.' : lang === 'it' ? 'Abbiamo ricevuto la tua segnalazione.' : 'Recibimos tu reporte.';
+    return `
+  <div class="menu-screen" style="text-align:center;">
+    <h1>${thanksTitle}</h1>
+    <div class="subtitle">${thanksDesc}</div>
+    <div class="menu-grid" style="margin-top:20px;">
+      <button class="menu-btn" data-menu="back"><div class="t">${lang === 'en' ? 'Back to menu' : lang === 'pt' ? 'Voltar ao menu' : lang === 'fr' ? 'Retour au menu' : lang === 'de' ? 'Zurück zum Menü' : lang === 'it' ? 'Torna al menu' : 'Volver al menú'}</div></button>
+    </div>
+  </div>`;
+  }
+
+  const qWhat = lang === 'en' ? 'What happened?' : lang === 'pt' ? 'O que aconteceu?' : lang === 'fr' ? "Qu'est-ce qui s'est passé ?" : lang === 'de' ? 'Was ist passiert?' : lang === 'it' ? 'Cosa è successo?' : '¿Qué pasó?';
+  const qWhatPlaceholder = lang === 'en' ? 'Describe what happened and what you expected to happen...' : lang === 'pt' ? 'Descreva o que aconteceu e o que você esperava que acontecesse...' : lang === 'fr' ? "Décrivez ce qui s'est passé et ce à quoi vous vous attendiez..." : lang === 'de' ? 'Beschreibe, was passiert ist und was du erwartet hattest...' : lang === 'it' ? 'Descrivi cosa è successo e cosa ti aspettavi che succedesse...' : 'Contanos qué pasó y qué esperabas que pasara...';
+  const qScreen = lang === 'en' ? 'What screen or mode were you in?' : lang === 'pt' ? 'Em que tela ou modo você estava?' : lang === 'fr' ? 'Dans quel écran ou mode étiez-vous ?' : lang === 'de' ? 'In welchem Bildschirm oder Modus warst du?' : lang === 'it' ? 'In quale schermata o modalità eri?' : '¿En qué pantalla o modo estabas?';
+  const qDevice = lang === 'en' ? 'What device?' : lang === 'pt' ? 'Em que dispositivo?' : lang === 'fr' ? 'Sur quel appareil ?' : lang === 'de' ? 'Auf welchem Gerät?' : lang === 'it' ? 'Su quale dispositivo?' : '¿En qué dispositivo?';
+  const qEmail = lang === 'en' ? 'Your email to follow up (optional)' : lang === 'pt' ? 'Seu email para retorno (opcional)' : lang === 'fr' ? 'Votre email pour vous recontacter (facultatif)' : lang === 'de' ? 'Deine E-Mail für Rückfragen (optional)' : lang === 'it' ? 'La tua email per ricontattarti (facoltativo)' : 'Tu email para contactarte (opcional)';
+  const otherLabel = lang === 'en' ? 'Other:' : lang === 'pt' ? 'Outro:' : lang === 'fr' ? 'Autre :' : lang === 'de' ? 'Andere:' : lang === 'it' ? 'Altro:' : 'Otro:';
+  const submitLabel = lang === 'en' ? 'Send' : lang === 'pt' ? 'Enviar' : lang === 'fr' ? 'Envoyer' : lang === 'de' ? 'Senden' : lang === 'it' ? 'Invia' : 'Enviar';
+
+  const screenOptions = [
+    { id: 'menu', label: lang === 'en' ? 'Menu' : lang === 'pt' ? 'Menu' : lang === 'fr' ? 'Menu' : lang === 'de' ? 'Menü' : lang === 'it' ? 'Menu' : 'Menú' },
+    { id: 'vs-ai', label: lang === 'en' ? 'vs. AI' : lang === 'pt' ? 'vs. IA' : lang === 'fr' ? "vs. l'IA" : lang === 'de' ? 'vs. KI' : lang === 'it' ? 'vs. IA' : 'vs. IA' },
+    { id: 'online', label: 'Online' },
+    { id: 'local', label: lang === 'en' ? 'Local 1v1' : lang === 'pt' ? '1v1 local' : lang === 'fr' ? '1v1 local' : lang === 'de' ? '1v1 lokal' : lang === 'it' ? '1v1 locale' : 'Local 1v1' },
+    { id: 'league', label: lang === 'en' ? 'League' : lang === 'pt' ? 'Liga' : lang === 'fr' ? 'Ligue' : lang === 'de' ? 'Liga' : lang === 'it' ? 'Lega' : 'Liga' },
+    { id: 'other', label: otherLabel.replace(':', '') },
+  ];
+  const deviceOptions = [
+    { id: 'desktop', label: lang === 'en' ? 'Computer' : lang === 'pt' ? 'Computador' : lang === 'fr' ? 'Ordinateur' : lang === 'de' ? 'Computer' : lang === 'it' ? 'Computer' : 'Computadora' },
+    { id: 'mobile', label: lang === 'en' ? 'Phone' : lang === 'pt' ? 'Celular' : lang === 'fr' ? 'Téléphone' : lang === 'de' ? 'Handy' : lang === 'it' ? 'Cellulare' : 'Celular' },
+    { id: 'other', label: otherLabel.replace(':', '') },
+  ];
+
+  return `
+  <div class="menu-screen" style="text-align:left;">
+    <h1 style="text-align:center;">${title}</h1>
+    ${bugReportError ? `<div style="background:#fde2e1;color:#9a2f24;border-radius:8px;padding:8px 12px;font-size:0.82rem;margin-bottom:10px;">${bugReportError}</div>` : ''}
+    <div style="margin-bottom:14px;">
+      <span class="field-label">${qWhat}</span>
+      <textarea id="bug-report-description" rows="4" placeholder="${qWhatPlaceholder}" style="width:100%;box-sizing:border-box;border-radius:10px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);padding:10px;font-family:inherit;font-size:0.88rem;resize:vertical;">${escapeHtml(bugReportForm.description)}</textarea>
+    </div>
+    <div style="margin-bottom:14px;">
+      <span class="field-label">${qScreen}</span>
+      <div class="duration-row" id="bug-report-screen-row">
+        ${screenOptions.map(o => `<button data-bug-screen="${o.id}" class="${bugReportForm.screenMode === o.id ? 'active' : ''}">${o.label}</button>`).join('')}
+      </div>
+      ${bugReportForm.screenMode === 'other' ? `<input type="text" id="bug-report-screen-other" value="${escapeHtml(bugReportForm.screenModeOther)}" placeholder="${otherLabel.replace(':', '')}" style="width:100%;box-sizing:border-box;border-radius:8px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);padding:8px 10px;font-family:inherit;font-size:0.85rem;margin-top:6px;">` : ''}
+    </div>
+    <div style="margin-bottom:14px;">
+      <span class="field-label">${qDevice}</span>
+      <div class="duration-row" id="bug-report-device-row">
+        ${deviceOptions.map(o => `<button data-bug-device="${o.id}" class="${bugReportForm.device === o.id ? 'active' : ''}">${o.label}</button>`).join('')}
+      </div>
+      ${bugReportForm.device === 'other' ? `<input type="text" id="bug-report-device-other" value="${escapeHtml(bugReportForm.deviceOther)}" placeholder="${otherLabel.replace(':', '')}" style="width:100%;box-sizing:border-box;border-radius:8px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);padding:8px 10px;font-family:inherit;font-size:0.85rem;margin-top:6px;">` : ''}
+    </div>
+    <div style="margin-bottom:18px;">
+      <span class="field-label">${qEmail}</span>
+      <input type="email" id="bug-report-email" value="${escapeHtml(bugReportForm.email)}" placeholder="tu@email.com" style="width:100%;box-sizing:border-box;border-radius:8px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);padding:8px 10px;font-family:inherit;font-size:0.85rem;">
+    </div>
+    <div class="menu-grid">
+      <button class="menu-btn" id="bug-report-submit-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
+        <div class="t" style="color:#fff;">${submitLabel}</div>
+      </button>
+      <button class="menu-btn" data-menu="back"><div class="t">${t('setup.back')}</div></button>
+    </div>
+  </div>`;
+}
+
+
 function renderTutorialInviteCta() {
   const title = lang === 'en' ? 'Tutorial complete!' : lang === 'pt' ? 'Tutorial concluído!' : lang === 'fr' ? 'Tutoriel terminé !' : lang === 'de' ? 'Tutorial abgeschlossen!' : lang === 'it' ? 'Tutorial completato!' : '¡Tutorial completado!';
   const subtitle = lang === 'en' ? 'Now play with someone for real' : lang === 'pt' ? 'Agora jogue com alguém de verdade' : lang === 'fr' ? 'Maintenant, jouez avec une vraie personne' : lang === 'de' ? 'Jetzt spiel mit einer echten Person' : lang === 'it' ? 'Ora gioca con una persona vera' : 'Ahora jugá con alguien de verdad';
@@ -8918,11 +9068,10 @@ function renderMainMenu() {
            style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c1470f;text-decoration:none;font-weight:600;">
           Feedback
         </a>
-        <a href="https://docs.google.com/forms/d/e/1FAIpQLSf4WbmjyE_7c6BCZsIJV42_CgS4vytQ9dH9_KfINmFJBPykxQ/viewform?usp=header" target="_blank" rel="noopener"
-           onclick="trackEvent('bug_report_click')"
-           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c0392b;text-decoration:none;font-weight:600;">
-          ${lang === 'en' ? 'Report bug' : lang === 'pt' ? 'Reportar bug' : lang === 'fr' ? 'Signaler un bug' : lang === 'de' ? 'Fehler melden' : lang === 'it' ? 'Segnala un bug' : 'Reportar bug'}
-        </a>
+        <button id="bug-report-open-btn"
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c0392b;text-decoration:none;font-weight:600;cursor:pointer;font-family:inherit;">
+          ${t('menu.bug')}
+        </button>
       </div>
       <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap; padding-top:8px; border-top:1px solid var(--border-1);">
         <button id="menu-lang-btn" style="background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
@@ -12401,6 +12550,7 @@ function render() {
     }
     if (currentMenuView === 'rules') app.innerHTML = renderRules();
     else if (currentMenuView === 'tutorial-invite-cta') app.innerHTML = renderTutorialInviteCta();
+    else if (currentMenuView === 'bug-report') app.innerHTML = renderBugReportScreen();
     else if (currentMenuView === 'leaderboard') app.innerHTML = renderLeaderboard();
     else if (currentMenuView === 'tournaments') app.innerHTML = renderTournamentsScreen();
     else if (currentMenuView === 'tournament-create') app.innerHTML = renderTournamentCreate();
@@ -12775,6 +12925,37 @@ function wireEvents() {
     currentMenuView = 'main';
     render();
   };
+
+  // Bug report — open from the main menu
+  const bugReportOpenBtn = document.getElementById('bug-report-open-btn');
+  if (bugReportOpenBtn) bugReportOpenBtn.onclick = () => {
+    resetBugReportForm();
+    currentMenuView = 'bug-report';
+    trackEvent('bug_report_click');
+    render();
+  };
+  const bugReportDescription = document.getElementById('bug-report-description');
+  if (bugReportDescription) bugReportDescription.oninput = () => { bugReportForm.description = bugReportDescription.value; };
+  const bugReportScreenOther = document.getElementById('bug-report-screen-other');
+  if (bugReportScreenOther) bugReportScreenOther.oninput = () => { bugReportForm.screenModeOther = bugReportScreenOther.value; };
+  const bugReportDeviceOther = document.getElementById('bug-report-device-other');
+  if (bugReportDeviceOther) bugReportDeviceOther.oninput = () => { bugReportForm.deviceOther = bugReportDeviceOther.value; };
+  const bugReportEmail = document.getElementById('bug-report-email');
+  if (bugReportEmail) bugReportEmail.oninput = () => { bugReportForm.email = bugReportEmail.value; };
+  document.querySelectorAll('[data-bug-screen]').forEach(btn => {
+    btn.onclick = () => {
+      bugReportForm.screenMode = btn.getAttribute('data-bug-screen');
+      render();
+    };
+  });
+  document.querySelectorAll('[data-bug-device]').forEach(btn => {
+    btn.onclick = () => {
+      bugReportForm.device = btn.getAttribute('data-bug-device');
+      render();
+    };
+  });
+  const bugReportSubmitBtn = document.getElementById('bug-report-submit-btn');
+  if (bugReportSubmitBtn) bugReportSubmitBtn.onclick = () => { submitBugReport(); };
 
   const reconnectAcceptBtn = document.getElementById('reconnect-accept-btn');
   if (reconnectAcceptBtn) reconnectAcceptBtn.onclick = () => { reconnectToOnlineRoom(); };
@@ -13751,8 +13932,10 @@ function doDiceRoll() {
       // If an undo (or anything else) moved the game out of 'rolling' while the
       // spin animation was playing, abandon this roll entirely — resolving it
       // anyway would stomp the undo's restored dice value with a brand new one,
-      // or force a phase change the player didn't ask for.
-      if (!s0.diceRolling || s0.gamePhase !== 'rolling') return s0;
+      // or force a phase change the player didn't ask for. Must still clear
+      // diceRolling here — leaving it stuck true would permanently block every
+      // future roll, since doDiceRoll's own top guard checks this same flag.
+      if (!s0.diceRolling || s0.gamePhase !== 'rolling') return { ...s0, diceRolling: false };
       const activeDice = getActiveDiceValues(s0);
       const roll = activeDice[Math.floor(Math.random() * activeDice.length)];
       return doDiceRollResolve(s0, roll);
