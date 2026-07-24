@@ -2812,9 +2812,11 @@ async function loadOrCreateUserProfile(user) {
       wins: 0, losses: 0, draws: 0,
       gamesPlayed: 0,
       customTeam: null,
+      isOver16: pendingIsOver16 !== null ? pendingIsOver16 : true, // Firebase-only accounts predating the age gate default true — see spec re: existing accounts
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
     };
+    pendingIsOver16 = null;
     await ref.set(userProfile);
   }
 }
@@ -7951,7 +7953,7 @@ function clearLocalLeague() {
   localStorage.removeItem(LOCAL_LEAGUE_STORAGE_KEY);
 }
 
-function startLeague(teamIds, durationMinutes) {
+function startLeague(teamIds, durationMinutes, targetGoals = null) {
   const leagueTeams = teamIds.map(id => {
     const teamData = TEAMS.find(t => t.id === id);
     return {
@@ -7963,7 +7965,7 @@ function startLeague(teamIds, durationMinutes) {
   const schedule = generateLeagueSchedule(teamIds);
   return {
     teams: leagueTeams, schedule, playerStats: [], playerHandicaps: [],
-    currentRound: 1, matchDurationMinutes: durationMinutes, currentMatchId: null,
+    currentRound: 1, matchDurationMinutes: durationMinutes, matchTargetGoals: targetGoals, currentMatchId: null,
   };
 }
 
@@ -7986,12 +7988,15 @@ function startLeagueMatch(s, matchId) {
   const awayTeamData = TEAMS.find(t => t.id === match.awayTeamId);
   const { finalHomeTeam, finalAwayTeam, clashResolved } = resolveKitClash(homeTeamData, awayTeamData);
   const fresh = getInitialState();
-  const turnDur = s.leagueState.matchDurationMinutes <= 5 ? 10 : (s.leagueState.matchDurationMinutes <= 10 ? 20 : TURN_DURATION);
+  const useGoals = !!s.leagueState.matchTargetGoals;
+  const turnDur = useGoals ? TURN_DURATION : (s.leagueState.matchDurationMinutes <= 5 ? (s.leagueState.matchDurationMinutes <= 2 ? 10 : 20) : TURN_DURATION);
   return {
     ...fresh, gameMode: 'league', leagueState: { ...s.leagueState, currentMatchId: matchId },
     players: applyHandicapsToPlayers(fresh.players, s.leagueState.playerHandicaps, finalHomeTeam, finalAwayTeam),
     homeTeam: finalHomeTeam, awayTeam: finalAwayTeam, gamePhase: 'pre-game-roll',
-    halfDurationMinutes: s.leagueState.matchDurationMinutes, gameClock: s.leagueState.matchDurationMinutes * 60,
+    targetGoals: useGoals ? s.leagueState.matchTargetGoals : null,
+    halfDurationMinutes: useGoals ? 0 : s.leagueState.matchDurationMinutes,
+    gameClock: useGoals ? 0 : s.leagueState.matchDurationMinutes * 60,
     turnDuration: turnDur, timer: turnDur,
     message: lang === 'en' ? `Round ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Roll the dice.` : lang === 'pt' ? `Rodada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Lance o dado.` : lang === 'fr' ? `Journée ${match.round} : ${homeTeamData.name} vs ${awayTeamData.name}. Lancez le dé.` : lang === 'de' ? `Spieltag ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Würfle.` : lang === 'it' ? `Giornata ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Lancia il dado.` : `Jornada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Tiren los dados.`,
     toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : lang === 'fr' ? 'Conflit de maillots' : lang === 'de' ? 'Trikotkonflikt' : lang === 'it' ? 'Conflitto di maglie' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeamData.name} will use their alternate kit.` : lang === 'pt' ? `${awayTeamData.name} usará seu uniforme alternativo.` : lang === 'fr' ? `${awayTeamData.name} utilisera son maillot alternatif.` : lang === 'de' ? `${awayTeamData.name} wird sein Ausweichtrikot tragen.` : lang === 'it' ? `${awayTeamData.name} userà la maglia alternativa.` : `${awayTeamData.name} usará su camiseta alternativa.` } : null,
@@ -9268,14 +9273,37 @@ function renderLanding() {
 let authFormMode = 'login';
 let authFormError = '';
 let authFormLoading = false;
+// Age gate (legal requirement — see hexagol_spec_age_gate_menores_2.md): whether
+// we're showing the "you need to be 16+" screen instead of the normal form, and
+// the computed isOver16 boolean to carry into whichever profile-creation path
+// actually runs afterward (email registration or Google sign-in's username step).
+let authAgeBlocked = false;
+let pendingIsOver16 = null;
 
 function renderAuthScreen() {
   const isRegister = authFormMode === 'register';
+  if (isRegister && authAgeBlocked) {
+    const title = lang === 'en' ? 'Almost there!' : lang === 'pt' ? 'Quase lá!' : lang === 'fr' ? 'Presque prêt !' : lang === 'de' ? 'Fast geschafft!' : lang === 'it' ? 'Ci siamo quasi!' : '¡Casi listo!';
+    const desc = lang === 'en' ? 'To create a full account you need to be 16 or older. You can still play everything as a guest — no account needed, and you lose nothing except saving your stats across devices.' : lang === 'pt' ? 'Para criar uma conta completa você precisa ter 16 anos ou mais. Você ainda pode jogar tudo como convidado — sem precisar de conta, e você não perde nada além de salvar suas estatísticas entre dispositivos.' : lang === 'fr' ? "Pour créer un compte complet, il faut avoir 16 ans ou plus. Vous pouvez quand même tout jouer en tant qu'invité — pas besoin de compte, et vous ne perdez rien à part la sauvegarde de vos statistiques entre appareils." : lang === 'de' ? 'Um ein vollständiges Konto zu erstellen, musst du mindestens 16 Jahre alt sein. Du kannst trotzdem alles als Gast spielen — kein Konto nötig, und du verlierst nichts außer der geräteübergreifenden Speicherung deiner Statistiken.' : lang === 'it' ? "Per creare un account completo devi avere almeno 16 anni. Puoi comunque giocare a tutto come ospite — non serve un account, e non perdi nulla se non il salvataggio delle statistiche tra dispositivi." : 'Para crear una cuenta completa tenés que tener 16 años o más. Igual podés jugar todo como invitado — no hace falta cuenta, y no te perdés nada más que guardar tus estadísticas entre dispositivos.';
+    const guestBtnLabel = lang === 'en' ? 'Continue as guest' : lang === 'pt' ? 'Continuar como convidado' : lang === 'fr' ? 'Continuer en tant qu\'invité' : lang === 'de' ? 'Als Gast fortfahren' : lang === 'it' ? 'Continua come ospite' : 'Seguir como invitado';
+    return `
+    <div class="menu-screen auth-screen" style="text-align:center;">
+      <h1>${title}</h1>
+      <p style="color:var(--text-2);font-size:0.88rem;line-height:1.5;max-width:340px;margin:8px auto 20px;">${desc}</p>
+      <div class="menu-grid">
+        <button class="menu-btn" id="auth-age-guest-btn" style="background:var(--green-accent); border-color:var(--green-accent);">
+          <div class="t" style="color:#fff;">${guestBtnLabel}</div>
+        </button>
+        <button class="menu-btn" id="auth-age-back-btn"><div class="t">${t('auth.back')}</div></button>
+      </div>
+    </div>`;
+  }
   return `
   <div class="menu-screen auth-screen">
     <h1>${isRegister ? t('auth.create') : t('auth.login')}</h1>
     <div class="auth-form">
       ${isRegister ? `<input type="text" class="auth-input" id="auth-username" placeholder="${t('auth.username')}" maxlength="24" autocomplete="username"/>` : ''}
+      ${isRegister ? `<input type="date" class="auth-input" id="auth-birthdate" placeholder="${lang === 'en' ? 'Date of birth' : lang === 'pt' ? 'Data de nascimento' : lang === 'fr' ? 'Date de naissance' : lang === 'de' ? 'Geburtsdatum' : lang === 'it' ? 'Data di nascita' : 'Fecha de nacimiento'}" max="${new Date().toISOString().slice(0, 10)}"/>` : ''}
       <input type="email" class="auth-input" id="auth-email" placeholder="${t('auth.email')}" autocomplete="email"/>
       <input type="password" class="auth-input" id="auth-password" placeholder="${t('auth.password')}" autocomplete="${isRegister ? 'new-password' : 'current-password'}"/>
       ${authFormError ? `<div class="auth-error">${authFormError}</div>` : ''}
@@ -12151,6 +12179,7 @@ let setupDiceMode = 'default'; // 'default' (0,1,2,3,4,6) | 'traditional' (1-6, 
 let leagueNumTeams = 4;
 let leagueSelectedTeams = Array(4).fill(null);
 let leagueDuration = 20;
+let leagueTargetGoals = null; // null = time-based, number = first to N goals
 
 // Online team selection state. 'mode' is 'preset' (pick from TEAMS) or
 // 'custom' (open the kit editor). Each side (home/away) tracks its own mode
@@ -12241,7 +12270,13 @@ function renderLeagueSetup() {
       <div>
         <span class="field-label">${t('setup.duration')}</span>
         <div class="duration-row" id="league-duration-row">
-          ${[5, 10, 20, 30, 45].map(m => `<button data-league-duration="${m}" class="${m === leagueDuration ? 'active' : ''}">${m} min</button>`).join('')}
+          ${[2, 5, 10, 20, 30, 45].map(m => `<button data-league-duration="${m}" class="${m === leagueDuration && leagueTargetGoals === null ? 'active' : ''}">${m} min</button>`).join('')}
+        </div>
+      </div>
+      <div>
+        <span class="field-label">${lang === 'en' ? 'Or: first to N goals' : lang === 'pt' ? 'Ou: primeiro a marcar N gols' : lang === 'fr' ? 'Ou : premier à marquer N buts' : lang === 'de' ? 'Oder: Erster mit N Toren' : lang === 'it' ? 'Oppure: primo a segnare N gol' : 'O: primero en marcar N goles'}</span>
+        <div class="duration-row" id="league-goals-row">
+          ${[1, 3, 5].map(g => `<button data-league-goals="${g}" class="${g === leagueTargetGoals ? 'active' : ''}">${g} ${lang === 'en' ? (g === 1 ? 'goal' : 'goals') : lang === 'pt' ? (g === 1 ? 'gol' : 'gols') : lang === 'fr' ? (g === 1 ? 'but' : 'buts') : lang === 'de' ? (g === 1 ? 'Tor' : 'Tore') : lang === 'it' ? (g === 1 ? 'gol' : 'gol') : (g === 1 ? 'gol' : 'goles')}</button>`).join('')}
         </div>
       </div>
     </div>
@@ -12938,9 +12973,9 @@ function render() {
       app.innerHTML = renderLanding();
       // Wire landing buttons directly here, not via wireEvents
       const googleBtn = document.getElementById('landing-google-btn');
-      if (googleBtn) googleBtn.onclick = () => loginWithGoogle();
+      if (googleBtn) googleBtn.onclick = () => { authFormMode = 'register'; authFormError = ''; authAgeBlocked = false; currentMenuView = 'auth'; render(); };
       const emailBtn = document.getElementById('landing-email-btn');
-      if (emailBtn) emailBtn.onclick = () => { authFormMode = 'register'; authFormError = ''; currentMenuView = 'auth'; render(); };
+      if (emailBtn) emailBtn.onclick = () => { authFormMode = 'register'; authFormError = ''; authAgeBlocked = false; currentMenuView = 'auth'; render(); };
       const guestBtn = document.getElementById('landing-guest-btn');
       if (guestBtn) guestBtn.onclick = () => loginAsGuest();
       return;
@@ -13521,6 +13556,16 @@ function wireEvents() {
   document.querySelectorAll('[data-league-duration]').forEach(btn => {
     btn.onclick = () => {
       leagueDuration = parseInt(btn.getAttribute('data-league-duration'), 10);
+      leagueTargetGoals = null;
+      document.querySelectorAll('[data-league-duration]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('[data-league-goals]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    };
+  });
+  document.querySelectorAll('[data-league-goals]').forEach(btn => {
+    btn.onclick = () => {
+      leagueTargetGoals = parseInt(btn.getAttribute('data-league-goals'), 10);
+      document.querySelectorAll('[data-league-goals]').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('[data-league-duration]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
     };
@@ -13534,7 +13579,7 @@ function wireEvents() {
         const overwriteMsg = lang === 'en' ? 'This will replace your saved league in progress. Continue?' : lang === 'pt' ? 'Isso substituirá sua liga salva em andamento. Continuar?' : lang === 'fr' ? 'Cela remplacera votre ligue enregistrée en cours. Continuer ?' : lang === 'de' ? 'Dies ersetzt deine gespeicherte laufende Liga. Fortfahren?' : lang === 'it' ? 'Questo sostituirà la tua lega salvata in corso. Continuare?' : 'Esto va a reemplazar la liga guardada que tenés en curso. ¿Continuar?';
         if (!confirm(overwriteMsg)) return;
       }
-      const leagueState = startLeague(leagueSelectedTeams, leagueDuration);
+      const leagueState = startLeague(leagueSelectedTeams, leagueDuration, leagueTargetGoals);
       saveLocalLeague(leagueState);
       currentMenuView = 'main';
       leagueViewTab = 'standings';
@@ -13895,9 +13940,11 @@ function wireEvents() {
         wins: 0, losses: 0, draws: 0,
         gamesPlayed: 0,
         customTeam: null,
+        isOver16: pendingIsOver16 !== null ? pendingIsOver16 : true, // Firebase-only accounts predating the age gate default true — see spec re: existing accounts
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         lastSeen: firebase.firestore.FieldValue.serverTimestamp(),
       };
+      pendingIsOver16 = null;
       await db.collection('users').doc(user.uid).set(userProfile);
       pendingUsernameUser = null;
       currentMenuView = 'main';
@@ -14692,13 +14739,46 @@ function startSecondHalfOnlineAuto() {
 // MÓDULO: APP — Inicialización, auth, PWA, modales legales
 // ═══════════════════════════════════════════════════════════
 function wireAuthEvents() {
+  // Age gate — required legal check, only for registering a full account (not
+  // login, not guest). Reads the birthdate field, computes age, and either lets
+  // the given callback proceed (stashing isOver16 for whichever profile-creation
+  // path runs next) or shows the "you need to be 16+" screen instead.
+  function checkAgeGateAndProceed(proceed) {
+    if (authFormMode !== 'register') { proceed(); return; }
+    const birthdateStr = document.getElementById('auth-birthdate')?.value;
+    if (!birthdateStr) {
+      authFormError = lang === 'en' ? 'Please enter your date of birth.' : lang === 'pt' ? 'Por favor, insira sua data de nascimento.' : lang === 'fr' ? 'Veuillez indiquer votre date de naissance.' : lang === 'de' ? 'Bitte gib dein Geburtsdatum ein.' : lang === 'it' ? 'Inserisci la tua data di nascita.' : 'Ingresá tu fecha de nacimiento.';
+      render();
+      return;
+    }
+    const birthdate = new Date(birthdateStr + 'T00:00:00');
+    const today = new Date();
+    let age = today.getFullYear() - birthdate.getFullYear();
+    const hadBirthdayThisYear = (today.getMonth() > birthdate.getMonth()) || (today.getMonth() === birthdate.getMonth() && today.getDate() >= birthdate.getDate());
+    if (!hadBirthdayThisYear) age--;
+    if (age < 16) {
+      authAgeBlocked = true;
+      authFormError = '';
+      render();
+      return;
+    }
+    pendingIsOver16 = true;
+    proceed();
+  }
+
   const googleBtn = document.getElementById('auth-google-btn');
-  if (googleBtn) googleBtn.onclick = () => loginWithGoogle();
+  if (googleBtn) googleBtn.onclick = () => checkAgeGateAndProceed(() => loginWithGoogle());
+
+  const ageGuestBtn = document.getElementById('auth-age-guest-btn');
+  if (ageGuestBtn) ageGuestBtn.onclick = () => { authAgeBlocked = false; loginAsGuest(); };
+  const ageBackBtn = document.getElementById('auth-age-back-btn');
+  if (ageBackBtn) ageBackBtn.onclick = () => { authAgeBlocked = false; render(); };
 
   const switchBtn = document.getElementById('auth-switch-btn');
   if (switchBtn) switchBtn.onclick = () => {
     authFormMode = authFormMode === 'login' ? 'register' : 'login';
     authFormError = '';
+    authAgeBlocked = false;
     render();
   };
 
@@ -14712,25 +14792,27 @@ function wireAuthEvents() {
     const username = document.getElementById('auth-username')?.value?.trim();
     if (!email || !password) { authFormError = lang === 'en' ? 'Please fill in all fields.' : lang === 'pt' ? 'Preencha todos os campos.' : lang === 'fr' ? 'Veuillez remplir tous les champs.' : lang === 'de' ? 'Bitte fülle alle Felder aus.' : lang === 'it' ? 'Per favore compila tutti i campi.' : 'Completá todos los campos.'; render(); return; }
     if (authFormMode === 'register' && !username) { authFormError = lang === 'en' ? 'Choose a username.' : lang === 'pt' ? 'Escolha um nome de usuário.' : lang === 'fr' ? 'Choisissez un nom d\'utilisateur.' : lang === 'de' ? 'Wähle einen Benutzernamen.' : lang === 'it' ? 'Scegli un nome utente.' : 'Elegí un nombre de usuario.'; render(); return; }
-    authFormLoading = true;
-    authFormError = '';
-    render();
-    try {
-      if (authFormMode === 'register') {
-        await registerWithEmail(email, password, username);
-      } else {
-        await loginWithEmail(email, password);
+    checkAgeGateAndProceed(async () => {
+      authFormLoading = true;
+      authFormError = '';
+      render();
+      try {
+        if (authFormMode === 'register') {
+          await registerWithEmail(email, password, username);
+        } else {
+          await loginWithEmail(email, password);
+        }
+        currentMenuView = 'main';
+      } catch (err) {
+        authFormError = err.message;
       }
-      currentMenuView = 'main';
-    } catch (err) {
-      authFormError = err.message;
-    }
-    authFormLoading = false;
-    render();
+      authFormLoading = false;
+      render();
+    });
   };
 
   // Allow Enter to submit
-  ['auth-email', 'auth-password', 'auth-username'].forEach(id => {
+  ['auth-email', 'auth-password', 'auth-username', 'auth-birthdate'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.onkeydown = (e) => { if (e.key === 'Enter') submitBtn?.click(); };
   });
@@ -14960,7 +15042,7 @@ function showLegalModal(type) {
 <h3>Base legal del tratamiento</h3><p>Tratamos los datos de tu cuenta y de tus partidas para poder brindarte el servicio que solicitás al crear una cuenta y jugar. Tratamos los datos de Google Analytics en base a tu consentimiento explícito, que podés retirar en cualquier momento desde la sección de Cookies.</p>
 <h3>Brechas de seguridad</h3><p>Si se produce un incidente de seguridad que comprometa tus datos personales, te lo notificaremos junto con la autoridad competente cuando corresponda por ley, dentro de los plazos exigidos por la normativa aplicable.</p>
 <h3>Tus derechos</h3><p>Bajo la Ley 25.326 (Argentina) y el GDPR, podés acceder, corregir o solicitar la eliminación de tus datos escribiendo a ignacio.oneto@gmail.com.</p>
-<h3>Menores</h3><p>Hexagol no está dirigido a menores de 13 años.</p>`;
+<h3>Menores</h3><p>Para crear una cuenta completa (con email/contraseña o con Google) tenés que tener 16 años o más. Al registrarte te pedimos tu fecha de nacimiento únicamente para calcular tu edad en ese momento — no la guardamos; solo guardamos si sos mayor o menor de 16 años. Si sos menor de 16, podés seguir jugando todo el juego como invitado, sin crear cuenta y sin que se recolecte ningún dato personal.</p>`;
 
   const termsEN = `<h2>Terms of Use — Hexagol</h2>
 <p><b>Last updated:</b> July 2026</p>
@@ -14986,7 +15068,7 @@ function showLegalModal(type) {
 <h3>Legal Basis for Processing</h3><p>We process your account and match data in order to provide the service you request when creating an account and playing. We process Google Analytics data based on your explicit consent, which you can withdraw at any time from the Cookies section.</p>
 <h3>Security Breaches</h3><p>If a security incident occurs that compromises your personal data, we will notify you, along with the competent authority where legally required, within the timeframes required by applicable law.</p>
 <h3>Your Rights</h3><p>Under Argentine Law 25.326 and the GDPR, you may access, correct or request deletion of your data by writing to ignacio.oneto@gmail.com.</p>
-<h3>Minors</h3><p>Hexagol is not directed at children under 13.</p>`;
+<h3>Minors</h3><p>You must be 16 or older to create a full account (with email/password or Google). When registering, we ask for your date of birth only to calculate your age at that moment — we do not store it; we only store whether you are over or under 16. If you are under 16, you can still play the entire game as a guest, with no account and no personal data collected.</p>`;
 
   const termsPT = `<h2>Termos de Uso — Hexagol</h2>
 <p><b>Última atualização:</b> julho de 2026</p>
@@ -15012,7 +15094,7 @@ function showLegalModal(type) {
 <h3>Base legal do tratamento</h3><p>Tratamos os dados da sua conta e das suas partidas para fornecer o serviço que você solicita ao criar uma conta e jogar. Tratamos os dados do Google Analytics com base no seu consentimento explícito, que você pode retirar a qualquer momento na seção de Cookies.</p>
 <h3>Violações de segurança</h3><p>Caso ocorra um incidente de segurança que comprometa seus dados pessoais, notificaremos você e a autoridade competente quando exigido por lei, dentro dos prazos exigidos pela legislação aplicável.</p>
 <h3>Seus direitos</h3><p>Sob a Lei 25.326 (Argentina) e o GDPR, você pode acessar, corrigir ou solicitar a exclusão dos seus dados escrevendo para ignacio.oneto@gmail.com.</p>
-<h3>Menores</h3><p>O Hexagol não é direcionado a menores de 13 anos.</p>`;
+<h3>Menores</h3><p>Para criar uma conta completa (com email/senha ou com Google) você precisa ter 16 anos ou mais. Ao se registrar, pedimos sua data de nascimento apenas para calcular sua idade naquele momento — não a armazenamos; só guardamos se você tem mais ou menos de 16 anos. Se você tem menos de 16 anos, ainda pode jogar todo o jogo como convidado, sem criar conta e sem que nenhum dado pessoal seja coletado.</p>`;
 
   const termsFR = `<h2>Conditions d'utilisation — Hexagol</h2>
 <p><b>Dernière mise à jour :</b> juillet 2026</p>
@@ -15038,7 +15120,7 @@ function showLegalModal(type) {
 <h3>Base légale du traitement</h3><p>Nous traitons les données de votre compte et de vos parties afin de vous fournir le service que vous demandez en créant un compte et en jouant. Nous traitons les données de Google Analytics sur la base de votre consentement explicite, que vous pouvez retirer à tout moment depuis la section Cookies.</p>
 <h3>Violations de sécurité</h3><p>En cas d'incident de sécurité compromettant vos données personnelles, nous vous en informerons, ainsi que l'autorité compétente lorsque la loi l'exige, dans les délais prévus par la réglementation applicable.</p>
 <h3>Vos droits</h3><p>En vertu de la loi argentine 25.326 et du RGPD, vous pouvez accéder à vos données, les corriger ou demander leur suppression en écrivant à ignacio.oneto@gmail.com.</p>
-<h3>Mineurs</h3><p>Hexagol ne s'adresse pas aux enfants de moins de 13 ans.</p>`;
+<h3>Mineurs</h3><p>Vous devez avoir 16 ans ou plus pour créer un compte complet (avec email/mot de passe ou avec Google). Lors de l'inscription, nous vous demandons votre date de naissance uniquement pour calculer votre âge à ce moment-là — nous ne la conservons pas ; nous enregistrons seulement si vous avez plus ou moins de 16 ans. Si vous avez moins de 16 ans, vous pouvez quand même jouer à tout le jeu en tant qu'invité, sans créer de compte et sans qu'aucune donnée personnelle ne soit collectée.</p>`;
 
   const termsDE = `<h2>Nutzungsbedingungen — Hexagol</h2>
 <p><b>Letzte Aktualisierung:</b> Juli 2026</p>
@@ -15064,7 +15146,7 @@ function showLegalModal(type) {
 <h3>Rechtsgrundlage der Verarbeitung</h3><p>Wir verarbeiten die Daten deines Kontos und deiner Spiele, um dir den Dienst bereitzustellen, den du durch die Kontoerstellung und das Spielen anforderst. Die Verarbeitung der Google-Analytics-Daten erfolgt auf Grundlage deiner ausdrücklichen Einwilligung, die du jederzeit im Bereich Cookies widerrufen kannst.</p>
 <h3>Sicherheitsverletzungen</h3><p>Sollte ein Sicherheitsvorfall auftreten, der deine personenbezogenen Daten gefährdet, informieren wir dich sowie, sofern gesetzlich vorgeschrieben, die zuständige Behörde innerhalb der gesetzlich vorgeschriebenen Fristen.</p>
 <h3>Deine Rechte</h3><p>Gemäß dem argentinischen Gesetz 25.326 und der DSGVO kannst du auf deine Daten zugreifen, sie korrigieren oder deren Löschung beantragen, indem du an ignacio.oneto@gmail.com schreibst.</p>
-<h3>Minderjährige</h3><p>Hexagol richtet sich nicht an Kinder unter 13 Jahren.</p>`;
+<h3>Minderjährige</h3><p>Um ein vollständiges Konto zu erstellen (mit E-Mail/Passwort oder mit Google), musst du mindestens 16 Jahre alt sein. Bei der Registrierung fragen wir dein Geburtsdatum nur ab, um in diesem Moment dein Alter zu berechnen — wir speichern es nicht; wir speichern nur, ob du älter oder jünger als 16 Jahre bist. Wenn du jünger als 16 bist, kannst du trotzdem das gesamte Spiel als Gast spielen, ohne Konto und ohne dass personenbezogene Daten erhoben werden.</p>`;
 
   const termsIT = `<h2>Termini di Utilizzo — Hexagol</h2>
 <p><b>Ultimo aggiornamento:</b> luglio 2026</p>
@@ -15090,7 +15172,7 @@ function showLegalModal(type) {
 <h3>Base giuridica del trattamento</h3><p>Trattiamo i dati del tuo account e delle tue partite per fornirti il servizio che richiedi creando un account e giocando. Trattiamo i dati di Google Analytics sulla base del tuo consenso esplicito, che puoi revocare in qualsiasi momento dalla sezione Cookie.</p>
 <h3>Violazioni della sicurezza</h3><p>In caso di incidente di sicurezza che comprometta i tuoi dati personali, ti informeremo, insieme all'autorità competente quando richiesto dalla legge, entro i termini previsti dalla normativa applicabile.</p>
 <h3>I tuoi diritti</h3><p>Ai sensi della Legge argentina 25.326 e del GDPR, puoi accedere ai tuoi dati, correggerli o richiederne la cancellazione scrivendo a ignacio.oneto@gmail.com.</p>
-<h3>Minori</h3><p>Hexagol non è rivolto a minori di 13 anni.</p>`;
+<h3>Minori</h3><p>Per creare un account completo (con email/password o con Google) devi avere almeno 16 anni. Al momento della registrazione ti chiediamo la data di nascita solo per calcolare la tua età in quel momento — non la conserviamo; salviamo solo se hai più o meno di 16 anni. Se hai meno di 16 anni, puoi comunque giocare a tutto il gioco come ospite, senza creare un account e senza che venga raccolto alcun dato personale.</p>`;
 
   const content = type === 'terms'
     ? (lang === 'en' ? termsEN : lang === 'pt' ? termsPT : lang === 'fr' ? termsFR : lang === 'de' ? termsDE : lang === 'it' ? termsIT : termsES)
