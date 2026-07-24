@@ -5616,6 +5616,21 @@ function movePlayersForKickoff(players, startingTeam, boardSize) {
   });
 }
 
+// Plan Handicap: getInitialPlayers() rebuilds a fresh, generic roster from a
+// static template with no concept of handicap — every kickoff reset (goal,
+// half-time, blocked ball, extra time, golden goal...) calls it, which was
+// silently wiping the handicap off every player each time. This carries each
+// player's handicap over from the pre-reset roster, matched by team + roster
+// number (the stable identity), into the freshly-rebuilt one. No-op outside
+// league mode, since non-league players never have a handicap to begin with.
+function preserveHandicaps(freshPlayers, oldPlayers) {
+  if (!oldPlayers) return freshPlayers;
+  return freshPlayers.map(p => {
+    const old = oldPlayers.find(op => op.team === p.team && op.playerNumber === p.playerNumber);
+    return old && old.handicap ? { ...p, handicap: old.handicap } : p;
+  });
+}
+
 function getTeamName(state, team) {
   return team === 'home' ? (state.homeTeam?.name ?? 'Local') : (state.awayTeam?.name ?? 'Visitante');
 }
@@ -6105,7 +6120,7 @@ function advanceToNextTurn(s, opts) {
 
   if (isBallTotallyBlocked(ballPosition, players, nextPlayer)) {
     const teamCausingBlockName = getTeamName(s, currentPlayer);
-    const playersForKickoff = movePlayersForKickoff(getInitialPlayers(s.boardSize), nextPlayer, s.boardSize);
+    const playersForKickoff = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), nextPlayer, s.boardSize), s.players);
     const msg = lang === 'en' ? `Ball blocked! ${teamToKickOffName} kicks off. Roll the dice.` : lang === 'pt' ? `Bola bloqueada! ${teamToKickOffName} sai com a bola. Lance o dado.` : lang === 'fr' ? `Ballon bloqué ! ${teamToKickOffName} remet en jeu. Lancez le dé.` : lang === 'de' ? `Ball blockiert! ${teamToKickOffName} stößt an. Würfle.` : lang === 'it' ? `Palla bloccata! ${teamToKickOffName} rimette in gioco. Lancia il dado.` : `¡Balón bloqueado! Saca ${teamToKickOffName}. Lanza el dado.`;
     const news = {
       ...s, players: playersForKickoff, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, currentPlayer: nextPlayer,
@@ -6262,7 +6277,7 @@ function handleGoal(s) {
     setTimeout(() => {
       setState(s2 => {
         if (s2.gamePhase !== 'goal-scored-match-ending') return s2;
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), scoringTeam === 'home' ? 'away' : 'home', s2.boardSize);
+        const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s2.boardSize), scoringTeam === 'home' ? 'away' : 'home', s2.boardSize), s2.players);
         return {
           ...s2, players: newPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           currentPlayer: scoringTeam === 'home' ? 'away' : 'home',
@@ -6293,7 +6308,7 @@ function handleGoal(s) {
   setTimeout(() => {
     setState(s2 => {
       if (s2.gamePhase !== 'goal-scored') return s2; // superseded by something else meanwhile
-      const newPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), scoringTeam === 'home' ? 'away' : 'home', s2.boardSize);
+      const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s2.boardSize), scoringTeam === 'home' ? 'away' : 'home', s2.boardSize), s2.players);
       return {
         ...s2, players: newPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
         currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling',
@@ -6315,7 +6330,7 @@ function handleOwnGoal(s) {
   const matchEnds = (s.targetGoals && newScore[scoringTeam] >= s.targetGoals) ||
                     (s.overtimeMode === 'golden-goal');
 
-  const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), team, s.boardSize);
+  const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), team, s.boardSize), s.players);
   const msg = lang === 'en' ? `OWN GOAL by ${concederName}!` : lang === 'pt' ? `GOL CONTRA de ${concederName}!` : lang === 'fr' ? `BUT CONTRE SON CAMP de ${concederName} !` : lang === 'de' ? `EIGENTOR von ${concederName}!` : lang === 'it' ? `AUTOGOL di ${concederName}!` : `¡AUTOGOL de ${concederName}! Repone ${concederName}.`;
 
   if (matchEnds) {
@@ -6327,7 +6342,7 @@ function handleOwnGoal(s) {
     setTimeout(() => {
       setState(s2 => {
         if (s2.gamePhase !== 'goal-scored-match-ending') return s2;
-        const resetPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), team, s2.boardSize);
+        const resetPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s2.boardSize), team, s2.boardSize), s2.players);
         return {
           ...s2, players: resetPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           currentPlayer: team, ...freshActionState(),
@@ -6352,7 +6367,7 @@ function handleOwnGoal(s) {
   setTimeout(() => {
     setState(s2 => {
       if (s2.gamePhase !== 'goal-scored') return s2;
-      const resetPlayers = movePlayersForKickoff(getInitialPlayers(s2.boardSize), team, s2.boardSize);
+      const resetPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s2.boardSize), team, s2.boardSize), s2.players);
       return {
         ...s2, players: resetPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
         currentPlayer: team, gamePhase: 'rolling',
@@ -8073,8 +8088,17 @@ function computeMatchHandicaps(s, homeTeam, awayTeam, homeIdentity, awayIdentity
     entries.sort(compareEntries);
     let topCount = Math.min(2, entries.length);
     while (topCount < entries.length && compareEntries(entries[topCount], entries[topCount - 1]) === 0) topCount++;
-    let bottomCount = entries.length > topCount ? 1 : 0;
-    while (bottomCount < entries.length - topCount && compareEntries(entries[entries.length - 1 - bottomCount], entries[entries.length - bottomCount]) === 0) bottomCount++;
+    // Bottom slot: if the single worst player is genuinely tied with anyone else
+    // (same score, same full tiebreak line), nobody gets the -1 this time — we
+    // spare everyone rather than penalize a group for a coin-flip. This is
+    // deliberately NOT the same "expand and share" behavior as the top slot.
+    let bottomCount = 0;
+    if (entries.length > topCount) {
+      const lastIdx = entries.length - 1;
+      let tieSize = 1;
+      while (lastIdx - tieSize >= topCount && compareEntries(entries[lastIdx - tieSize], entries[lastIdx - tieSize + 1]) === 0) tieSize++;
+      bottomCount = tieSize === 1 ? 1 : 0;
+    }
     return entries.map((e, idx) => {
       const handicap = idx < topCount ? 1 : (idx >= entries.length - bottomCount ? -1 : 0);
       const rosterPlayer = roster.find(rp => rp.playerNumber === e.playerNumber);
@@ -12770,11 +12794,20 @@ function renderDicePanel(s) {
       const handicaps = computeMatchHandicaps(s, s.homeTeam, s.awayTeam);
       const handicapLabel = lang === 'en' ? 'Handicap for the next match' : lang === 'pt' ? 'Handicap para a próxima partida' : lang === 'fr' ? 'Handicap pour le prochain match' : lang === 'de' ? 'Handicap für das nächste Spiel' : lang === 'it' ? 'Handicap per la prossima partita' : 'Handicap para el próximo partido';
       const changedHandicaps = handicaps.filter(h => h.handicap !== 0);
-      const handicapRows = changedHandicaps.map(h => `
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.78rem;">
-          <span>#${h.playerNumber} ${escapeHtml(h.name)}</span>
-          <span style="font-weight:800;color:${h.handicap > 0 ? '#2a6e3f' : '#9a2f24'};">${h.handicap > 0 ? '+1' : '−1'}</span>
-        </div>`).join('');
+      const renderHandicapGroup = (team, teamId) => {
+        const rows = changedHandicaps.filter(h => h.teamId === teamId);
+        if (!rows.length) return '';
+        return `
+          <div style="margin-bottom:6px;">
+            <div style="font-weight:700;font-size:0.76rem;color:var(--text-2);margin-bottom:2px;">${escapeHtml(team.name)}</div>
+            ${rows.map(h => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:2px 0 2px 8px;font-size:0.78rem;">
+                <span>#${h.playerNumber} ${escapeHtml(h.name)}</span>
+                <span style="font-weight:800;color:${h.handicap > 0 ? '#2a6e3f' : '#9a2f24'};">${h.handicap > 0 ? '+1' : '−1'}</span>
+              </div>`).join('')}
+          </div>`;
+      };
+      const handicapRows = renderHandicapGroup(s.homeTeam, s.homeTeam?.id) + renderHandicapGroup(s.awayTeam, s.awayTeam?.id);
       const handicapHtml = changedHandicaps.length ? `
         <div style="margin:10px 0;padding:8px;background:var(--surface-2);border-radius:10px;">
           <div style="font-size:0.7rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;">${handicapLabel}</div>
@@ -13674,7 +13707,7 @@ function wireEvents() {
     if (btn) btn.onclick = () => {
       if (state.gameMode === 'online' && !onlineIsHost) return;
       setState(s => {
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), s.score.home > s.score.away ? 'away' : 'home', s.boardSize);
+        const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), s.score.home > s.score.away ? 'away' : 'home', s.boardSize), s.players);
         const kickoffTeam = s.score.home <= s.score.away ? 'home' : 'away';
         const kickoffName = getTeamName(s, kickoffTeam);
         const msg = lang === 'en' ? `Extra time! ${kickoffName} kicks off.` : lang === 'pt' ? `Prorrogação! ${kickoffName} sai com a bola.` : lang === 'fr' ? `Prolongation ! ${kickoffName} donne le coup d'envoi.` : lang === 'de' ? `Verlängerung! ${kickoffName} stößt an.` : lang === 'it' ? `Supplementari! ${kickoffName} dà il calcio d'inizio.` : `¡Prórroga! Saca ${kickoffName}.`;
@@ -13691,7 +13724,7 @@ function wireEvents() {
     if (btn) btn.onclick = () => {
       if (state.gameMode === 'online' && !onlineIsHost) return;
       setState(s => {
-        const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), 'home', s.boardSize);
+        const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), 'home', s.boardSize), s.players);
         const msg = lang === 'en' ? 'Golden goal! First to score wins.' : lang === 'pt' ? 'Gol de ouro! O primeiro a marcar vence.' : lang === 'fr' ? 'But en or ! Le premier à marquer gagne.' : lang === 'de' ? 'Golden Goal! Wer zuerst trifft, gewinnt.' : lang === 'it' ? 'Golden goal! Chi segna per primo vince.' : '¡Gol de oro! El primero en marcar gana.';
         return logAction({ ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           gamePhase: 'pre-game-roll', overtimeMode: 'golden-goal', isClockRunning: false,
@@ -14018,7 +14051,7 @@ function wireEvents() {
     if (state.gameMode === 'online' && !onlineIsHost) return;
     setState(s => {
       const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
-      const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), secondHalfKickoff, s.boardSize);
+      const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), secondHalfKickoff, s.boardSize), s.players);
       const kickoffTeamName = getTeamName(s, secondHalfKickoff);
       const news = {
         ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
@@ -14367,7 +14400,7 @@ function resolveKickoffWinner(s) {
     const winnerName = getTeamName(s, startingTeam);
     const rollVal = startingTeam === 'home' ? s.homeRoll : s.awayRoll;
     const msg = lang === 'en' ? `${winnerName} rolls ${rollVal} and wins the kickoff! Roll the dice to start.` : lang === 'pt' ? `${winnerName} tira ${rollVal} e vence o sorteio! Lance o dado para começar.` : lang === 'fr' ? `${winnerName} fait ${rollVal} et gagne le coup d'envoi ! Lancez le dé pour commencer.` : lang === 'de' ? `${winnerName} würfelt ${rollVal} und gewinnt den Anstoß! Würfle, um zu beginnen.` : lang === 'it' ? `${winnerName} fa ${rollVal} e vince il calcio d'inizio! Lancia il dado per iniziare.` : `¡${winnerName} saca un ${rollVal} y gana el saque! Lanza el dado para empezar.`;
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), startingTeam, s.boardSize);
+    const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), startingTeam, s.boardSize), s.players);
     startClock();
     startTurnTimer();
     preGameRollStartedAt = null;
@@ -14722,7 +14755,7 @@ function startSecondHalfOnlineAuto() {
   setState(s => {
     if (s.gamePhase !== 'half-time') return s; // already started
     const secondHalfKickoff = s.kickoffTeam === 'home' ? 'away' : 'home';
-    const newPlayers = movePlayersForKickoff(getInitialPlayers(s.boardSize), secondHalfKickoff, s.boardSize);
+    const newPlayers = preserveHandicaps(movePlayersForKickoff(getInitialPlayers(s.boardSize), secondHalfKickoff, s.boardSize), s.players);
     const kickoffTeamName = getTeamName(s, secondHalfKickoff);
     const news = {
       ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
