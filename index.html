@@ -9465,20 +9465,20 @@ function renderMainMenu() {
     <div style="margin-top:14px; background:var(--surface-2); border:1px solid var(--border-1); border-radius:12px; padding:10px; display:flex; flex-direction:column; gap:8px;">
       <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
         <a href="javascript:void(0)" id="donate-btn" onclick="showDonateModal()"
-           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#b3822e;text-decoration:none;font-weight:600;cursor:pointer;">
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);text-decoration:none;font-weight:600;cursor:pointer;">
           ${lang === 'en' ? 'Donate' : lang === 'pt' ? 'Doações' : lang === 'fr' ? 'Faire un don' : lang === 'de' ? 'Spenden' : lang === 'it' ? 'Fai una donazione' : 'Donaciones'}
         </a>
         <a href="javascript:void(0)" onclick="showCommunityModal()"
-           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#1e9e56;text-decoration:none;font-weight:600;cursor:pointer;">
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);text-decoration:none;font-weight:600;cursor:pointer;">
           ${t('menu.community')}
         </a>
         <a href="https://www.reddit.com/r/Hexagol/submit" target="_blank" rel="noopener"
            onclick="trackEvent('feedback_click')"
-           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c1470f;text-decoration:none;font-weight:600;">
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);text-decoration:none;font-weight:600;">
           Feedback
         </a>
         <button id="bug-report-open-btn"
-           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:#c0392b;text-decoration:none;font-weight:600;cursor:pointer;font-family:inherit;">
+           style="display:inline-flex;align-items:center;gap:6px;background:var(--surface-1);border:1px solid var(--border-1);border-radius:8px;padding:6px 14px;font-size:0.76rem;color:var(--text-2);text-decoration:none;font-weight:600;cursor:pointer;font-family:inherit;">
           ${t('menu.bug')}
         </button>
       </div>
