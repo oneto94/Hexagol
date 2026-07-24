@@ -328,6 +328,7 @@
     align-items: center;
     justify-content: center;
     overflow: hidden;
+    position: relative;
   }
 
   svg#board {
@@ -8032,6 +8033,43 @@ const HANDICAP_WEIGHTS = {
 
 // Plan Handicap — MVP del partido: reusa los mismos pesos que el handicap
 // para elegir la figura entre los 22 jugadores de ambos planteles.
+// Plan Handicap — despliega el desglose de handicap sobre el tablero (que no
+// se usa en la pantalla de fin de partido online) en vez de apretarlo en el
+// panel lateral, así el menú de al lado queda intacto. Reusa los datos ya
+// calculados en window.__onlineHandicapOverlayData al armar el panel.
+function toggleHandicapOverlay() {
+  const existing = document.getElementById('handicap-overlay-panel');
+  if (existing) { existing.remove(); return; }
+  const data = window.__onlineHandicapOverlayData;
+  const frame = document.querySelector('.board-frame');
+  if (!data || !frame) return;
+  const title = lang === 'en' ? 'Handicap for the next match' : lang === 'pt' ? 'Handicap para a próxima partida' : lang === 'fr' ? 'Handicap pour le prochain match' : lang === 'de' ? 'Handicap für das nächste Spiel' : lang === 'it' ? 'Handicap per la prossima partita' : 'Handicap para el próximo partido';
+  const renderGroup = (teamName, rows) => {
+    if (!rows.length) return '';
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="font-weight:700;font-size:0.82rem;color:var(--text-2);margin-bottom:4px;">${escapeHtml(teamName)}</div>
+        ${rows.map(h => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 8px;font-size:0.82rem;">
+            <span>#${h.playerNumber} ${escapeHtml(h.name)}</span>
+            <span style="font-weight:800;color:${h.handicap > 0 ? '#2a6e3f' : '#9a2f24'};">${h.handicap > 0 ? '+1' : '−1'}</span>
+          </div>`).join('')}
+      </div>`;
+  };
+  const panel = document.createElement('div');
+  panel.id = 'handicap-overlay-panel';
+  panel.style.cssText = 'position:absolute;inset:0;z-index:50;background:var(--surface-1);overflow-y:auto;padding:16px;border-radius:inherit;';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-weight:700;font-size:0.92rem;color:var(--text-1);">${title}</div>
+      <button id="close-handicap-overlay-btn" style="background:var(--surface-3);border:none;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:0.8rem;">✕</button>
+    </div>
+    ${renderGroup(data.homeTeamName, data.homeRows)}
+    ${renderGroup(data.awayTeamName, data.awayRows)}`;
+  frame.appendChild(panel);
+  document.getElementById('close-handicap-overlay-btn').onclick = () => panel.remove();
+}
+
 function computeMatchMVP(s, homeTeam, awayTeam) {
   const ms = s.matchStats;
   if (!ms || !s.players || !s.players.length) return null;
@@ -11403,6 +11441,26 @@ async function reportTournamentResult(tournamentId, matchId, isLeague, homeScore
       );
       const existingHandicaps = (data.playerHandicaps || []).filter(h => h.teamId !== matchInfo.homeUid && h.teamId !== matchInfo.awayUid);
       update.playerHandicaps = [...existingHandicaps, ...newHandicaps];
+
+      // Player stats (goals/assists) accumulate across the whole tournament,
+      // unlike handicap which is recomputed fresh each match — same pattern as
+      // local league's playerStats, keyed by UID instead of team.id.
+      let updatedPlayerStats = [...(data.playerStats || [])];
+      const applyStat = (playerIdStr, count, statKey) => {
+        const player = (matchInfo.players || []).find(p => p.id === parseInt(playerIdStr));
+        if (!player) return;
+        const uid = player.team === 'home' ? matchInfo.homeUid : matchInfo.awayUid;
+        const team = player.team === 'home' ? matchInfo.homeTeam : matchInfo.awayTeam;
+        const rosterPlayer = team?.roster?.find(rp => rp.playerNumber === player.playerNumber);
+        const idx = updatedPlayerStats.findIndex(ps => ps.uid === uid && ps.playerNumber === player.playerNumber);
+        if (idx > -1) updatedPlayerStats[idx][statKey] = (updatedPlayerStats[idx][statKey] || 0) + count;
+        else updatedPlayerStats.push({ uid, playerNumber: player.playerNumber, name: rosterPlayer?.name || `#${player.playerNumber}`, goals: statKey === 'goals' ? count : 0, assists: statKey === 'assists' ? count : 0 });
+      };
+      if (matchInfo.matchStats) {
+        Object.entries(matchInfo.matchStats.goals || {}).forEach(([id, n]) => applyStat(id, n, 'goals'));
+        Object.entries(matchInfo.matchStats.assists || {}).forEach(([id, n]) => applyStat(id, n, 'assists'));
+      }
+      update.playerStats = updatedPlayerStats;
     }
     await tRef.update(update);
   } else {
@@ -11453,39 +11511,91 @@ function renderTournamentDetail() {
     `;
   } else if (isLeague) {
     const standings = computeLeagueStandings(t);
-    const standingsRows = standings.map((r, i) => `
-      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:6px 0;border-bottom:1px solid var(--border-1);font-size:0.76rem;align-items:center;">
-        <span style="color:var(--text-4);">${i + 1}</span>
-        <span style="font-weight:600;">${escapeHtml(r.username)}</span>
-        <span style="text-align:center;">${r.played}</span>
-        <span style="text-align:center;color:#2a6e3f;">${r.won}</span>
-        <span style="text-align:center;">${r.drawn}</span>
-        <span style="text-align:center;color:#9a2f24;">${r.lost}</span>
-        <span style="text-align:center;">${r.goalsFor - r.goalsAgainst}</span>
-        <span style="text-align:center;font-weight:700;">${r.points}</span>
-      </div>`).join('');
-    const myMatches = (t.fixture || []).filter(m => currentUser && (m.homeUid === currentUser.uid || m.awayUid === currentUser.uid));
-    const matchRows = myMatches.map(m => {
-      const oppUid = m.homeUid === currentUser.uid ? m.awayUid : m.homeUid;
-      const opp = t.participants.find(p => p.uid === oppUid);
-      const canPlay = m.status === 'pending' && oppUid;
-      const scoreText = m.status === 'finished' ? `${m.homeScore} - ${m.awayScore}` : (lang === 'en' ? 'Pending' : 'Pendiente');
-      return `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">
-        <span style="flex:1;font-size:0.82rem;">${lang === 'en' ? 'Round' : 'Jornada'} ${m.round} vs ${escapeHtml(opp?.username || '?')}</span>
-        <span style="font-size:0.78rem;color:var(--text-3);">${scoreText}</span>
-        ${canPlay ? `<button data-play-tournament-match="${m.id}" style="background:var(--green-accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play' : 'Jugar'}</button>` : ''}
-      </div>`;
-    }).join('');
-    bodyHtml = `
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px;">${lang === 'en' ? 'Standings' : 'Posiciones'}</div>
-      <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:4px 0;font-size:0.68rem;color:var(--text-4);font-weight:700;">
-        <span></span><span></span><span style="text-align:center;">PJ</span><span style="text-align:center;">G</span><span style="text-align:center;">E</span><span style="text-align:center;">P</span><span style="text-align:center;">DG</span><span style="text-align:center;">Pts</span>
-      </div>
-      ${standingsRows}
-      <div style="font-size:0.72rem;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.05em;margin:16px 0 8px;">${lang === 'en' ? 'My matches' : 'Mis partidos'}</div>
-      ${matchRows || `<div style="color:var(--text-4);font-size:0.8rem;">${lang === 'en' ? 'No matches.' : 'Sin partidos.'}</div>`}
-    `;
+    const tabs = lang === 'en'
+      ? [{ id: 'standings', label: 'Table' }, { id: 'schedule', label: 'Schedule' }, { id: 'scorers', label: 'Scorers' }, { id: 'handicap', label: 'Handicap' }]
+      : [{ id: 'standings', label: 'Tabla' }, { id: 'schedule', label: 'Calendario' }, { id: 'scorers', label: 'Goleadores' }, { id: 'handicap', label: 'Handicap' }];
+    const activeTab = tournamentDetailTab;
+    const tabsHtml = `<div class="league-tabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;">
+      ${tabs.map(tb => `<button class="league-tab ${activeTab === tb.id ? 'active' : ''}" data-tournament-tab="${tb.id}">${tb.label}</button>`).join('')}
+    </div>`;
+
+    let tabBody = '';
+    if (activeTab === 'schedule') {
+      const noStats = lang === 'en' ? 'No matches yet.' : lang === 'pt' ? 'Ainda sem partidas.' : lang === 'fr' ? 'Pas encore de matchs.' : lang === 'de' ? 'Noch keine Spiele.' : lang === 'it' ? 'Ancora nessuna partita.' : 'Todavía no hay partidos.';
+      const allRows = (t.fixture || []).map(m => {
+        const homeP = t.participants.find(p => p.uid === m.homeUid);
+        const awayP = t.participants.find(p => p.uid === m.awayUid);
+        const isMine = currentUser && (m.homeUid === currentUser.uid || m.awayUid === currentUser.uid);
+        const canPlay = isMine && m.status === 'pending' && m.homeUid && m.awayUid;
+        const scoreText = m.status === 'finished' ? `${m.homeScore} - ${m.awayScore}` : (lang === 'en' ? 'Pending' : 'Pendiente');
+        return `
+        <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border-1);">
+          <span style="flex:1;font-size:0.8rem;">${lang === 'en' ? 'Round' : 'Jornada'} ${m.round}: ${escapeHtml(homeP?.username || '?')} vs ${escapeHtml(awayP?.username || '?')}</span>
+          <span style="font-size:0.76rem;color:var(--text-3);">${scoreText}</span>
+          ${canPlay ? `<button data-play-tournament-match="${m.id}" style="background:var(--green-accent);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:0.72rem;cursor:pointer;">${lang === 'en' ? 'Play' : 'Jugar'}</button>` : ''}
+        </div>`;
+      }).join('');
+      tabBody = allRows || `<p style="text-align:center;color:var(--text-4);padding:14px 0;">${noStats}</p>`;
+    } else if (activeTab === 'scorers') {
+      const noStats = lang === 'en' ? 'No stats yet.' : lang === 'pt' ? 'Ainda sem estatísticas.' : lang === 'fr' ? 'Pas encore de statistiques.' : lang === 'de' ? 'Noch keine Statistiken.' : lang === 'it' ? 'Ancora nessuna statistica.' : 'Todavía no hay estadísticas.';
+      const stats = t.playerStats || [];
+      const goalsLabel = lang === 'en' ? 'Goals' : lang === 'pt' ? 'Gols' : lang === 'fr' ? 'Buts' : lang === 'de' ? 'Tore' : lang === 'it' ? 'Gol' : 'Goles';
+      const assistsLabel = lang === 'en' ? 'Assists' : lang === 'pt' ? 'Assistências' : lang === 'fr' ? 'Passes décisives' : lang === 'de' ? 'Vorlagen' : lang === 'it' ? 'Assist' : 'Asistencias';
+      const renderStatTable = (rows, key) => {
+        const sorted = [...rows].filter(r => (r[key] || 0) > 0).sort((a, b) => (b[key] || 0) - (a[key] || 0)).slice(0, 10);
+        if (!sorted.length) return `<p style="color:var(--text-4);font-size:0.8rem;">${noStats}</p>`;
+        return sorted.map((r, i) => {
+          const owner = t.participants.find(p => p.uid === r.uid);
+          return `
+          <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border-1);font-size:0.8rem;">
+            <span style="color:var(--text-4);width:16px;">${i + 1}</span>
+            <span style="flex:1;">#${r.playerNumber} ${escapeHtml(r.name)} <span style="color:var(--text-4);font-size:0.72rem;">(${escapeHtml(owner?.username || '?')})</span></span>
+            <span style="font-weight:700;">${r[key] || 0}</span>
+          </div>`;
+        }).join('');
+      };
+      tabBody = `<h3 style="margin:0 0 6px;">${goalsLabel}</h3>${renderStatTable(stats, 'goals')}<h3 style="margin:14px 0 6px;">${assistsLabel}</h3>${renderStatTable(stats, 'assists')}`;
+    } else if (activeTab === 'handicap') {
+      const noStats = lang === 'en' ? 'No stats yet.' : lang === 'pt' ? 'Ainda sem estatísticas.' : lang === 'fr' ? 'Pas encore de statistiques.' : lang === 'de' ? 'Noch keine Statistiken.' : lang === 'it' ? 'Ancora nessuna statistica.' : 'Todavía no hay estadísticas.';
+      const handicapDesc = lang === 'en' ? 'Based on the last match each participant played. Only players with a bonus or penalty are shown.' : lang === 'pt' ? 'Baseado na última partida de cada participante. Só aparecem jogadores com bônus ou penalidade.' : lang === 'fr' ? 'Basé sur le dernier match de chaque participant. Seuls les joueurs avec un bonus ou une pénalité sont affichés.' : lang === 'de' ? 'Basierend auf dem letzten Spiel jedes Teilnehmers. Nur Spieler mit Bonus oder Malus werden angezeigt.' : lang === 'it' ? "Basato sull'ultima partita di ogni partecipante. Sono mostrati solo i giocatori con bonus o penalità." : 'Según el último partido de cada participante. Solo se muestran los jugadores con bonus o penalidad.';
+      const withHandicap = (t.playerHandicaps || []).filter(h => h.handicap !== 0);
+      if (!withHandicap.length) {
+        tabBody = `<p style="text-align:center;color:var(--text-4);padding:14px 0;">${noStats}</p>`;
+      } else {
+        const rows = t.participants.map(p => {
+          const own = withHandicap.filter(h => h.teamId === p.uid);
+          if (!own.length) return '';
+          return `
+            <div style="margin-bottom:12px;">
+              <div style="font-weight:700;font-size:0.85rem;margin-bottom:4px;">${escapeHtml(p.username)}</div>
+              ${own.map(h => `
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 8px;font-size:0.78rem;">
+                  <span>#${h.playerNumber} ${escapeHtml(h.name)}</span>
+                  <span style="font-weight:800;color:${h.handicap > 0 ? '#2a6e3f' : '#9a2f24'};">${h.handicap > 0 ? '+1' : '−1'}</span>
+                </div>`).join('')}
+            </div>`;
+        }).join('');
+        tabBody = `<p style="font-size:0.78rem;color:var(--text-4);margin:0 0 10px;">${handicapDesc}</p>${rows}`;
+      }
+    } else {
+      const standingsRows = standings.map((r, i) => `
+        <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:6px 0;border-bottom:1px solid var(--border-1);font-size:0.76rem;align-items:center;">
+          <span style="color:var(--text-4);">${i + 1}</span>
+          <span style="font-weight:600;">${escapeHtml(r.username)}</span>
+          <span style="text-align:center;">${r.played}</span>
+          <span style="text-align:center;color:#2a6e3f;">${r.won}</span>
+          <span style="text-align:center;">${r.drawn}</span>
+          <span style="text-align:center;color:#9a2f24;">${r.lost}</span>
+          <span style="text-align:center;">${r.goalsFor - r.goalsAgainst}</span>
+          <span style="text-align:center;font-weight:700;">${r.points}</span>
+        </div>`).join('');
+      tabBody = `
+        <div style="display:grid;grid-template-columns:24px 1fr repeat(6, 32px);gap:4px;padding:4px 0;font-size:0.68rem;color:var(--text-4);font-weight:700;">
+          <span></span><span></span><span style="text-align:center;">PJ</span><span style="text-align:center;">G</span><span style="text-align:center;">E</span><span style="text-align:center;">P</span><span style="text-align:center;">DG</span><span style="text-align:center;">Pts</span>
+        </div>
+        ${standingsRows}`;
+    }
+    bodyHtml = tabsHtml + tabBody;
   } else {
     const roundLabel = (idx, total) => {
       const remaining = total - idx;
@@ -12318,6 +12428,7 @@ function renderLeagueSetup() {
 }
 
 let leagueViewTab = 'standings';
+let tournamentDetailTab = 'standings';
 
 function renderLeagueView(s) {
   const ls = s.leagueState;
@@ -12749,11 +12860,30 @@ function renderDicePanel(s) {
           <div style="font-size:0.68rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.03em;">${onlineMvpLabel}</div>
           <div style="font-weight:700;font-size:0.88rem;color:var(--text-1);">#${onlineMvp.playerNumber} ${escapeHtml(onlineMvp.name)}</div>
         </div>` : '';
+      // Plan Handicap — Torneos-Liga: identidad por UID, no por equipo (ver
+      // reportTournamentResult). El desglose se muestra en un panel que se
+      // despliega sobre el tablero (que no se usa en esta pantalla) en vez de
+      // apretarlo en este panel lateral, para no perder el menú de al lado.
+      const onlineHomeUid = onlineMyTeam === 'home' ? currentUser?.uid : onlineOpponentUid;
+      const onlineAwayUid = onlineMyTeam === 'home' ? onlineOpponentUid : currentUser?.uid;
+      const onlineHandicaps = (s.tournamentIsLeague && onlineHomeUid && onlineAwayUid)
+        ? computeMatchHandicaps(s, s.homeTeam, s.awayTeam, onlineHomeUid, onlineAwayUid)
+        : [];
+      const onlineChangedHandicaps = onlineHandicaps.filter(h => h.handicap !== 0);
+      const handicapToggleLabel = lang === 'en' ? 'View handicap changes' : lang === 'pt' ? 'Ver mudanças de handicap' : lang === 'fr' ? 'Voir les changements de handicap' : lang === 'de' ? 'Handicap-Änderungen ansehen' : lang === 'it' ? "Vedi le modifiche all'handicap" : 'Ver cambios de handicap';
+      window.__onlineHandicapOverlayData = onlineChangedHandicaps.length ? {
+        homeTeamName: s.homeTeam?.name || '', awayTeamName: s.awayTeam?.name || '',
+        homeRows: onlineChangedHandicaps.filter(h => h.teamId === onlineHomeUid),
+        awayRows: onlineChangedHandicaps.filter(h => h.teamId === onlineAwayUid),
+      } : null;
+      const handicapToggleHtml = onlineChangedHandicaps.length ? `
+        <button id="toggle-handicap-overlay-btn" style="display:block;width:100%;margin-bottom:6px;padding:8px;border-radius:8px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);cursor:pointer;font-family:inherit;font-size:0.8rem;font-weight:600;">${handicapToggleLabel}</button>` : '';
       return `<div class="dice-panel">
         <div style="font-size:1.1rem; font-weight:800; color:${resultColor}; text-align:center; margin-bottom:4px;">${resultText}</div>
         <div style="font-size:0.85rem; text-align:center; color:var(--text-2); margin-bottom:6px;">${myTeamName} ${myScore} — ${theirScore} ${theirTeamName}</div>
         ${eloInfo}
         ${onlineMvpHtml}
+        ${handicapToggleHtml}
         <button class="btn ghost" id="share-result-btn" style="width:100%; margin-bottom:6px;">${t('gameover.share')}</button>
         <a href="javascript:void(0)"
            onclick="trackEvent('cafecito_click',{source:'game_over'});showDonateModal()"
@@ -13866,6 +13996,10 @@ function wireEvents() {
     };
   });
 
+  document.querySelectorAll('[data-tournament-tab]').forEach(btn => {
+    btn.onclick = () => { tournamentDetailTab = btn.getAttribute('data-tournament-tab'); render(); };
+  });
+
   // Challenge host setup
   document.querySelectorAll('[data-ch-variant]').forEach(btn => {
     btn.onclick = () => {
@@ -14106,6 +14240,9 @@ function wireEvents() {
     trackEvent('invite_cta_dismissed', { source: 'vs_ai_gameover' });
     render();
   };
+
+  const toggleHandicapBtn = document.getElementById('toggle-handicap-overlay-btn');
+  if (toggleHandicapBtn) toggleHandicapBtn.onclick = () => toggleHandicapOverlay();
 
   const shareResultBtn = document.getElementById('share-result-btn');
   if (shareResultBtn) shareResultBtn.onclick = () => {
