@@ -40,14 +40,23 @@
 <meta name="apple-mobile-web-app-title" content="Hexagol">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
 
-<!-- Google Analytics 4 -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-9BKP766588"></script>
+<!-- Google Analytics 4 — carga diferida hasta que el usuario da su consentimiento (ver módulo de consentimiento de cookies más abajo). El shim de dataLayer/gtag queda siempre presente (no envía nada por sí solo); lo que realmente empieza a mandar datos es el script async + gtag('config', ...), y eso solo se dispara desde initAnalytics(), llamada únicamente tras aceptar. -->
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-9BKP766588');
+  let analyticsInitialized = false;
+  function initAnalytics() {
+    if (analyticsInitialized) return;
+    analyticsInitialized = true;
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-9BKP766588';
+    document.head.appendChild(s);
+    gtag('js', new Date());
+    gtag('config', 'G-9BKP766588');
+  }
   function trackEvent(name, params) {
+    if (getCookieConsent() !== 'granted') return;
     if (typeof gtag !== 'undefined') gtag('event', name, params || {});
   }
 </script>
@@ -1151,6 +1160,51 @@ function setLang(l) {
 }
 
 // ═══════════════════════════════════════════════════════════
+// MÓDULO: Consentimiento de cookies (RGPD/GDPR) — Google Analytics no arranca
+// hasta que el usuario acepta explícitamente. Elección guardada en el
+// dispositivo; se puede cambiar más adelante desde la Política de Privacidad.
+// ═══════════════════════════════════════════════════════════
+function getCookieConsent() {
+  return localStorage.getItem('hexagol_cookie_consent'); // 'granted' | 'denied' | null (todavía no eligió)
+}
+function setCookieConsent(value) {
+  localStorage.setItem('hexagol_cookie_consent', value);
+}
+function showCookieConsentBanner() {
+  if (document.getElementById('cookie-consent-banner')) return;
+  const msgBefore = lang === 'en' ? 'We use Google Analytics cookies to understand how the game is used. They only activate if you accept — you can change your choice anytime from the ' : lang === 'pt' ? 'Usamos cookies do Google Analytics para entender como o jogo é usado. Só ativam se você aceitar — você pode mudar sua escolha quando quiser na ' : lang === 'fr' ? "Nous utilisons des cookies Google Analytics pour comprendre l'utilisation du jeu. Ils ne s'activent que si vous acceptez — vous pouvez modifier votre choix à tout moment depuis la " : lang === 'de' ? 'Wir verwenden Google-Analytics-Cookies, um zu verstehen, wie das Spiel genutzt wird. Sie werden nur aktiviert, wenn du zustimmst — du kannst deine Wahl jederzeit in der ' : lang === 'it' ? 'Usiamo cookie di Google Analytics per capire come viene usato il gioco. Si attivano solo se accetti — puoi cambiare la tua scelta in qualsiasi momento dalla ': 'Usamos cookies de Google Analytics para entender cómo se usa el juego. Solo se activan si aceptás — podés cambiar tu elección cuando quieras desde la ';
+  const privacyLinkLabel = lang === 'en' ? 'Privacy Policy' : lang === 'pt' ? 'Política de Privacidade' : lang === 'fr' ? 'Politique de confidentialité' : lang === 'de' ? 'Datenschutzrichtlinie' : lang === 'it' ? 'Informativa sulla Privacy' : 'Política de Privacidad';
+  const acceptLabel = lang === 'en' ? 'Accept' : lang === 'pt' ? 'Aceitar' : lang === 'fr' ? 'Accepter' : lang === 'de' ? 'Akzeptieren' : lang === 'it' ? 'Accetta' : 'Aceptar';
+  const rejectLabel = lang === 'en' ? 'Reject' : lang === 'pt' ? 'Rejeitar' : lang === 'fr' ? 'Refuser' : lang === 'de' ? 'Ablehnen' : lang === 'it' ? 'Rifiuta' : 'Rechazar';
+  const banner = document.createElement('div');
+  banner.id = 'cookie-consent-banner';
+  banner.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9500;background:var(--surface-1);border-top:1.5px solid var(--border-1);box-shadow:0 -4px 16px rgba(0,0,0,0.18);padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-width:520px;margin:0 auto;';
+  banner.innerHTML = `
+    <div style="font-size:0.8rem;color:var(--text-2);line-height:1.45;">${msgBefore}<a href="javascript:void(0)" id="cookie-consent-privacy-link" style="color:var(--text-1);text-decoration:underline;font-weight:600;">${privacyLinkLabel}</a>.</div>
+    <div style="display:flex;gap:8px;">
+      <button id="cookie-consent-reject" style="flex:1;padding:9px;font-size:0.84rem;border-radius:8px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);cursor:pointer;font-family:inherit;font-weight:600;">${rejectLabel}</button>
+      <button id="cookie-consent-accept" style="flex:1;padding:9px;font-size:0.84rem;border-radius:8px;border:1.5px solid var(--green-accent);background:var(--green-accent);color:#fff;cursor:pointer;font-family:inherit;font-weight:600;">${acceptLabel}</button>
+    </div>`;
+  document.body.appendChild(banner);
+  document.getElementById('cookie-consent-privacy-link').onclick = () => showLegalModal('privacy');
+  document.getElementById('cookie-consent-accept').onclick = () => {
+    setCookieConsent('granted');
+    initAnalytics();
+    banner.remove();
+  };
+  document.getElementById('cookie-consent-reject').onclick = () => {
+    setCookieConsent('denied');
+    banner.remove();
+  };
+}
+function initCookieConsent() {
+  const consent = getCookieConsent();
+  if (consent === 'granted') { initAnalytics(); return; }
+  if (consent === 'denied') return;
+  showCookieConsentBanner();
+}
+
+// ═══════════════════════════════════════════════════════════
 // MÓDULO: Auto-roll — per-device preference, independent of match/account.
 // Each player decides on their own device whether their own turns roll the
 // dice automatically; doesn't affect or require anything from the opponent.
@@ -1339,7 +1393,7 @@ const i18n = {
     'gameover.rematch': '🔁 Pedir revanche',
     'gameover.waiting': '⏳ Aguardando o adversário aceitar a revanche...',
     'gameover.back': 'Voltar ao menu',
-    'gameover.league': '🏆 Voltar à liga',
+    'gameover.league': 'Voltar à liga',
     'gameover.finished': 'Partida finalizada',
     'rematch.request': 'pediu uma revanche.',
     'rematch.accept': '✓ Aceitar',
@@ -1501,7 +1555,7 @@ const i18n = {
     'gameover.rematch': '🔁 Pedir revancha',
     'gameover.waiting': '⏳ Esperando que el rival acepte la revancha...',
     'gameover.back': 'Volver al menú',
-    'gameover.league': '🏆 Volver a la liga',
+    'gameover.league': 'Volver a la liga',
     'gameover.finished': 'Partido finalizado',
     'rematch.request': 'te pidió la revancha.',
     'rematch.accept': '✓ Aceptar',
@@ -1661,7 +1715,7 @@ const i18n = {
     'gameover.rematch': '🔁 Request rematch',
     'gameover.waiting': '⏳ Waiting for opponent to accept rematch...',
     'gameover.back': 'Back to menu',
-    'gameover.league': '🏆 Back to league',
+    'gameover.league': 'Back to league',
     'gameover.finished': 'Match finished',
     'rematch.request': 'requested a rematch.',
     'rematch.accept': '✓ Accept',
@@ -1821,7 +1875,7 @@ const i18n = {
     'gameover.rematch': '🔁 Demander une revanche',
     'gameover.waiting': '⏳ En attente que l\'adversaire accepte la revanche...',
     'gameover.back': 'Retour au menu',
-    'gameover.league': '🏆 Retour à la ligue',
+    'gameover.league': 'Retour à la ligue',
     'gameover.finished': 'Match terminé',
     'rematch.request': 'a demandé une revanche.',
     'rematch.accept': '✓ Accepter',
@@ -1981,7 +2035,7 @@ const i18n = {
     'gameover.rematch': '🔁 Revanche anfragen',
     'gameover.waiting': '⏳ Warte darauf, dass der Gegner die Revanche annimmt...',
     'gameover.back': 'Zurück zum Menü',
-    'gameover.league': '🏆 Zurück zur Liga',
+    'gameover.league': 'Zurück zur Liga',
     'gameover.finished': 'Spiel beendet',
     'rematch.request': 'hat eine Revanche angefragt.',
     'rematch.accept': '✓ Annehmen',
@@ -2141,7 +2195,7 @@ const i18n = {
     'gameover.rematch': '🔁 Richiedi rivincita',
     'gameover.waiting': '⏳ In attesa che l\'avversario accetti la rivincita...',
     'gameover.back': 'Torna al menu',
-    'gameover.league': '🏆 Torna alla lega',
+    'gameover.league': 'Torna alla lega',
     'gameover.finished': 'Partita terminata',
     'rematch.request': 'ha chiesto una rivincita.',
     'rematch.accept': '✓ Accetta',
@@ -2430,7 +2484,10 @@ function applyRemoteState(remote) {
         console.warn('[Hexagol ELO] Update failed:', err)
       );
       if (state.tournamentId && state.tournamentMatchId && onlineIsHost) {
-        reportTournamentResult(state.tournamentId, state.tournamentMatchId, state.tournamentIsLeague, state.score.home, state.score.away)
+        const homeUidForReport = onlineMyTeam === 'home' ? currentUser?.uid : onlineOpponentUid;
+        const awayUidForReport = onlineMyTeam === 'home' ? onlineOpponentUid : currentUser?.uid;
+        reportTournamentResult(state.tournamentId, state.tournamentMatchId, state.tournamentIsLeague, state.score.home, state.score.away,
+          { matchStats: state.matchStats, players: state.players, homeTeam: state.homeTeam, awayTeam: state.awayTeam, homeUid: homeUidForReport, awayUid: awayUidForReport })
           .catch(err => console.warn('[Hexagol Tournament] Report failed:', err));
       }
     }
@@ -5622,8 +5679,15 @@ function getInitialState(boardSize) {
     toastToShow: null,
     gameLog: [{ turn: 0, message: lang === 'en' ? 'Match is about to begin.' : lang === 'pt' ? 'A partida está prestes a começar.' : lang === 'fr' ? 'Le match va commencer.' : lang === 'de' ? 'Das Spiel beginnt gleich.' : lang === 'it' ? 'La partita sta per iniziare.' : 'El partido está por comenzar.', actionType: 'game-event' }],
     stats: { possession: { home: 0, away: 0 }, shotsOnGoal: { home: 0, away: 0 }, offsides: { home: 0, away: 0 }, passes: { home: 0, away: 0 } },
-    matchStats: { goals: {}, assists: {} },
+    matchStats: { goals: {}, assists: {}, shotsOnGoal: {}, passes: {}, chainPasses: {}, touches: {}, exposedBall: {}, blocks: {}, saves: {}, offsides: {}, ownGoals: {} },
     assistProviderId: null,
+    // Plan Handicap: wide-definition assist tracking — survives across turns
+    // (unlike assistProviderId, which is only for same-turn chain-pass), so it's
+    // deliberately NOT reset on every normal turn transition, only when the ball
+    // itself resets (goal, kickoff, blocked ball) or the chain is broken.
+    pendingAssistProviderId: null,
+    pendingAssistReceiverId: null,
+    pendingAssistTouchCount: 0,
     turnStartState: null,
     prevTurnSnapshot: null,
     undoUsedThisTurn: false,
@@ -5907,7 +5971,10 @@ function playSoundsForTransition(prev, next) {
       // If this match belongs to a tournament, report the result back —
       // only the host reports to avoid a double-write race between both clients.
       if (next.tournamentId && next.tournamentMatchId && onlineIsHost) {
-        reportTournamentResult(next.tournamentId, next.tournamentMatchId, next.tournamentIsLeague, next.score.home, next.score.away)
+        const homeUidForReport = onlineMyTeam === 'home' ? currentUser?.uid : onlineOpponentUid;
+        const awayUidForReport = onlineMyTeam === 'home' ? onlineOpponentUid : currentUser?.uid;
+        reportTournamentResult(next.tournamentId, next.tournamentMatchId, next.tournamentIsLeague, next.score.home, next.score.away,
+          { matchStats: next.matchStats, players: next.players, homeTeam: next.homeTeam, awayTeam: next.awayTeam, homeUid: homeUidForReport, awayUid: awayUidForReport })
           .catch(err => console.warn('[Hexagol Tournament] Report failed:', err));
       }
     }
@@ -6021,9 +6088,10 @@ function advanceToNextTurn(s, opts) {
     const { offsidePlayers, offsideLineY } = checkForOffside(players, currentPlayer, offsideCheckBall, s.lastPlayerToTouchBallId);
     if (offsidePlayers.length > 0 && offsideLineY !== null) {
       const nextStats = { ...s.stats, offsides: { ...s.stats.offsides, [currentPlayer]: s.stats.offsides[currentPlayer] + 1 } };
+      const sWithPlayerOffsides = offsidePlayers.reduce((acc, p) => bumpMatchStat(acc, p.id, 'offsides'), s);
       const msg = lang === 'en' ? `Offside! ${teamToKickOffName}, move the highlighted players.` : lang === 'pt' ? `Impedimento! ${teamToKickOffName}, mova os jogadores destacados.` : lang === 'fr' ? `Hors-jeu ! ${teamToKickOffName}, déplacez les joueurs en surbrillance.` : lang === 'de' ? `Abseits! ${teamToKickOffName}, bewege die markierten Spieler.` : lang === 'it' ? `Fuorigioco! ${teamToKickOffName}, muovi i giocatori evidenziati.` : `¡Füra de juego! ${teamToKickOffName}, debes mover a los jugadores resaltados.`;
       const news = {
-        ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'resolving-offside', diceValue: null,
+        ...sWithPlayerOffsides, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'resolving-offside', diceValue: null,
         ...freshActionState(), validOffsideMoves: [], offsidePlayerIds: offsidePlayers.map(p => p.id),
         offsideContext: { ballPosition: offsideCheckBall, offsideLineY }, swapCandidates: [],
         offsideTimer: OFFSIDE_RESOLUTION_DURATION, timer: s.turnDuration, toastToShow: null,
@@ -6042,7 +6110,7 @@ function advanceToNextTurn(s, opts) {
       gamePhase: 'rolling', diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, offsidePlayerIds: [], validOffsideMoves: [], swapCandidates: [],
       timer: s.turnDuration, toastToShow: { title: lang === 'en' ? 'Ball blocked!' : lang === 'pt' ? 'Bola bloqueada!' : lang === 'fr' ? 'Ballon bloqué !' : lang === 'de' ? 'Ball blockiert!' : lang === 'it' ? 'Palla bloccata!' : '¡Juego trabado!', description: lang === 'en' ? `${teamCausingBlockName} has blocked the ball. Resetting kickoff.` : lang === 'pt' ? `${teamCausingBlockName} bloqueou a bola. Reiniciando o saque.` : lang === 'fr' ? `${teamCausingBlockName} a bloqué le ballon. Remise en jeu.` : lang === 'de' ? `${teamCausingBlockName} hat den Ball blockiert. Wiederanpfiff.` : lang === 'it' ? `${teamCausingBlockName} ha bloccato la palla. Rimessa in gioco.` : `${teamCausingBlockName} ha bloqueado el balón. Se reinicia el saque.` },
-      turnStartState: null, isKickoffTurn: true, assistProviderId: null,
+      turnStartState: null, isKickoffTurn: true, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0,
     };
     return logAction(news, msg, 'game-event', currentPlayer);
   }
@@ -6077,8 +6145,9 @@ function advanceToNextTurn(s, opts) {
     remainingBudget: s.gameVariant === 'quick' ? s.diceValue : 0,
     usedPlayerIds: [],
   } : s.prevTurnSnapshot;
+  const sWithBlockCredit = creditBlockersAndSaves(s, currentPlayer);
   const news = {
-    ...s, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'rolling', diceValue: null,
+    ...sWithBlockCredit, stats: nextStats, currentPlayer: nextPlayer, gamePhase: 'rolling', diceValue: null,
     ...freshActionState(), offsidePlayerIds: [], validOffsideMoves: [], offsideContext: null,
     swapCandidates: [], swapTimer: GOALKEEPER_SWAP_DURATION, timer: s.turnDuration,
     turnCount: s.turnCount + 1, toastToShow: null, turnStartState: null, isKickoffTurn: false, assistProviderId: null,
@@ -6088,12 +6157,84 @@ function advanceToNextTurn(s, opts) {
   return logAction(news, baseMsg, 'turn-start', nextPlayer);
 }
 
+// Bumps a per-player counter inside matchStats (Plan Handicap tracking).
+// Safe no-op if playerId is falsy so call sites don't need their own guards.
+function bumpMatchStat(s, playerId, key) {
+  if (!playerId) return s;
+  return { ...s, matchStats: { ...s.matchStats, [key]: { ...s.matchStats[key], [playerId]: (s.matchStats[key]?.[playerId] || 0) + 1 } } };
+}
+
+// Plan Handicap — wide-definition assist. connectionType:
+//  'exact' — landed directly on a teammate (the existing same-turn chain-pass
+//            assist mechanism handles this already via assistProviderId; here we
+//            just clear any pending wide-assist, since a cleaner one just started).
+//  'wide'  — landed in open space adjacent to a teammate: actorId becomes a new
+//            pending assist provider, waiting for someone to actually touch it.
+//  'none'  — landed on an opponent, or in open space with nobody nearby: if a
+//            pending assist exists, this is the touch that resolves it — either
+//            locking in newToucherId as the receiver, extending their own touch
+//            count (up to a cap), or voiding the whole thing.
+const PENDING_ASSIST_TOUCH_CAP = 3;
+function resolveAssistTracking(s, connectionType, actorId, newToucherId) {
+  if (connectionType === 'exact') {
+    return { ...s, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0 };
+  }
+  if (connectionType === 'wide') {
+    return { ...s, pendingAssistProviderId: actorId, pendingAssistReceiverId: null, pendingAssistTouchCount: 0 };
+  }
+  // connectionType === 'none'
+  if (!s.pendingAssistProviderId) return s;
+  const provider = s.players.find(p => p.id === s.pendingAssistProviderId);
+  const toucher = s.players.find(p => p.id === newToucherId);
+  if (!s.pendingAssistReceiverId) {
+    // Nobody has picked up the loose ball yet — the first touch decides its fate.
+    if (provider && toucher && toucher.team === provider.team && toucher.id !== provider.id) {
+      return { ...s, pendingAssistReceiverId: newToucherId, pendingAssistTouchCount: 1 };
+    }
+    return { ...s, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0 };
+  }
+  // Someone already "owns" the loose ball — only their own continued touches keep it alive.
+  if (newToucherId === s.pendingAssistReceiverId) {
+    const nextCount = s.pendingAssistTouchCount + 1;
+    if (nextCount > PENDING_ASSIST_TOUCH_CAP) {
+      return { ...s, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0 };
+    }
+    return { ...s, pendingAssistTouchCount: nextCount };
+  }
+  return { ...s, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0 };
+}
+
+// Plan Handicap — "atajada" (goalkeeper) / "bloqueo" (field player): credits any
+// defender whose mere positioning is preventing what would otherwise be a valid
+// direct shot threat against their own goal, right as the attacking team's turn
+// begins. Reuses the same shot-threat calculation already used for the on-screen
+// threat warnings: compute the real threat set, then recompute it with each
+// defender hypothetically removed — if removing them reveals a NEW threat square
+// that wasn't there before, their presence was uniquely blocking it.
+function creditBlockersAndSaves(s, defendingTeam) {
+  const attackingTeam = defendingTeam === 'home' ? 'away' : 'home';
+  const realThreats = getShotThreatGoalSquares(s.ballPosition, attackingTeam, s.players);
+  const defenders = s.players.filter(p => p.team === defendingTeam);
+  let next = s;
+  for (const d of defenders) {
+    const withoutD = s.players.filter(p => p.id !== d.id);
+    const threatsWithoutD = getShotThreatGoalSquares(s.ballPosition, attackingTeam, withoutD);
+    if (threatsWithoutD.length > realThreats.length) {
+      next = bumpMatchStat(next, d.id, d.isGoalkeeper ? 'saves' : 'blocks');
+    }
+  }
+  return next;
+}
+
 function handleGoal(s) {
   const scoringTeam = s.currentPlayer;
   const scorerId = s.lastPlayerToTouchBallId;
-  const assisterId = s.assistProviderId;
+  // Plan Handicap: prefer the direct (same-turn chain-pass) assist if there is
+  // one; otherwise, promote a pending wide-definition assist if the scorer is
+  // the same player who picked up that loose ball (and it's still valid).
+  const assisterId = s.assistProviderId || (s.pendingAssistReceiverId === scorerId ? s.pendingAssistProviderId : null);
   const safeMatchStats = s.matchStats || { goals: {}, assists: {} };
-  const newMatchStats = { goals: { ...(safeMatchStats.goals || {}) }, assists: { ...(safeMatchStats.assists || {}) } };
+  const newMatchStats = { ...safeMatchStats, goals: { ...(safeMatchStats.goals || {}) }, assists: { ...(safeMatchStats.assists || {}) } };
   if (scorerId) newMatchStats.goals[scorerId] = (newMatchStats.goals[scorerId] || 0) + 1;
   if (assisterId) newMatchStats.assists[assisterId] = (newMatchStats.assists[assisterId] || 0) + 1;
 
@@ -6124,7 +6265,7 @@ function handleGoal(s) {
           ...s2, players: newPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           currentPlayer: scoringTeam === 'home' ? 'away' : 'home',
           ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
-          turnStartState: null, lastAction: null, assistProviderId: null,
+          turnStartState: null, lastAction: null, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0,
           gamePhase: 'match-ending', isClockRunning: false,
         };
       });
@@ -6155,7 +6296,7 @@ function handleGoal(s) {
         ...s2, players: newPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
         currentPlayer: scoringTeam === 'home' ? 'away' : 'home', gamePhase: 'rolling',
         ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
-        turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+        turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0,
       };
     });
   }, 420);
@@ -6189,7 +6330,7 @@ function handleOwnGoal(s) {
           ...s2, players: resetPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
           currentPlayer: team, ...freshActionState(),
           lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
-          turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+          turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0,
           gamePhase: 'match-ending', isClockRunning: false,
         };
       });
@@ -6214,7 +6355,7 @@ function handleOwnGoal(s) {
         ...s2, players: resetPlayers, ballPosition: s2.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION },
         currentPlayer: team, gamePhase: 'rolling',
         ...freshActionState(), lastPlayerToTouchBallId: null, swapCandidates: [], timer: s2.turnDuration,
-        turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null,
+        turnStartState: null, lastAction: null, isKickoffTurn: true, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0,
       };
     });
   }, 420);
@@ -7781,6 +7922,35 @@ function handleTutorialAction(userAction) {
 
 
 
+// ═══════════════════════════════════════════════════════════
+// MÓDULO: Persistencia de Liga local — hasta ahora vivía solo en memoria y se
+// perdía al cerrar la pestaña. Guardamos la estructura de la liga (tabla,
+// fixture, stats por jugador, ronda actual) entre partidos, en localStorage
+// ya que es un modo local sin cuenta ni conexión. Deliberadamente NO persiste
+// un partido a mitad de jugar — el punto de guardado seguro es entre
+// partidos, cuando finishLeagueMatch termina de actualizar todo.
+// ═══════════════════════════════════════════════════════════
+const LOCAL_LEAGUE_STORAGE_KEY = 'hexagol_local_league';
+function saveLocalLeague(leagueState) {
+  try {
+    localStorage.setItem(LOCAL_LEAGUE_STORAGE_KEY, JSON.stringify(leagueState));
+  } catch (e) {
+    console.error('[Hexagol] Error guardando la liga local:', e);
+  }
+}
+function loadLocalLeague() {
+  try {
+    const raw = localStorage.getItem(LOCAL_LEAGUE_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.error('[Hexagol] Error leyendo la liga local guardada:', e);
+    return null;
+  }
+}
+function clearLocalLeague() {
+  localStorage.removeItem(LOCAL_LEAGUE_STORAGE_KEY);
+}
+
 function startLeague(teamIds, durationMinutes) {
   const leagueTeams = teamIds.map(id => {
     const teamData = TEAMS.find(t => t.id === id);
@@ -7792,9 +7962,21 @@ function startLeague(teamIds, durationMinutes) {
   });
   const schedule = generateLeagueSchedule(teamIds);
   return {
-    teams: leagueTeams, schedule, playerStats: [],
+    teams: leagueTeams, schedule, playerStats: [], playerHandicaps: [],
     currentRound: 1, matchDurationMinutes: durationMinutes, currentMatchId: null,
   };
+}
+
+// Plan Handicap: overlays each player's current handicap (+1/0/-1) from the
+// league's stored values onto their in-match player object, matched by team +
+// roster number (the stable identity across matches — in-match player.id isn't).
+function applyHandicapsToPlayers(players, playerHandicaps, homeTeam, awayTeam, homeIdentity, awayIdentity) {
+  if (!playerHandicaps || !playerHandicaps.length) return players;
+  return players.map(p => {
+    const teamId = p.team === 'home' ? (homeIdentity ?? homeTeam.id) : (awayIdentity ?? awayTeam.id);
+    const found = playerHandicaps.find(h => h.teamId === teamId && h.playerNumber === p.playerNumber);
+    return found ? { ...p, handicap: found.handicap } : p;
+  });
 }
 
 function startLeagueMatch(s, matchId) {
@@ -7807,12 +7989,94 @@ function startLeagueMatch(s, matchId) {
   const turnDur = s.leagueState.matchDurationMinutes <= 5 ? 10 : (s.leagueState.matchDurationMinutes <= 10 ? 20 : TURN_DURATION);
   return {
     ...fresh, gameMode: 'league', leagueState: { ...s.leagueState, currentMatchId: matchId },
+    players: applyHandicapsToPlayers(fresh.players, s.leagueState.playerHandicaps, finalHomeTeam, finalAwayTeam),
     homeTeam: finalHomeTeam, awayTeam: finalAwayTeam, gamePhase: 'pre-game-roll',
     halfDurationMinutes: s.leagueState.matchDurationMinutes, gameClock: s.leagueState.matchDurationMinutes * 60,
     turnDuration: turnDur, timer: turnDur,
     message: lang === 'en' ? `Round ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Roll the dice.` : lang === 'pt' ? `Rodada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Lance o dado.` : lang === 'fr' ? `Journée ${match.round} : ${homeTeamData.name} vs ${awayTeamData.name}. Lancez le dé.` : lang === 'de' ? `Spieltag ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Würfle.` : lang === 'it' ? `Giornata ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Lancia il dado.` : `Jornada ${match.round}: ${homeTeamData.name} vs ${awayTeamData.name}. Tiren los dados.`,
     toastToShow: clashResolved ? { title: lang === 'en' ? 'Kit clash' : lang === 'pt' ? 'Conflito de uniformes' : lang === 'fr' ? 'Conflit de maillots' : lang === 'de' ? 'Trikotkonflikt' : lang === 'it' ? 'Conflitto di maglie' : 'Conflicto de camisetas', description: lang === 'en' ? `${awayTeamData.name} will use their alternate kit.` : lang === 'pt' ? `${awayTeamData.name} usará seu uniforme alternativo.` : lang === 'fr' ? `${awayTeamData.name} utilisera son maillot alternatif.` : lang === 'de' ? `${awayTeamData.name} wird sein Ausweichtrikot tragen.` : lang === 'it' ? `${awayTeamData.name} userà la maglia alternativa.` : `${awayTeamData.name} usará su camiseta alternativa.` } : null,
   };
+}
+
+// ═══════════════════════════════════════════════════════════
+// MÓDULO: Plan Handicap — cálculo del handicap por partido de liga.
+// Suma los puntos de cada métrica trackeada en matchStats, ordena a cada
+// plantel por separado (nunca cruzando los dos equipos), y asigna +1 a los
+// 2 mejores, -1 al peor, 0 al resto. Empates reales (misma línea de stats
+// completa) se comparten en vez de forzar un desempate arbitrario.
+// ═══════════════════════════════════════════════════════════
+const HANDICAP_WEIGHTS = {
+  goals: 4, assists: 3, saves: 2, blocks: 2, shotsOnGoal: 0.5, chainPasses: 0.5,
+  passes: 0.3, touches: 0.2, exposedBall: -0.5, offsides: -1, ownGoals: -3,
+};
+
+// Plan Handicap — MVP del partido: reusa los mismos pesos que el handicap
+// para elegir la figura entre los 22 jugadores de ambos planteles.
+function computeMatchMVP(s, homeTeam, awayTeam) {
+  const ms = s.matchStats;
+  if (!ms || !s.players || !s.players.length) return null;
+  function scoreFor(playerId) {
+    let total = 0;
+    for (const key in HANDICAP_WEIGHTS) total += (ms[key]?.[playerId] || 0) * HANDICAP_WEIGHTS[key];
+    return total;
+  }
+  let best = null;
+  s.players.forEach(p => {
+    const score = scoreFor(p.id);
+    if (!best || score > best.score) {
+      const team = p.team === 'home' ? homeTeam : awayTeam;
+      const rosterPlayer = team.roster?.find(rp => rp.playerNumber === p.playerNumber);
+      best = { playerNumber: p.playerNumber, team: p.team, name: rosterPlayer?.name || `#${p.playerNumber}`, score: Math.round(score * 10) / 10 };
+    }
+  });
+  return best && best.score > 0 ? best : null;
+}
+
+function computeMatchHandicaps(s, homeTeam, awayTeam, homeIdentity, awayIdentity) {
+  const ms = s.matchStats;
+  function scoreFor(playerId) {
+    let total = 0;
+    for (const key in HANDICAP_WEIGHTS) total += (ms[key]?.[playerId] || 0) * HANDICAP_WEIGHTS[key];
+    return total;
+  }
+  // Desempate, en este orden: goles, asistencias, atajadas+bloqueos, pases en
+  // cadena, pases, tiros al arco, toques, offsides (menos mejor), balón
+  // expuesto (menos mejor), gol en contra (menos mejor).
+  function tieBreakVector(playerId) {
+    return [
+      ms.goals?.[playerId] || 0,
+      ms.assists?.[playerId] || 0,
+      (ms.saves?.[playerId] || 0) + (ms.blocks?.[playerId] || 0),
+      ms.chainPasses?.[playerId] || 0,
+      ms.passes?.[playerId] || 0,
+      ms.shotsOnGoal?.[playerId] || 0,
+      ms.touches?.[playerId] || 0,
+      -(ms.offsides?.[playerId] || 0),
+      -(ms.exposedBall?.[playerId] || 0),
+      -(ms.ownGoals?.[playerId] || 0),
+    ];
+  }
+  function compareEntries(a, b) {
+    if (b.score !== a.score) return b.score - a.score;
+    const va = tieBreakVector(a.id), vb = tieBreakVector(b.id);
+    for (let i = 0; i < va.length; i++) if (vb[i] !== va[i]) return vb[i] - va[i];
+    return 0; // empate real — misma línea de estadísticas
+  }
+  function handicapsForTeam(team, teamKey, identity) {
+    const roster = team.roster || [];
+    const entries = s.players.filter(p => p.team === teamKey).map(p => ({ id: p.id, playerNumber: p.playerNumber, score: scoreFor(p.id) }));
+    entries.sort(compareEntries);
+    let topCount = Math.min(2, entries.length);
+    while (topCount < entries.length && compareEntries(entries[topCount], entries[topCount - 1]) === 0) topCount++;
+    let bottomCount = entries.length > topCount ? 1 : 0;
+    while (bottomCount < entries.length - topCount && compareEntries(entries[entries.length - 1 - bottomCount], entries[entries.length - bottomCount]) === 0) bottomCount++;
+    return entries.map((e, idx) => {
+      const handicap = idx < topCount ? 1 : (idx >= entries.length - bottomCount ? -1 : 0);
+      const rosterPlayer = roster.find(rp => rp.playerNumber === e.playerNumber);
+      return { teamId: identity ?? team.id, playerNumber: e.playerNumber, name: rosterPlayer?.name || `#${e.playerNumber}`, handicap, score: Math.round(e.score * 10) / 10 };
+    });
+  }
+  return [...handicapsForTeam(homeTeam, 'home', homeIdentity), ...handicapsForTeam(awayTeam, 'away', awayIdentity)];
 }
 
 function finishLeagueMatch(s) {
@@ -7861,7 +8125,14 @@ function finishLeagueMatch(s) {
   const isRoundOver = currentRoundMatches.every(m => m.played);
   const nextRound = isLeagueOver ? leagueState.currentRound : (isRoundOver ? leagueState.currentRound + 1 : leagueState.currentRound);
 
-  const updatedLeagueState = { ...leagueState, teams: updatedTeams, schedule: updatedSchedule, playerStats: updatedPlayerStats, currentRound: nextRound, currentMatchId: null };
+  // Plan Handicap: recompute for the two teams that just played, keep whatever
+  // the other teams already had from their own last match untouched.
+  const newHandicapsForThisMatch = computeMatchHandicaps(s, homeTeam, awayTeam);
+  const existingHandicaps = (leagueState.playerHandicaps || []).filter(h => h.teamId !== homeTeam.id && h.teamId !== awayTeam.id);
+  const updatedPlayerHandicaps = [...existingHandicaps, ...newHandicapsForThisMatch];
+
+  const updatedLeagueState = { ...leagueState, teams: updatedTeams, schedule: updatedSchedule, playerStats: updatedPlayerStats, playerHandicaps: updatedPlayerHandicaps, currentRound: nextRound, currentMatchId: null };
+  saveLocalLeague(updatedLeagueState);
 
   if (isLeagueOver) {
     const champion = getSortedLeagueTeams(updatedTeams, updatedSchedule)[0];
@@ -7976,7 +8247,11 @@ function handlePlayerSelection(s, playerId) {
       return { ...s, toastToShow: { title: lang === 'en' ? 'Already moved' : lang === 'pt' ? 'Já jogou' : lang === 'fr' ? 'Déjà déplacé' : lang === 'de' ? 'Bereits bewegt' : lang === 'it' ? 'Già mosso' : 'Ya actuó', description: lang === 'en' ? 'This player already acted this turn.' : lang === 'pt' ? 'Este jogador já atuou neste turno.' : lang === 'fr' ? 'Ce joueur a déjà agi ce tour-ci.' : lang === 'de' ? 'Dieser Spieler hat in dieser Runde bereits gehandelt.' : lang === 'it' ? 'Questo giocatore ha già agito in questo turno.' : 'Este jugador ya actuó en este turno.', variant: 'destructive' } };
     }
 
-    const effectiveDvQ = s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue;
+    const baseDvQ = s.gameVariant === 'quick' ? s.remainingBudget : s.diceValue;
+    // Plan Handicap: add the player's handicap (+1/0/-1) before anything else —
+    // in particular before the goalkeeper doubles their own-area movement, since
+    // that doubling reads this same value downstream inside getValidMoves/etc.
+    const effectiveDvQ = Math.max(1, baseDvQ + (clickedPlayer.handicap || 0));
     const newValidMoves = getValidMoves(clickedPlayer, effectiveDvQ, s.players, s.ballPosition);
     let kickResult = { validTargets: [], invalidOffsideTargets: [] };
     let loftedPassTargets = [];
@@ -8143,14 +8418,16 @@ function handleActionExecution(s, executedAction, position) {
       return handleGoal(withStat);
     }
     const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
-    if (ownGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) return handleOwnGoal({ ...s, players: newPlayers, ballPosition: finalBallPos });
+    if (ownGoal.some(p => p.x === finalBallPos.x && p.y === finalBallPos.y)) return handleOwnGoal(bumpMatchStat({ ...s, players: newPlayers, ballPosition: finalBallPos }, selectedPlayerId, 'ownGoals'));
 
     const receivingTeammate = players.find(p => p.position.x === finalBallPos.x && p.position.y === finalBallPos.y && p.team === currentPlayer && p.id !== selectedPlayerId);
     if (receivingTeammate) {
       // Deduct drag cost before entering chain-pass
       const dragCostChain = Math.max(Math.abs(ballPosition.x - actingPlayer.position.x), Math.abs(ballPosition.y - actingPlayer.position.y))
                           + Math.max(Math.abs(finalBallPos.x - ballPosition.x), Math.abs(finalBallPos.y - ballPosition.y));
-      const logWithBudget = deductBudget(logState, dragCostChain, selectedPlayerId);
+      const logWithBudget0 = deductBudget(logState, dragCostChain, selectedPlayerId);
+      const logWithBudget1 = bumpMatchStat(logWithBudget0, selectedPlayerId, 'passes');
+      const logWithBudget = resolveAssistTracking(logWithBudget1, 'exact', selectedPlayerId, receivingTeammate.id);
       const chainResult = getValidChainPassTargets(receivingTeammate, newPlayers);
       const nextReceivers = [];
       chainResult.validTargets.forEach(pos => {
@@ -8173,7 +8450,20 @@ function handleActionExecution(s, executedAction, position) {
     // Drag cost = distance from player to ball + distance dragged
     const dragCost = Math.max(Math.abs(ballPosition.x - actingPlayer.position.x), Math.abs(ballPosition.y - actingPlayer.position.y))
                    + Math.max(Math.abs(finalBallPos.x - ballPosition.x), Math.abs(finalBallPos.y - ballPosition.y));
-    const nextChange = deductBudget({ ...logState, players: newPlayers, ballPosition: finalBallPos, lastPlayerToTouchBallId: lastTouchedId, lastAction: { from: ballPosition, to: finalBallPos } }, dragCost, selectedPlayerId);
+    // Plan Handicap: same wide-definition pass/shot/touch/exposed-ball tracking as the kick branch
+    const dragOppGoalForShot = currentPlayer === 'home' ? _activeAwayGoal : _activeHomeGoal;
+    const dragDistToGoal = Math.min(...dragOppGoalForShot.map(g => Math.abs(g.x - finalBallPos.x) + Math.abs(g.y - finalBallPos.y)));
+    const dragHasClearLineToGoal = dragDistToGoal <= 6 && botHasDirectShotFromPos(finalBallPos, currentPlayer, players);
+    const dragHasTeammateAdjacent = players.some(p => p.team === currentPlayer && p.id !== selectedPlayerId && isAdjacent(p.position, finalBallPos));
+    const dragHasOpponentAdjacent = players.some(p => p.team !== currentPlayer && isAdjacent(p.position, finalBallPos));
+    let withDragStat = logState;
+    if (dragHasClearLineToGoal) withDragStat = bumpMatchStat(withDragStat, selectedPlayerId, 'shotsOnGoal');
+    if (dragHasTeammateAdjacent) withDragStat = bumpMatchStat(withDragStat, selectedPlayerId, 'passes');
+    if (!dragHasClearLineToGoal && !dragHasTeammateAdjacent) {
+      withDragStat = bumpMatchStat(withDragStat, selectedPlayerId, 'touches');
+      if (dragHasOpponentAdjacent) withDragStat = bumpMatchStat(withDragStat, selectedPlayerId, 'exposedBall');
+    }
+    const nextChange = deductBudget({ ...resolveAssistTracking(withDragStat, dragHasTeammateAdjacent ? 'wide' : 'none', selectedPlayerId, lastTouchedId), players: newPlayers, ballPosition: finalBallPos, lastPlayerToTouchBallId: lastTouchedId, lastAction: { from: ballPosition, to: finalBallPos } }, dragCost, selectedPlayerId);
     return advanceToNextTurn(nextChange);
   }
 
@@ -8201,7 +8491,7 @@ function handleActionExecution(s, executedAction, position) {
       return handleGoal(withStat);
     }
     const ownGoal = currentPlayer === 'home' ? _activeHomeGoal : _activeAwayGoal;
-    if (ownGoal.some(p => p.x === position.x && p.y === position.y)) return handleOwnGoal({ ...s, ballPosition: position });
+    if (ownGoal.some(p => p.x === position.x && p.y === position.y)) return handleOwnGoal(bumpMatchStat({ ...s, ballPosition: position }, currentPasser.id, 'ownGoals'));
 
     const playersOnTarget = players.filter(p => p.position.x === position.x && p.position.y === position.y);
     const opponentOnTarget = playersOnTarget.find(p => p.team !== currentPlayer);
@@ -8211,7 +8501,8 @@ function handleActionExecution(s, executedAction, position) {
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
       const kickCost1 = Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y));
       const effectiveKickCost1 = (s.gameVariant === 'quick' && s.chainPassInitiatorId) ? 0 : kickCost1;
-      const nextChange = deductBudget({ ...logState, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } }, effectiveKickCost1, selectedPlayerId);
+      const sWithAssistUpdate1 = resolveAssistTracking(logState, 'none', currentPasser.id, opponentOnTarget.id);
+      const nextChange = deductBudget({ ...sWithAssistUpdate1, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: opponentOnTarget.id, lastAction: { from: startPos, to: position } }, effectiveKickCost1, selectedPlayerId);
       return advanceToNextTurn(nextChange);
     }
 
@@ -8219,9 +8510,14 @@ function handleActionExecution(s, executedAction, position) {
     if (receivingTeammate) {
       const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
       const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
-      const logState = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : lang === 'pt' ? `Passe para #${receivingTeammate.playerNumber}.` : lang === 'fr' ? `Passe à #${receivingTeammate.playerNumber}.` : lang === 'de' ? `Pass zu #${receivingTeammate.playerNumber}.` : lang === 'it' ? `Passaggio a #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
+      const logState0 = logAction(s, lang === 'en' ? `Pass to #${receivingTeammate.playerNumber}.` : lang === 'pt' ? `Passe para #${receivingTeammate.playerNumber}.` : lang === 'fr' ? `Passe à #${receivingTeammate.playerNumber}.` : lang === 'de' ? `Pass zu #${receivingTeammate.playerNumber}.` : lang === 'it' ? `Passaggio a #${receivingTeammate.playerNumber}.` : `Pase a #${receivingTeammate.playerNumber}.`, 'kick');
+      const logState = resolveAssistTracking(logState0, 'exact', currentPasser.id, receivingTeammate.id);
       // Count pass stat
-      const withPassStat = { ...logState, stats: { ...logState.stats, passes: { ...logState.stats.passes, [currentPlayer]: (logState.stats.passes?.[currentPlayer] || 0) + 1 } } };
+      const withPassStat0 = { ...logState, stats: { ...logState.stats, passes: { ...logState.stats.passes, [currentPlayer]: (logState.stats.passes?.[currentPlayer] || 0) + 1 } } };
+      // Plan Handicap: per-player — a continuation within an already-started chain
+      // counts as "pase en cadena" (worth more), the pass that starts the chain
+      // counts as a regular "pase completado" like any other successful pass.
+      const withPassStat = bumpMatchStat(withPassStat0, currentPasser.id, executedAction === 'chain-pass' ? 'chainPasses' : 'passes');
       // Deduct budget for the initial kick (chain pass itself is free)
       const chainKickCost = executedAction !== 'chain-pass'
         ? Math.max(Math.abs(position.x - startPos.x), Math.abs(position.y - startPos.y))
@@ -8251,12 +8547,23 @@ function handleActionExecution(s, executedAction, position) {
     const distToGoal = Math.min(...oppGoalForShot.map(g => Math.abs(g.x - position.x) + Math.abs(g.y - position.y)));
     const hasClearLineToGoal = distToGoal <= 6 && botHasDirectShotFromPos(position, currentPlayer, players);
     const hasTeammateAdjacent = players.some(p => p.team === currentPlayer && p.id !== selectedPlayerId && isAdjacent(p.position, position));
+    const hasOpponentAdjacent = players.some(p => p.team !== currentPlayer && isAdjacent(p.position, position));
+    const kickPlayerIdForStats = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
     let withShotStat = logState;
     if (hasClearLineToGoal) {
       withShotStat = { ...logState, stats: { ...logState.stats, shotsOnGoal: { ...logState.stats.shotsOnGoal, [currentPlayer]: logState.stats.shotsOnGoal[currentPlayer] + 1 } } };
+      withShotStat = bumpMatchStat(withShotStat, kickPlayerIdForStats, 'shotsOnGoal');
     }
     if (hasTeammateAdjacent) {
       withShotStat = { ...withShotStat, stats: { ...withShotStat.stats, passes: { ...withShotStat.stats.passes, [currentPlayer]: (withShotStat.stats.passes?.[currentPlayer] || 0) + 1 } } };
+      withShotStat = bumpMatchStat(withShotStat, kickPlayerIdForStats, 'passes');
+    }
+    // Plan Handicap: neither a shot line nor a nearby teammate — this is a "toque"
+    // (touch), the ball just gets moved into open space under this player's control.
+    // If it lands next to a rival, that's also a "balón expuesto" (negative).
+    if (!hasClearLineToGoal && !hasTeammateAdjacent) {
+      withShotStat = bumpMatchStat(withShotStat, kickPlayerIdForStats, 'touches');
+      if (hasOpponentAdjacent) withShotStat = bumpMatchStat(withShotStat, kickPlayerIdForStats, 'exposedBall');
     }
     const playerNewPos = executedAction !== 'chain-pass' ? ballPosition : actingPlayer.position;
     const newPlayers = executedAction !== 'chain-pass' ? players.map(p => p.id === selectedPlayerId ? { ...p, position: playerNewPos } : p) : players;
@@ -8265,7 +8572,8 @@ function handleActionExecution(s, executedAction, position) {
     const kickPlayerId = executedAction === 'chain-pass' ? s.chainPassInitiatorId : selectedPlayerId;
     // In quick mode, kicks during a chain pass are free (only the initial kick costs budget)
     const effectiveKickCost = (s.gameVariant === 'quick' && s.chainPassInitiatorId) ? 0 : kickCost2;
-    const nextChange = deductBudget({ ...withShotStat, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } }, effectiveKickCost, kickPlayerId);
+    const withAssistUpdate = resolveAssistTracking(withShotStat, hasTeammateAdjacent ? 'wide' : 'none', kickPlayerIdForStats, lastTouchId);
+    const nextChange = deductBudget({ ...withAssistUpdate, players: newPlayers, ballPosition: position, lastPlayerToTouchBallId: lastTouchId, lastAction: { from: startPos, to: position } }, effectiveKickCost, kickPlayerId);
     return advanceToNextTurn(nextChange);
   }
 
@@ -8732,6 +9040,17 @@ function renderBoardSVG(s) {
       svg += `<circle class="disc" r="${r}" fill="${jersey.fill}" stroke="${stroke}" />`;
       if (jersey.overlay) svg += `<g clip-path="url(#clip-${p.id})" transform="scale(${off.scale})">${jersey.overlay}</g>`;
       svg += `<g ${flipBoard ? 'transform="rotate(180)"' : ''}><text class="num" fill="${textColor}" stroke="${numberHalo(team.textColor)}" y="0.5" style="font-size:${11 * Math.max(off.scale, 0.85)}px;">${p.playerNumber}</text></g>`;
+      // Plan Handicap: small badge on the token itself for players with a
+      // current bonus/penalty, so it's visible during the match, not only in menus.
+      if (p.handicap) {
+        const badgeR = r * 0.34;
+        const badgeCx = r * 0.72, badgeCy = -r * 0.72;
+        const badgeFill = p.handicap > 0 ? '#2a6e3f' : '#9a2f24';
+        svg += `<g ${flipBoard ? 'transform="rotate(180)"' : ''}>`;
+        svg += `<circle cx="${badgeCx}" cy="${badgeCy}" r="${badgeR}" fill="${badgeFill}" stroke="#fff" stroke-width="1" />`;
+        svg += `<text x="${badgeCx}" y="${badgeCy + badgeR * 0.36}" text-anchor="middle" fill="#fff" style="font-size:${badgeR * 1.3}px;font-weight:800;">${p.handicap > 0 ? '+' : '−'}</text>`;
+        svg += `</g>`;
+      }
       svg += `</g>`;
     });
     if (tilePlayers.length > 4) {
@@ -10984,7 +11303,12 @@ async function playTournamentMatch(tournamentId, matchId, isLeague) {
       : guestTeam;
     const initialState = buildInitialOnlineState(myTeam, finalAwayTeam, TURN_DURATION, tDuration, tTargetGoals, t.gameVariant || 'classic', t.boardSize || 'classic', t.diceMode || 'default');
     preGameRollStartedAt = Date.now();
-    state = { ...initialState, timer: 30, tournamentId, tournamentMatchId: matchId, tournamentIsLeague: isLeague };
+    // Plan Handicap — Torneos-Liga: aplica el handicap guardado por UID (no por
+    // equipo, ver reportTournamentResult) solo si es una liga; copas no tienen.
+    const playersWithHandicap = isLeague
+      ? applyHandicapsToPlayers(initialState.players, t.playerHandicaps, myTeam, finalAwayTeam, currentUser.uid, data.awayUid)
+      : initialState.players;
+    state = { ...initialState, players: playersWithHandicap, timer: 30, tournamentId, tournamentMatchId: matchId, tournamentIsLeague: isLeague };
     window.state = state;
     attachOnlineStateListener();
     attachOnlineRematchListener(startOnlineRematch);
@@ -11003,7 +11327,7 @@ async function playTournamentMatch(tournamentId, matchId, isLeague) {
 // Called when a tournament match ends — writes the result back to the
 // tournament doc (fixture row for league, bracket cell for cup) and, for cup
 // matches, tries to auto-advance the bracket if the whole round is finished.
-async function reportTournamentResult(tournamentId, matchId, isLeague, homeScore, awayScore) {
+async function reportTournamentResult(tournamentId, matchId, isLeague, homeScore, awayScore, matchInfo) {
   const tRef = db.collection('tournaments').doc(tournamentId);
   const tSnap = await tRef.get();
   if (!tSnap.exists) return;
@@ -11014,7 +11338,21 @@ async function reportTournamentResult(tournamentId, matchId, isLeague, homeScore
       m.id === matchId ? { ...m, homeScore, awayScore, status: 'finished', playedAt: new Date() } : m
     );
     const allDone = fixture.every(m => m.homeScore !== null || !m.homeUid || !m.awayUid);
-    await tRef.update({ fixture, status: allDone ? 'finished' : 'active', finishedAt: allDone ? firebase.firestore.FieldValue.serverTimestamp() : null });
+    const update = { fixture, status: allDone ? 'finished' : 'active', finishedAt: allDone ? firebase.firestore.FieldValue.serverTimestamp() : null };
+    // Plan Handicap — Torneos-Liga: cada partido siempre usa el mismo equipo por
+    // defecto (no hay selección de plantel por participante como en Liga local),
+    // así que la identidad estable acá es la cuenta (UID) de cada jugador, no el
+    // ID del equipo. Se recalcula solo para los dos participantes de este
+    // partido; el resto conserva su handicap de su propio último partido.
+    if (matchInfo && matchInfo.homeUid && matchInfo.awayUid) {
+      const newHandicaps = computeMatchHandicaps(
+        { matchStats: matchInfo.matchStats, players: matchInfo.players },
+        matchInfo.homeTeam, matchInfo.awayTeam, matchInfo.homeUid, matchInfo.awayUid
+      );
+      const existingHandicaps = (data.playerHandicaps || []).filter(h => h.teamId !== matchInfo.homeUid && h.teamId !== matchInfo.awayUid);
+      update.playerHandicaps = [...existingHandicaps, ...newHandicaps];
+    }
+    await tRef.update(update);
   } else {
     const bracket = { ...data.bracket, rounds: data.bracket.rounds.map(round => ({ matches: [...round.matches] })) };
     const lastRoundIdx = bracket.rounds.length - 1;
@@ -11853,6 +12191,16 @@ function jerseyDot(teamIdOrTeam, size) {
 }
 
 function renderLeagueSetup() {
+  const savedLeague = loadLocalLeague();
+  const resumeBanner = savedLeague ? `
+    <div style="background:var(--green-tint);border:1.5px solid var(--green-accent);border-radius:12px;padding:12px 14px;margin-bottom:16px;">
+      <div style="font-weight:700;font-size:0.9rem;color:var(--text-1);margin-bottom:4px;">${lang === 'en' ? 'You have a league in progress' : lang === 'pt' ? 'Você tem uma liga em andamento' : lang === 'fr' ? 'Vous avez une ligue en cours' : lang === 'de' ? 'Du hast eine laufende Liga' : lang === 'it' ? 'Hai una lega in corso' : 'Tenés una liga guardada en curso'}</div>
+      <div style="font-size:0.78rem;color:var(--text-3);margin-bottom:10px;">${lang === 'en' ? `Round ${savedLeague.currentRound}, ${savedLeague.teams.length} teams.` : lang === 'pt' ? `Rodada ${savedLeague.currentRound}, ${savedLeague.teams.length} times.` : lang === 'fr' ? `Journée ${savedLeague.currentRound}, ${savedLeague.teams.length} équipes.` : lang === 'de' ? `Spieltag ${savedLeague.currentRound}, ${savedLeague.teams.length} Teams.` : lang === 'it' ? `Giornata ${savedLeague.currentRound}, ${savedLeague.teams.length} squadre.` : `Jornada ${savedLeague.currentRound}, ${savedLeague.teams.length} equipos.`}</div>
+      <div style="display:flex;gap:8px;">
+        <button id="resume-local-league-btn" class="btn" style="flex:1;padding:8px;font-size:0.82rem;background:var(--green-accent);border-color:var(--green-accent);color:#fff;">${lang === 'en' ? 'Continue' : lang === 'pt' ? 'Continuar' : lang === 'fr' ? 'Continuer' : lang === 'de' ? 'Fortsetzen' : lang === 'it' ? 'Continua' : 'Continuar'}</button>
+        <button id="discard-local-league-btn" class="btn ghost" style="flex:1;padding:8px;font-size:0.82rem;">${lang === 'en' ? 'Discard' : lang === 'pt' ? 'Descartar' : lang === 'fr' ? 'Supprimer' : lang === 'de' ? 'Verwerfen' : lang === 'it' ? 'Elimina' : 'Descartar'}</button>
+      </div>
+    </div>` : '';
   if (leagueSelectedTeams.length !== leagueNumTeams) leagueSelectedTeams = Array(leagueNumTeams).fill(null);
   const teamLabel = (i) => lang === 'en' ? `Team ${i + 1}` : lang === 'pt' ? `Time ${i + 1}` : lang === 'fr' ? `Équipe ${i + 1}` : lang === 'de' ? `Team ${i + 1}` : lang === 'it' ? `Squadra ${i + 1}` : `Equipo ${i + 1}`;
   const choosePlaceholder = lang === 'en' ? 'Choose a team' : lang === 'pt' ? 'Escolha um time' : lang === 'fr' ? 'Choisissez une équipe' : lang === 'de' ? 'Wähle ein Team' : lang === 'it' ? 'Scegli una squadra' : 'Elige un equipo';
@@ -11880,6 +12228,7 @@ function renderLeagueSetup() {
 
   return `
   <div class="menu-screen" style="max-width:680px;">
+    ${resumeBanner}
     <h1>${lang === 'en' ? 'League setup' : lang === 'pt' ? 'Configurar Liga' : lang === 'fr' ? 'Configuration de la ligue' : lang === 'de' ? 'Liga einrichten' : lang === 'it' ? 'Configura la lega' : 'Configurar Liga'}</h1>
     <div class="subtitle">${lang === 'en' ? 'Choose teams and match duration. Home and away format.' : lang === 'pt' ? 'Escolha os times e a duração das partidas. Formato ida e volta.' : lang === 'fr' ? 'Choisissez les équipes et la durée du match. Format aller-retour.' : lang === 'de' ? 'Wähle Teams und Spieldauer. Hin- und Rückrunde.' : lang === 'it' ? 'Scegli le squadre e la durata della partita. Formato andata e ritorno.' : 'Elige los equipos y la duración de cada partido. Se juega ida y vuelta.'}</div>
     <div class="setup-row">
@@ -11918,8 +12267,8 @@ function renderLeagueView(s) {
   ls.schedule.forEach(m => { (matchesByRound[m.round] = matchesByRound[m.round] || []).push(m); });
 
   const tabs = lang === 'en'
-    ? [{ id: 'standings', label: '📊 Table' }, { id: 'schedule', label: '📅 Schedule' }, { id: 'scorers', label: '⭐ Scorers' }]
-    : [{ id: 'standings', label: '📊 Tabla' }, { id: 'schedule', label: '📅 Calendario' }, { id: 'scorers', label: '⭐ Goleadores' }];
+    ? [{ id: 'standings', label: 'Table' }, { id: 'schedule', label: 'Schedule' }, { id: 'scorers', label: 'Scorers' }, { id: 'handicap', label: 'Handicap' }]
+    : [{ id: 'standings', label: 'Tabla' }, { id: 'schedule', label: 'Calendario' }, { id: 'scorers', label: 'Goleadores' }, { id: 'handicap', label: 'Handicap' }];
 
   const thTeam = lang === 'en' ? 'Team' : lang === 'pt' ? 'Time' : lang === 'fr' ? 'Équipe' : lang === 'de' ? 'Team' : lang === 'it' ? 'Squadra' : 'Equipo';
   const thPlayer = lang === 'en' ? 'Player' : lang === 'pt' ? 'Jogador' : lang === 'fr' ? 'Joueur' : lang === 'de' ? 'Spieler' : lang === 'it' ? 'Giocatore' : 'Jugador';
@@ -11976,12 +12325,34 @@ function renderLeagueView(s) {
         <tbody>${list.map((p, i) => `<tr><td>${i+1}</td><td style="text-align:left;">${p.name}</td><td style="text-align:left;"><div style="display:flex; align-items:center; gap:6px;">${jerseyDot(p.teamId, 14)} ${TEAMS.find(t=>t.id===p.teamId)?.name}</div></td><td><b>${p[key]}</b></td></tr>`).join('')}</tbody>
       </table>`;
     body = `<h3 style="margin:0 0 6px;">${scorersTitle}</h3>${renderStatTable(topScorers, 'goals', goalsLabel)}<h3 style="margin:14px 0 6px;">${assistsTitle}</h3>${renderStatTable(topAssists, 'assists', assistsLabel)}`;
+  } else if (leagueViewTab === 'handicap') {
+    const handicapTitle = lang === 'en' ? 'Current handicap' : lang === 'pt' ? 'Handicap atual' : lang === 'fr' ? 'Handicap actuel' : lang === 'de' ? 'Aktueller Handicap' : lang === 'it' ? 'Handicap attuale' : 'Handicap actual';
+    const handicapDesc = lang === 'en' ? 'Based on the last match each team played. Only players with a bonus or penalty are shown.' : lang === 'pt' ? 'Baseado na última partida de cada time. Só aparecem jogadores com bônus ou penalidade.' : lang === 'fr' ? 'Basé sur le dernier match de chaque équipe. Seuls les joueurs avec un bonus ou une pénalité sont affichés.' : lang === 'de' ? 'Basierend auf dem letzten Spiel jedes Teams. Nur Spieler mit Bonus oder Malus werden angezeigt.' : lang === 'it' ? 'In base allultima partita di ogni squadra. Sono mostrati solo i giocatori con bonus o penalita.' : 'Según el último partido de cada equipo. Solo se muestran los jugadores con bonus o penalidad.';
+    const withHandicap = (ls.playerHandicaps || []).filter(h => h.handicap !== 0);
+    if (withHandicap.length === 0) {
+      body = `<p style="text-align:center; color:var(--text-4); padding:14px 0;">${noStats}</p>`;
+    } else {
+      const rows = ls.teams.map(t => {
+        const teamHandicaps = withHandicap.filter(h => h.teamId === t.teamId);
+        if (!teamHandicaps.length) return '';
+        return `
+          <div style="margin-bottom:12px;">
+            <div style="display:flex;align-items:center;gap:6px;font-weight:700;font-size:0.85rem;margin-bottom:4px;">${jerseyDot(t.teamId, 16)} ${t.name}</div>
+            ${teamHandicaps.map(h => `
+              <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0 3px 22px;font-size:0.78rem;">
+                <span>#${h.playerNumber} ${escapeHtml(h.name)}</span>
+                <span style="font-weight:800;color:${h.handicap > 0 ? '#2a6e3f' : '#9a2f24'};">${h.handicap > 0 ? '+1' : '−1'}</span>
+              </div>`).join('')}
+          </div>`;
+      }).join('');
+      body = `<p style="font-size:0.78rem;color:var(--text-4);margin:0 0 10px;">${handicapDesc}</p>${rows}`;
+    }
   }
 
   return `
   <div class="menu-screen league-screen" style="max-width:760px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-      <h1 style="margin:0; font-size:1.6rem;">🏆 ${lang === 'en' ? 'Hexagol League' : lang === 'pt' ? 'Liga Hexagol' : lang === 'fr' ? 'Ligue Hexagol' : lang === 'de' ? 'Hexagol-Liga' : lang === 'it' ? 'Lega Hexagol' : 'Liga Hexagol'}</h1>
+      <h1 style="margin:0; font-size:1.6rem;">${lang === 'en' ? 'Hexagol League' : lang === 'pt' ? 'Liga Hexagol' : lang === 'fr' ? 'Ligue Hexagol' : lang === 'de' ? 'Hexagol-Liga' : lang === 'it' ? 'Lega Hexagol' : 'Liga Hexagol'}</h1>
       <button class="btn ghost" data-menu="league-exit" style="padding:7px 14px; font-size:0.78rem;">${exitLabel}</button>
     </div>
     <div class="league-tabs">
@@ -12004,7 +12375,6 @@ function renderLeagueOver(s) {
   const gdLabel = lang === 'en' ? 'GD' : lang === 'pt' ? 'SG' : lang === 'fr' ? 'DB' : lang === 'de' ? 'TD' : lang === 'it' ? 'DR' : 'DG';
   return `
   <div class="menu-screen" style="max-width:600px;">
-    <div style="font-size:3.5rem; line-height:1;">🏆</div>
     <h1 style="margin:10px 0 4px;">${champTitle}</h1>
     <div class="subtitle">${champDesc}</div>
     <table class="league-table" style="margin-top:10px;">
@@ -12313,10 +12683,18 @@ function renderDicePanel(s) {
       const eloInfo = userProfile && onlineOpponentUid
         ? `<div style="font-size:0.75rem; color:var(--text-3); text-align:center; margin: 4px 0 6px;">⚡ ${userProfile.elo} ELO · ${userProfile.wins}${wLabel} ${userProfile.losses}${lLabel} ${userProfile.draws}${eLabel}</div>`
         : '';
+      const onlineMvp = computeMatchMVP(s, s.homeTeam, s.awayTeam);
+      const onlineMvpLabel = lang === 'en' ? 'Man of the match' : lang === 'pt' ? 'Melhor em campo' : lang === 'fr' ? 'Homme du match' : lang === 'de' ? 'Spieler des Spiels' : lang === 'it' ? 'Migliore in campo' : 'Figura del partido';
+      const onlineMvpHtml = onlineMvp ? `
+        <div style="text-align:center;margin-bottom:6px;padding:6px;background:var(--surface-2);border-radius:10px;">
+          <div style="font-size:0.68rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.03em;">${onlineMvpLabel}</div>
+          <div style="font-weight:700;font-size:0.88rem;color:var(--text-1);">#${onlineMvp.playerNumber} ${escapeHtml(onlineMvp.name)}</div>
+        </div>` : '';
       return `<div class="dice-panel">
         <div style="font-size:1.1rem; font-weight:800; color:${resultColor}; text-align:center; margin-bottom:4px;">${resultText}</div>
         <div style="font-size:0.85rem; text-align:center; color:var(--text-2); margin-bottom:6px;">${myTeamName} ${myScore} — ${theirScore} ${theirTeamName}</div>
         ${eloInfo}
+        ${onlineMvpHtml}
         <button class="btn ghost" id="share-result-btn" style="width:100%; margin-bottom:6px;">${t('gameover.share')}</button>
         <a href="javascript:void(0)"
            onclick="trackEvent('cafecito_click',{source:'game_over'});showDonateModal()"
@@ -12345,7 +12723,31 @@ function renderDicePanel(s) {
         <span style="color:var(--text-4);"> · </span>
         <button id="gameover-invite-cta-dismiss-btn" style="background:none;border:none;color:var(--text-4);font-size:0.7rem;cursor:pointer;font-family:inherit;">${lang === 'en' ? 'No thanks' : lang === 'pt' ? 'Não, obrigado' : lang === 'fr' ? 'Non merci' : lang === 'de' ? 'Nein danke' : lang === 'it' ? 'No grazie' : 'No, gracias'}</button>
       </div>` : '';
-    return `<div class="dice-panel"><h3>${t('gameover.finished')}</h3>${gameOverInviteCtaHtml}<button class="btn" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${s.gameMode === 'league' ? t('gameover.league') : t('gameover.back')}</button></div>`;
+    const mvp = computeMatchMVP(s, s.homeTeam, s.awayTeam);
+    const mvpLabel = lang === 'en' ? 'Man of the match' : lang === 'pt' ? 'Melhor em campo' : lang === 'fr' ? 'Homme du match' : lang === 'de' ? 'Spieler des Spiels' : lang === 'it' ? 'Migliore in campo' : 'Figura del partido';
+    const mvpHtml = mvp ? `
+        <div style="text-align:center;margin:10px 0;padding:8px;background:var(--surface-2);border-radius:10px;">
+          <div style="font-size:0.7rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.03em;">${mvpLabel}</div>
+          <div style="font-weight:700;font-size:0.92rem;color:var(--text-1);">#${mvp.playerNumber} ${escapeHtml(mvp.name)}</div>
+        </div>` : '';
+    let leagueSummaryHtml = mvpHtml;
+    if (s.gameMode === 'league') {
+      const handicaps = computeMatchHandicaps(s, s.homeTeam, s.awayTeam);
+      const handicapLabel = lang === 'en' ? 'Handicap for the next match' : lang === 'pt' ? 'Handicap para a próxima partida' : lang === 'fr' ? 'Handicap pour le prochain match' : lang === 'de' ? 'Handicap für das nächste Spiel' : lang === 'it' ? 'Handicap per la prossima partita' : 'Handicap para el próximo partido';
+      const changedHandicaps = handicaps.filter(h => h.handicap !== 0);
+      const handicapRows = changedHandicaps.map(h => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.78rem;">
+          <span>#${h.playerNumber} ${escapeHtml(h.name)}</span>
+          <span style="font-weight:800;color:${h.handicap > 0 ? '#2a6e3f' : '#9a2f24'};">${h.handicap > 0 ? '+1' : '−1'}</span>
+        </div>`).join('');
+      const handicapHtml = changedHandicaps.length ? `
+        <div style="margin:10px 0;padding:8px;background:var(--surface-2);border-radius:10px;">
+          <div style="font-size:0.7rem;color:var(--text-4);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:4px;">${handicapLabel}</div>
+          ${handicapRows}
+        </div>` : '';
+      leagueSummaryHtml = mvpHtml + handicapHtml;
+    }
+    return `<div class="dice-panel"><h3>${t('gameover.finished')}</h3>${leagueSummaryHtml}${gameOverInviteCtaHtml}<button class="btn" id="back-to-menu-btn" style="width:100%; margin-top:6px;">${s.gameMode === 'league' ? t('gameover.league') : t('gameover.back')}</button></div>`;
   }
 
   const isBotTurn = s.gameMode === 'vs-ai' && s.currentPlayer === s.aiTeam;
@@ -13128,12 +13530,33 @@ function wireEvents() {
     startLeagueBtn.onclick = () => {
       if (leagueSelectedTeams.some(id => !id)) return;
       if (new Set(leagueSelectedTeams).size !== leagueSelectedTeams.length) return;
+      if (loadLocalLeague()) {
+        const overwriteMsg = lang === 'en' ? 'This will replace your saved league in progress. Continue?' : lang === 'pt' ? 'Isso substituirá sua liga salva em andamento. Continuar?' : lang === 'fr' ? 'Cela remplacera votre ligue enregistrée en cours. Continuer ?' : lang === 'de' ? 'Dies ersetzt deine gespeicherte laufende Liga. Fortfahren?' : lang === 'it' ? 'Questo sostituirà la tua lega salvata in corso. Continuare?' : 'Esto va a reemplazar la liga guardada que tenés en curso. ¿Continuar?';
+        if (!confirm(overwriteMsg)) return;
+      }
       const leagueState = startLeague(leagueSelectedTeams, leagueDuration);
+      saveLocalLeague(leagueState);
       currentMenuView = 'main';
       leagueViewTab = 'standings';
       setState({ ...getInitialState(), gameMode: 'league', gamePhase: 'league-view', leagueState, message: `Comienza la liga. Jornada 1.` });
     };
   }
+  const resumeLocalLeagueBtn = document.getElementById('resume-local-league-btn');
+  if (resumeLocalLeagueBtn) resumeLocalLeagueBtn.onclick = () => {
+    const savedLeague = loadLocalLeague();
+    if (!savedLeague) return;
+    currentMenuView = 'main';
+    leagueViewTab = 'standings';
+    setState({ ...getInitialState(), gameMode: 'league', gamePhase: 'league-view', leagueState: savedLeague });
+  };
+  const discardLocalLeagueBtn = document.getElementById('discard-local-league-btn');
+  if (discardLocalLeagueBtn) discardLocalLeagueBtn.onclick = () => {
+    const confirmMsg = lang === 'en' ? 'Discard the saved league? This cannot be undone.' : lang === 'pt' ? 'Descartar a liga salva? Isso não pode ser desfeito.' : lang === 'fr' ? 'Supprimer la ligue enregistrée ? Action irréversible.' : lang === 'de' ? 'Gespeicherte Liga verwerfen? Das kann nicht rückgängig gemacht werden.' : lang === 'it' ? 'Eliminare la lega salvata? Non si può annullare.' : '¿Descartar la liga guardada? No se puede deshacer.';
+    if (confirm(confirmMsg)) {
+      clearLocalLeague();
+      render();
+    }
+  };
 
   // League view: tabs + play match buttons
   document.querySelectorAll('[data-league-tab]').forEach(btn => {
@@ -13554,7 +13977,7 @@ function wireEvents() {
         ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
         currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
         lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-        isClockRunning: true, isKickoffTurn: true, assistProviderId: null, isAiThinking: false,
+        isClockRunning: true, isKickoffTurn: true, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0, isAiThinking: false,
       };
       return logAction(news, t('msg.kickoff', { half: t('msg.second'), team: kickoffTeamName }), 'game-event');
     });
@@ -14258,7 +14681,7 @@ function startSecondHalfOnlineAuto() {
       ...s, players: newPlayers, ballPosition: s.boardSize === 'compact' ? { ...INITIAL_BALL_POSITION_COMPACT } : { ...INITIAL_BALL_POSITION }, gamePhase: 'rolling',
       currentPlayer: secondHalfKickoff, half: 2, diceValue: null, ...freshActionState(),
       lastPlayerToTouchBallId: null, timer: s.turnDuration, gameClock: s.halfDurationMinutes * 60,
-      isClockRunning: true, isKickoffTurn: true, assistProviderId: null, prevTurnSnapshot: null, undoUsedThisTurn: false,
+      isClockRunning: true, isKickoffTurn: true, assistProviderId: null, pendingAssistProviderId: null, pendingAssistReceiverId: null, pendingAssistTouchCount: 0, prevTurnSnapshot: null, undoUsedThisTurn: false,
     };
     return logAction(news, `Comienza el segundo tiempo. Saca ${kickoffTeamName}.`, 'game-event');
   });
@@ -14438,6 +14861,7 @@ render();
 document.addEventListener('fullscreenchange', () => { render(); });
 checkForReconnectableSession();
 checkUrlRoomParam();
+initCookieConsent();
 checkUrlProfileParam();
 
 // Lang button (landing + main menu) — opens a picker modal with all 4 languages
@@ -14526,7 +14950,8 @@ function showLegalModal(type) {
 <p><b>Última actualización:</b> julio de 2026 · <b>Responsable:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
 <h3>Datos que recolectamos</h3><p><b>Al crear una cuenta:</b> nombre de usuario, email y contraseña (encriptada por Firebase). <b>Al jugar:</b> estadísticas de partidas (victorias, derrotas, ELO). <b>Automáticamente:</b> datos de uso anónimos via Google Analytics 4 (páginas, tiempo, dispositivo, país).</p>
 <h3>Para qué los usamos</h3><p>Para proveer el servicio, mostrar la tabla de líderes y mejorar el juego. No vendemos ni compartimos tus datos con terceros con fines comerciales.</p>
-<h3>Servicios de terceros</h3><p>Firebase (Google) para autenticación y base de datos. Google Analytics para análisis anónimo.</p>
+<h3>Servicios de terceros</h3><p>Firebase (Google) para autenticación y base de datos — es un servicio esencial, sin el cual el juego online no puede funcionar. Google Analytics para análisis anónimo — es opcional, ver la sección de Cookies.</p>
+<h3>Cookies y almacenamiento local</h3><p>Google Analytics es opcional: solo arranca si lo aceptás desde el cartel que aparece en tu primera visita. Si lo rechazás, el resto del juego sigue funcionando exactamente igual — no afecta tu cuenta, tus partidas ni el chat. Podés cambiar tu elección cuando quieras con el botón de más abajo. Por separado, Firebase guarda información esencial en tu dispositivo (mayormente en IndexedDB, no cookies tradicionales) para mantener tu sesión activa y sincronizar tus partidas — esto es imprescindible para el funcionamiento del servicio y no requiere consentimiento previo, aunque te lo declaramos igual acá.</p>
 <h3>Tus derechos</h3><p>Bajo la Ley 25.326 (Argentina) y el GDPR, podés acceder, corregir o solicitar la eliminación de tus datos escribiendo a ignacio.oneto@gmail.com.</p>
 <h3>Menores</h3><p>Hexagol no está dirigido a menores de 13 años.</p>`;
 
@@ -14544,7 +14969,8 @@ function showLegalModal(type) {
 <p><b>Last updated:</b> July 2026 · <b>Controller:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
 <h3>Data We Collect</h3><p><b>When creating an account:</b> username, email and password (encrypted by Firebase). <b>When playing:</b> match statistics (wins, losses, ELO). <b>Automatically:</b> anonymous usage data via Google Analytics 4 (pages, time, device, country).</p>
 <h3>How We Use It</h3><p>To provide the service, show the global leaderboard and improve the game. We do not sell or share your data with third parties for commercial purposes.</p>
-<h3>Third-Party Services</h3><p>Firebase (Google) for authentication and database. Google Analytics for anonymous analysis.</p>
+<h3>Third-Party Services</h3><p>Firebase (Google) for authentication and database — an essential service, without which online play cannot work. Google Analytics for anonymous analysis — optional, see the Cookies section.</p>
+<h3>Cookies and Local Storage</h3><p>Google Analytics is optional: it only starts if you accept it via the banner shown on your first visit. If you decline, the rest of the game works exactly the same — it does not affect your account, your matches, or chat. You can change your choice at any time using the button below. Separately, Firebase stores essential information on your device (mostly in IndexedDB, not traditional cookies) to keep your session active and sync your matches — this is required for the service to work and does not require prior consent, though we disclose it here anyway.</p>
 <h3>Your Rights</h3><p>Under Argentine Law 25.326 and the GDPR, you may access, correct or request deletion of your data by writing to ignacio.oneto@gmail.com.</p>
 <h3>Minors</h3><p>Hexagol is not directed at children under 13.</p>`;
 
@@ -14562,7 +14988,8 @@ function showLegalModal(type) {
 <p><b>Última atualização:</b> julho de 2026 · <b>Responsável:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
 <h3>Dados que coletamos</h3><p><b>Ao criar uma conta:</b> nome de usuário, e-mail e senha (criptografada pelo Firebase). <b>Ao jogar:</b> estatísticas de partidas (vitórias, derrotas, ELO). <b>Automaticamente:</b> dados de uso anônimos via Google Analytics 4 (páginas, tempo, dispositivo, país).</p>
 <h3>Para que os usamos</h3><p>Para fornecer o serviço, mostrar a tabela de classificação e melhorar o jogo. Não vendemos nem compartilhamos seus dados com terceiros para fins comerciais.</p>
-<h3>Serviços de terceiros</h3><p>Firebase (Google) para autenticação e banco de dados. Google Analytics para análise anônima.</p>
+<h3>Serviços de terceiros</h3><p>Firebase (Google) para autenticação e banco de dados — um serviço essencial, sem o qual o jogo online não pode funcionar. Google Analytics para análise anônima — opcional, veja a seção de Cookies.</p>
+<h3>Cookies e armazenamento local</h3><p>O Google Analytics é opcional: só começa se você aceitar no aviso exibido na sua primeira visita. Se você recusar, o resto do jogo continua funcionando exatamente igual — não afeta sua conta, suas partidas nem o chat. Você pode mudar sua escolha quando quiser com o botão abaixo. Separadamente, o Firebase guarda informações essenciais no seu dispositivo (principalmente em IndexedDB, não cookies tradicionais) para manter sua sessão ativa e sincronizar suas partidas — isso é indispensável para o funcionamento do serviço e não exige consentimento prévio, mas declaramos aqui mesmo assim.</p>
 <h3>Seus direitos</h3><p>Sob a Lei 25.326 (Argentina) e o GDPR, você pode acessar, corrigir ou solicitar a exclusão dos seus dados escrevendo para ignacio.oneto@gmail.com.</p>
 <h3>Menores</h3><p>O Hexagol não é direcionado a menores de 13 anos.</p>`;
 
@@ -14580,7 +15007,8 @@ function showLegalModal(type) {
 <p><b>Dernière mise à jour :</b> juillet 2026 · <b>Responsable :</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
 <h3>Données que nous collectons</h3><p><b>Lors de la création d'un compte :</b> nom d'utilisateur, e-mail et mot de passe (chiffré par Firebase). <b>En jouant :</b> statistiques de matchs (victoires, défaites, ELO). <b>Automatiquement :</b> données d'utilisation anonymes via Google Analytics 4 (pages, temps, appareil, pays).</p>
 <h3>Comment nous les utilisons</h3><p>Pour fournir le service, afficher le classement mondial et améliorer le jeu. Nous ne vendons ni ne partageons vos données avec des tiers à des fins commerciales.</p>
-<h3>Services tiers</h3><p>Firebase (Google) pour l'authentification et la base de données. Google Analytics pour une analyse anonyme.</p>
+<h3>Services tiers</h3><p>Firebase (Google) pour l'authentification et la base de données — un service essentiel, sans lequel le jeu en ligne ne peut pas fonctionner. Google Analytics pour une analyse anonyme — optionnel, voir la section Cookies.</p>
+<h3>Cookies et stockage local</h3><p>Google Analytics est optionnel : il ne démarre que si vous l'acceptez via la bannière affichée lors de votre première visite. Si vous refusez, le reste du jeu fonctionne exactement pareil — cela n'affecte ni votre compte, ni vos matchs, ni le chat. Vous pouvez modifier votre choix à tout moment avec le bouton ci-dessous. Séparément, Firebase stocke des informations essentielles sur votre appareil (principalement dans IndexedDB, pas des cookies traditionnels) pour maintenir votre session active et synchroniser vos matchs — cela est indispensable au fonctionnement du service et ne nécessite pas de consentement préalable, bien que nous le déclarions ici quand même.</p>
 <h3>Vos droits</h3><p>En vertu de la loi argentine 25.326 et du RGPD, vous pouvez accéder à vos données, les corriger ou demander leur suppression en écrivant à ignacio.oneto@gmail.com.</p>
 <h3>Mineurs</h3><p>Hexagol ne s'adresse pas aux enfants de moins de 13 ans.</p>`;
 
@@ -14598,7 +15026,8 @@ function showLegalModal(type) {
 <p><b>Letzte Aktualisierung:</b> Juli 2026 · <b>Verantwortlicher:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
 <h3>Daten, die wir erheben</h3><p><b>Bei der Kontoerstellung:</b> Benutzername, E-Mail und Passwort (verschlüsselt durch Firebase). <b>Beim Spielen:</b> Spielstatistiken (Siege, Niederlagen, ELO). <b>Automatisch:</b> anonyme Nutzungsdaten über Google Analytics 4 (Seiten, Zeit, Gerät, Land).</p>
 <h3>Wofür wir sie verwenden</h3><p>Um den Dienst bereitzustellen, die Rangliste anzuzeigen und das Spiel zu verbessern. Wir verkaufen oder teilen deine Daten nicht zu kommerziellen Zwecken mit Dritten.</p>
-<h3>Dienste Dritter</h3><p>Firebase (Google) für Authentifizierung und Datenbank. Google Analytics für anonyme Analysen.</p>
+<h3>Dienste Dritter</h3><p>Firebase (Google) für Authentifizierung und Datenbank — ein essenzieller Dienst, ohne den das Online-Spiel nicht funktionieren kann. Google Analytics für anonyme Analysen — optional, siehe Abschnitt Cookies.</p>
+<h3>Cookies und lokaler Speicher</h3><p>Google Analytics ist optional: Es startet nur, wenn du dem Banner bei deinem ersten Besuch zustimmst. Wenn du ablehnst, funktioniert der Rest des Spiels genau gleich weiter — es hat keine Auswirkung auf dein Konto, deine Spiele oder den Chat. Du kannst deine Wahl jederzeit über die Schaltfläche unten ändern. Getrennt davon speichert Firebase essenzielle Informationen auf deinem Gerät (hauptsächlich in IndexedDB, keine klassischen Cookies), um deine Sitzung aktiv zu halten und deine Spiele zu synchronisieren — das ist für die Funktion des Dienstes notwendig und erfordert keine vorherige Einwilligung, wir weisen aber trotzdem hier darauf hin.</p>
 <h3>Deine Rechte</h3><p>Gemäß dem argentinischen Gesetz 25.326 und der DSGVO kannst du auf deine Daten zugreifen, sie korrigieren oder deren Löschung beantragen, indem du an ignacio.oneto@gmail.com schreibst.</p>
 <h3>Minderjährige</h3><p>Hexagol richtet sich nicht an Kinder unter 13 Jahren.</p>`;
 
@@ -14616,7 +15045,8 @@ function showLegalModal(type) {
 <p><b>Ultimo aggiornamento:</b> luglio 2026 · <b>Titolare:</b> Ignacio Oneto — ignacio.oneto@gmail.com</p>
 <h3>Dati che raccogliamo</h3><p><b>Alla creazione di un account:</b> nome utente, email e password (criptata da Firebase). <b>Durante il gioco:</b> statistiche delle partite (vittorie, sconfitte, ELO). <b>Automaticamente:</b> dati d'uso anonimi tramite Google Analytics 4 (pagine, tempo, dispositivo, paese).</p>
 <h3>A cosa li usiamo</h3><p>Per fornire il servizio, mostrare la classifica globale e migliorare il gioco. Non vendiamo né condividiamo i tuoi dati con terzi per scopi commerciali.</p>
-<h3>Servizi di terze parti</h3><p>Firebase (Google) per autenticazione e database. Google Analytics per analisi anonime.</p>
+<h3>Servizi di terze parti</h3><p>Firebase (Google) per autenticazione e database — un servizio essenziale, senza il quale il gioco online non può funzionare. Google Analytics per analisi anonime — opzionale, vedi la sezione Cookie.</p>
+<h3>Cookie e archiviazione locale</h3><p>Google Analytics è opzionale: parte solo se lo accetti tramite il banner mostrato alla tua prima visita. Se rifiuti, il resto del gioco continua a funzionare esattamente allo stesso modo — non influisce sul tuo account, sulle tue partite né sulla chat. Puoi cambiare la tua scelta in qualsiasi momento con il pulsante qui sotto. Separatamente, Firebase memorizza informazioni essenziali sul tuo dispositivo (principalmente in IndexedDB, non cookie tradizionali) per mantenere attiva la tua sessione e sincronizzare le tue partite — questo è indispensabile per il funzionamento del servizio e non richiede consenso preventivo, anche se lo dichiariamo comunque qui.</p>
 <h3>I tuoi diritti</h3><p>Ai sensi della Legge argentina 25.326 e del GDPR, puoi accedere ai tuoi dati, correggerli o richiederne la cancellazione scrivendo a ignacio.oneto@gmail.com.</p>
 <h3>Minori</h3><p>Hexagol non è rivolto a minori di 13 anni.</p>`;
 
@@ -14627,13 +15057,22 @@ function showLegalModal(type) {
   const modal = document.createElement('div');
   modal.id = 'legal-modal';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  const cookiePrefsLabel = lang === 'en' ? 'Manage cookie preferences' : lang === 'pt' ? 'Gerenciar preferências de cookies' : lang === 'fr' ? 'Gérer les préférences de cookies' : lang === 'de' ? 'Cookie-Einstellungen verwalten' : lang === 'it' ? 'Gestisci le preferenze sui cookie' : 'Administrar preferencias de cookies';
+  const cookiePrefsHtml = type === 'privacy' ? `<button id="reopen-cookie-consent-btn" style="display:block;margin:12px 0 0;padding:8px 14px;border-radius:8px;border:1.5px solid var(--border-1);background:var(--surface-2);color:var(--text-1);cursor:pointer;font-family:inherit;font-size:0.8rem;font-weight:600;">${cookiePrefsLabel}</button>` : '';
   modal.innerHTML = `
     <div style="background:var(--surface-1);border-radius:12px;max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:24px;position:relative;font-size:0.85rem;line-height:1.6;color:var(--text-1);">
       <button onclick="document.getElementById('legal-modal').remove()" style="position:sticky;top:0;float:right;background:var(--surface-3);border:none;border-radius:999px;padding:4px 12px;cursor:pointer;font-size:0.8rem;">✕</button>
       ${content}
+      ${cookiePrefsHtml}
     </div>`;
   modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
   document.body.appendChild(modal);
+  const reopenCookieBtn = document.getElementById('reopen-cookie-consent-btn');
+  if (reopenCookieBtn) reopenCookieBtn.onclick = () => {
+    localStorage.removeItem('hexagol_cookie_consent');
+    modal.remove();
+    showCookieConsentBanner();
+  };
 }
 
 // Register PWA service worker
